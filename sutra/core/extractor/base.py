@@ -181,3 +181,6 @@ class IndexResult:
     indexed_at: datetime
     commit_hash: str
     languages: dict[str, int]   # {"python": 42, "typescript": 18, "go": 7}
+    failed_files: list[tuple[str, str]] = field(default_factory=list)
+    # Each entry: (repo_relative_path, error_message) — files the indexer
+    # could not read or that the adapter raised an exception on.

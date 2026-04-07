@@ -107,6 +107,10 @@ class JsonGraphExporter:
                 "count": len(index),
                 "dtype": "float32",
             },
+            "failed_files": [
+                {"path": path, "error": error}
+                for path, error in result.failed_files
+            ],
         }
         (output_dir / "graph.json").write_text(
             json.dumps(graph, indent=2), encoding="utf-8"

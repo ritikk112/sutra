@@ -147,6 +147,26 @@ def parse_moniker(moniker: str) -> MonikerComponents:
 # Descriptor introspection
 # ---------------------------------------------------------------------------
 
+def is_valid_moniker(s: str) -> bool:
+    """
+    Return True if s is a well-formed Sutra moniker.
+
+    A valid moniker has the form:
+        sutra <language> <repo_name> <file_path> <descriptor>
+    where descriptor ends with one of the four canonical suffixes:
+        ().   callable (function or method)
+        #     class/type
+        /     module/namespace
+        .     variable (any descriptor ending in . that is NOT ().)
+    """
+    try:
+        parsed = parse_moniker(s)
+        descriptor_kind(parsed.descriptor)
+        return True
+    except ValueError:
+        return False
+
+
 def descriptor_kind(descriptor: str) -> str:
     """
     Return the symbol kind implied by the descriptor's suffix.

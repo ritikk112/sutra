@@ -216,8 +216,11 @@ class TestGraphSchema:
         assert repo["languages"] == {"python": 1}
 
     def test_top_level_sections_present(self) -> None:
-        for key in ("symbols", "relationships", "files", "embeddings"):
+        for key in ("symbols", "relationships", "files", "embeddings", "failed_files"):
             assert key in self.graph
+
+    def test_failed_files_empty_by_default(self) -> None:
+        assert self.graph["failed_files"] == []
 
     def test_embeddings_metadata_block(self) -> None:
         emb = self.graph["embeddings"]
@@ -449,7 +452,7 @@ class TestDeterminism:
             g1, g2 = json.load(f1), json.load(f2)
         # generated_at will differ; compare everything else
         for key in ("symbols", "relationships", "files", "repository", "embeddings",
-                    "sutra_version", "schema_version"):
+                    "sutra_version", "schema_version", "failed_files"):
             assert g1[key] == g2[key], f"Mismatch in {key!r}"
 
 
@@ -479,6 +482,7 @@ class TestEdgeCases:
         assert graph["symbols"] == []
         assert graph["relationships"] == []
         assert graph["embeddings"]["count"] == 0
+        assert graph["failed_files"] == []
 
     def test_custom_embedding_dims(self, tmp_path: Path) -> None:
         result = _make_result()
