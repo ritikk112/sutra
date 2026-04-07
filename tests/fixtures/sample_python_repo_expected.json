@@ -1,0 +1,454 @@
+{
+  "embeddings": {
+    "count": 6,
+    "dims": 384,
+    "dtype": "float32",
+    "file": "embeddings.npy",
+    "index_file": "embeddings_index.json"
+  },
+  "failed_files": [],
+  "files": [
+    {
+      "hash": "sha256:165c985f52abcc401989af69e04798701a8b57e1e16ffc4bf1898766e3603ec1",
+      "language": "python",
+      "path": "src/services/user.py",
+      "size_bytes": 499
+    }
+  ],
+  "relationships": [
+    {
+      "is_resolved": true,
+      "kind": "contains",
+      "location": null,
+      "metadata": {},
+      "source_id": "sutra python sample_python_repo src/services/user.py UserService#",
+      "target_id": "sutra python sample_python_repo src/services/user.py UserService#__init__().",
+      "target_name": null
+    },
+    {
+      "is_resolved": true,
+      "kind": "contains",
+      "location": null,
+      "metadata": {},
+      "source_id": "sutra python sample_python_repo src/services/user.py UserService#",
+      "target_id": "sutra python sample_python_repo src/services/user.py UserService#create_user().",
+      "target_name": null
+    },
+    {
+      "is_resolved": false,
+      "kind": "extends",
+      "location": null,
+      "metadata": {
+        "call_form": "direct",
+        "import_source": null
+      },
+      "source_id": "sutra python sample_python_repo src/services/user.py UserService#",
+      "target_id": null,
+      "target_name": "Base"
+    },
+    {
+      "is_resolved": false,
+      "kind": "calls",
+      "location": {
+        "byte_end": 327,
+        "byte_start": 309,
+        "column_end": 33,
+        "column_start": 15,
+        "line_end": 20,
+        "line_start": 20
+      },
+      "metadata": {
+        "call_form": "direct"
+      },
+      "source_id": "sutra python sample_python_repo src/services/user.py UserService#create_user().",
+      "target_id": null,
+      "target_name": "_generate_id"
+    },
+    {
+      "is_resolved": false,
+      "kind": "calls",
+      "location": {
+        "byte_end": 454,
+        "byte_start": 437,
+        "column_end": 27,
+        "column_start": 10,
+        "line_end": 28,
+        "line_start": 28
+      },
+      "metadata": {
+        "call_form": "direct"
+      },
+      "source_id": "sutra python sample_python_repo src/services/user.py bootstrap().",
+      "target_id": null,
+      "target_name": "UserService"
+    },
+    {
+      "is_resolved": false,
+      "kind": "calls",
+      "location": {
+        "byte_end": 483,
+        "byte_start": 459,
+        "column_end": 28,
+        "column_start": 4,
+        "line_end": 29,
+        "line_start": 29
+      },
+      "metadata": {
+        "call_form": "method",
+        "receiver": "svc"
+      },
+      "source_id": "sutra python sample_python_repo src/services/user.py bootstrap().",
+      "target_id": null,
+      "target_name": "create_user"
+    },
+    {
+      "is_resolved": true,
+      "kind": "contains",
+      "location": null,
+      "metadata": {},
+      "source_id": "sutra python sample_python_repo src/services/user.py src/services/user/",
+      "target_id": "sutra python sample_python_repo src/services/user.py Base#",
+      "target_name": null
+    },
+    {
+      "is_resolved": true,
+      "kind": "contains",
+      "location": null,
+      "metadata": {},
+      "source_id": "sutra python sample_python_repo src/services/user.py src/services/user/",
+      "target_id": "sutra python sample_python_repo src/services/user.py MAX_RETRIES.",
+      "target_name": null
+    },
+    {
+      "is_resolved": true,
+      "kind": "contains",
+      "location": null,
+      "metadata": {},
+      "source_id": "sutra python sample_python_repo src/services/user.py src/services/user/",
+      "target_id": "sutra python sample_python_repo src/services/user.py UserService#",
+      "target_name": null
+    },
+    {
+      "is_resolved": true,
+      "kind": "contains",
+      "location": null,
+      "metadata": {},
+      "source_id": "sutra python sample_python_repo src/services/user.py src/services/user/",
+      "target_id": "sutra python sample_python_repo src/services/user.py _generate_id().",
+      "target_name": null
+    },
+    {
+      "is_resolved": true,
+      "kind": "contains",
+      "location": null,
+      "metadata": {},
+      "source_id": "sutra python sample_python_repo src/services/user.py src/services/user/",
+      "target_id": "sutra python sample_python_repo src/services/user.py bootstrap().",
+      "target_name": null
+    },
+    {
+      "is_resolved": false,
+      "kind": "imports",
+      "location": {
+        "byte_end": 52,
+        "byte_start": 48,
+        "column_end": 24,
+        "column_start": 20,
+        "line_end": 3,
+        "line_start": 3
+      },
+      "metadata": {
+        "alias": null,
+        "import_source": "pathlib"
+      },
+      "source_id": "sutra python sample_python_repo src/services/user.py src/services/user/",
+      "target_id": null,
+      "target_name": "Path"
+    },
+    {
+      "is_resolved": false,
+      "kind": "imports",
+      "location": {
+        "byte_end": 62,
+        "byte_start": 60,
+        "column_end": 9,
+        "column_start": 7,
+        "line_end": 4,
+        "line_start": 4
+      },
+      "metadata": {
+        "alias": null,
+        "call_form": "module",
+        "import_source": null
+      },
+      "source_id": "sutra python sample_python_repo src/services/user.py src/services/user/",
+      "target_id": null,
+      "target_name": "os"
+    }
+  ],
+  "repository": {
+    "commit_sha": "9cf58473d738db821deb7e39351a6bbf17424090",
+    "languages": {
+      "python": 1
+    },
+    "name": "sample_python_repo",
+    "url": "https://github.com/test/sample_python_repo"
+  },
+  "schema_version": "1",
+  "sutra_version": "0.1.0",
+  "symbols": [
+    {
+      "base_classes": [],
+      "body_hash": "sha256:d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1",
+      "decorators": [],
+      "docstring": null,
+      "embedding_id": 0,
+      "file_path": "src/services/user.py",
+      "id": "sutra python sample_python_repo src/services/user.py Base#",
+      "is_abstract": false,
+      "is_exported": true,
+      "kind": "class",
+      "language": "python",
+      "location": {
+        "byte_end": 107,
+        "byte_start": 87,
+        "column_end": 8,
+        "column_start": 0,
+        "line_end": 10,
+        "line_start": 9
+      },
+      "name": "Base",
+      "qualified_name": "src.services.user.Base",
+      "visibility": "public"
+    },
+    {
+      "body_hash": "sha256:ef7e2338bb39a478f834fa62f94fbf08c65a28225901fb182b56bb8b013a23f0",
+      "embedding_id": null,
+      "file_path": "src/services/user.py",
+      "id": "sutra python sample_python_repo src/services/user.py MAX_RETRIES.",
+      "is_constant": true,
+      "is_exported": true,
+      "kind": "variable",
+      "language": "python",
+      "location": {
+        "byte_end": 84,
+        "byte_start": 64,
+        "column_end": 20,
+        "column_start": 0,
+        "line_end": 6,
+        "line_start": 6
+      },
+      "name": "MAX_RETRIES",
+      "qualified_name": "src.services.user.MAX_RETRIES",
+      "type_annotation": "int",
+      "visibility": "public"
+    },
+    {
+      "base_classes": [
+        "Base"
+      ],
+      "body_hash": "sha256:ba3f29e85c6e9c3a57b064717cb3330663e67d85f313e2259c8e546ebf07d14a",
+      "decorators": [],
+      "docstring": "Manages user operations.",
+      "embedding_id": 1,
+      "file_path": "src/services/user.py",
+      "id": "sutra python sample_python_repo src/services/user.py UserService#",
+      "is_abstract": false,
+      "is_exported": true,
+      "kind": "class",
+      "language": "python",
+      "location": {
+        "byte_end": 327,
+        "byte_start": 110,
+        "column_end": 33,
+        "column_start": 0,
+        "line_end": 20,
+        "line_start": 13
+      },
+      "name": "UserService",
+      "qualified_name": "src.services.user.UserService",
+      "visibility": "public"
+    },
+    {
+      "body_hash": "sha256:b6a6d43ac5d0ab98a45b2a744464541fd5d982bde5a850b6e9fd6f7003168b22",
+      "complexity": 1,
+      "decorators": [],
+      "docstring": null,
+      "embedding_id": 2,
+      "enclosing_class_id": "sutra python sample_python_repo src/services/user.py UserService#",
+      "file_path": "src/services/user.py",
+      "id": "sutra python sample_python_repo src/services/user.py UserService#__init__().",
+      "is_async": false,
+      "is_constructor": true,
+      "is_exported": true,
+      "is_static": false,
+      "kind": "method",
+      "language": "python",
+      "location": {
+        "byte_end": 247,
+        "byte_start": 175,
+        "column_end": 30,
+        "column_start": 4,
+        "line_end": 17,
+        "line_start": 16
+      },
+      "name": "__init__",
+      "parameters": [
+        {
+          "default_value": null,
+          "is_keyword_variadic": false,
+          "is_variadic": false,
+          "name": "self",
+          "type_annotation": null
+        },
+        {
+          "default_value": null,
+          "is_keyword_variadic": false,
+          "is_variadic": false,
+          "name": "db_path",
+          "type_annotation": "str"
+        }
+      ],
+      "qualified_name": "src.services.user.UserService.__init__",
+      "return_type": "None",
+      "signature": "def __init__(self, db_path: str) -> None",
+      "visibility": "public"
+    },
+    {
+      "body_hash": "sha256:b697edc0009dff10ed90490e6514ff440dab582388de802d0c485b828d25ec69",
+      "complexity": 1,
+      "decorators": [],
+      "docstring": null,
+      "embedding_id": 3,
+      "enclosing_class_id": "sutra python sample_python_repo src/services/user.py UserService#",
+      "file_path": "src/services/user.py",
+      "id": "sutra python sample_python_repo src/services/user.py UserService#create_user().",
+      "is_async": false,
+      "is_constructor": false,
+      "is_exported": true,
+      "is_static": false,
+      "kind": "method",
+      "language": "python",
+      "location": {
+        "byte_end": 327,
+        "byte_start": 253,
+        "column_end": 33,
+        "column_start": 4,
+        "line_end": 20,
+        "line_start": 19
+      },
+      "name": "create_user",
+      "parameters": [
+        {
+          "default_value": null,
+          "is_keyword_variadic": false,
+          "is_variadic": false,
+          "name": "self",
+          "type_annotation": null
+        },
+        {
+          "default_value": null,
+          "is_keyword_variadic": false,
+          "is_variadic": false,
+          "name": "name",
+          "type_annotation": "str"
+        }
+      ],
+      "qualified_name": "src.services.user.UserService.create_user",
+      "return_type": "str",
+      "signature": "def create_user(self, name: str) -> str",
+      "visibility": "public"
+    },
+    {
+      "body_hash": "sha256:ef43e4560cdc2cebe33c6d3db491bb8843fc55c267188561fc17c11419de19fb",
+      "complexity": 1,
+      "decorators": [],
+      "docstring": null,
+      "embedding_id": 4,
+      "file_path": "src/services/user.py",
+      "id": "sutra python sample_python_repo src/services/user.py _generate_id().",
+      "is_async": false,
+      "is_exported": false,
+      "kind": "function",
+      "language": "python",
+      "location": {
+        "byte_end": 381,
+        "byte_start": 330,
+        "column_end": 15,
+        "column_start": 0,
+        "line_end": 24,
+        "line_start": 23
+      },
+      "name": "_generate_id",
+      "parameters": [
+        {
+          "default_value": null,
+          "is_keyword_variadic": false,
+          "is_variadic": false,
+          "name": "name",
+          "type_annotation": "str"
+        }
+      ],
+      "qualified_name": "src.services.user._generate_id",
+      "return_type": "str",
+      "signature": "def _generate_id(name: str) -> str",
+      "visibility": "private"
+    },
+    {
+      "body_hash": "sha256:93d55f275adbb12d321e034cb38806db9e892f80181e2fc108d27aff41c802a3",
+      "complexity": 1,
+      "decorators": [],
+      "docstring": null,
+      "embedding_id": 5,
+      "file_path": "src/services/user.py",
+      "id": "sutra python sample_python_repo src/services/user.py bootstrap().",
+      "is_async": false,
+      "is_exported": true,
+      "kind": "function",
+      "language": "python",
+      "location": {
+        "byte_end": 498,
+        "byte_start": 384,
+        "column_end": 14,
+        "column_start": 0,
+        "line_end": 30,
+        "line_start": 27
+      },
+      "name": "bootstrap",
+      "parameters": [
+        {
+          "default_value": null,
+          "is_keyword_variadic": false,
+          "is_variadic": false,
+          "name": "path",
+          "type_annotation": "str"
+        }
+      ],
+      "qualified_name": "src.services.user.bootstrap",
+      "return_type": "\"UserService\"",
+      "signature": "def bootstrap(path: str) -> \"UserService\"",
+      "visibility": "public"
+    },
+    {
+      "body_hash": "sha256:165c985f52abcc401989af69e04798701a8b57e1e16ffc4bf1898766e3603ec1",
+      "docstring": "User service module.",
+      "embedding_id": null,
+      "file_path": "src/services/user.py",
+      "id": "sutra python sample_python_repo src/services/user.py src/services/user/",
+      "is_exported": true,
+      "kind": "module",
+      "language": "python",
+      "location": {
+        "byte_end": 499,
+        "byte_start": 0,
+        "column_end": 0,
+        "column_start": 0,
+        "line_end": 31,
+        "line_start": 1
+      },
+      "name": "user",
+      "qualified_name": "src.services.user",
+      "visibility": "public"
+    }
+  ]
+}
