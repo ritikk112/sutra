@@ -34,9 +34,11 @@ _EXCLUDED_DIRS = frozenset({
 })
 
 # File extension → language string.
-# New languages plug in here when their adapters land (Priority 7: TS, Priority 8: Go).
+# New languages plug in here when their adapters land (Priority 8: Go).
 _EXTENSION_MAP: dict[str, str] = {
     ".py": "python",
+    ".ts": "typescript",
+    ".tsx": "typescript",
 }
 
 

@@ -369,7 +369,16 @@ class TestSnapshot:
         To regenerate:
             UPDATE_SNAPSHOTS=1 pytest tests/test_e2e_fixture_repo.py::TestSnapshot
         """
+        # Exclude fields that change on every run or every commit:
+        # - generated_at: wall-clock timestamp
+        # - commit_sha (inside repository): the fixture dir lives inside the sutra
+        #   git repo, so git rev-parse HEAD returns sutra's own HEAD — it changes
+        #   on every new sutra commit and is meaningless for this fixture.
         actual = {k: v for k, v in indexed["graph"].items() if k != "generated_at"}
+        if "repository" in actual:
+            actual = {**actual, "repository": {
+                k: v for k, v in actual["repository"].items() if k != "commit_sha"
+            }}
         actual_str = json.dumps(actual, indent=2, sort_keys=True)
 
         if not _SNAPSHOT_PATH.exists() and not os.getenv("UPDATE_SNAPSHOTS"):
