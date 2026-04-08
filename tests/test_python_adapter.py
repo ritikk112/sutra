@@ -425,14 +425,14 @@ class TestMethodSymbol:
         m = sym_by_name(result, "from_token")
         assert m is not None
         assert m.is_static is True
-        assert m.enclosing_class_id != ""
+        assert m.enclosing_class_id is not None
 
     def test_classmethod_has_class_id(self, adapter):
         src = "class Svc:\n    @classmethod\n    def create(cls):\n        pass\n"
         result = extract(adapter, src)
         m = sym_by_name(result, "create")
         assert m is not None
-        assert m.enclosing_class_id != ""
+        assert m.enclosing_class_id is not None
 
     def test_async_method(self, adapter):
         src = "class Svc:\n    async def fetch(self):\n        pass\n"

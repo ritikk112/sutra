@@ -6,10 +6,13 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from sutra.core.extractor.base import (
+    ClassSymbol,
     IndexResult,
+    MethodSymbol,
+    RelationKind,
+    Relationship,
     Repository,
     Symbol,
-    Relationship,
     File,
 )
 from sutra.core.extractor.moniker import repo_name_from_url
@@ -31,15 +34,21 @@ _EXCLUDED_DIRS = frozenset({
     ".pytest_cache",
     "dist",
     "build",
+    "testdata",   # Go conventional test-fixture directory; ignored by go toolchain
 })
 
 # File extension → language string.
-# New languages plug in here when their adapters land (Priority 8: Go).
 _EXTENSION_MAP: dict[str, str] = {
     ".py": "python",
     ".ts": "typescript",
     ".tsx": "typescript",
+    ".go": "go",
 }
+
+# Filename suffixes that are never indexed (before extension check).
+# _test.go files are excluded at the Indexer level, not the GoAdapter level,
+# to keep the adapter pure (adapters never see test files).
+_EXCLUDED_SUFFIXES = frozenset({"_test.go"})
 
 
 class Indexer:
@@ -148,6 +157,11 @@ class Indexer:
             relationships.extend(extraction.relationships)
             language_counts[lang] = language_counts.get(lang, 0) + 1
 
+        # Cross-file Go method → struct linking (O(n) in-memory dict lookup).
+        # Must run after all files are processed so all ClassSymbols are known.
+        if "go" in language_counts:
+            self._resolve_go_methods(symbols, relationships)
+
         result = IndexResult(
             repository=Repository(url=repo_url, name=repo_name),
             files=file_records,
@@ -163,14 +177,74 @@ class Indexer:
         return result
 
     # ------------------------------------------------------------------
+    # Post-aggregation linking
+    # ------------------------------------------------------------------
+
+    def _resolve_go_methods(
+        self,
+        symbols: list[Symbol],
+        relationships: list[Relationship],
+    ) -> None:
+        """
+        Post-aggregation pass: link Go methods to their receiver type when the
+        type is defined in a different file from the method.
+
+        The GoAdapter sets enclosing_class_id=None for cross-file methods and
+        emits no CONTAINS relationship for them.  This pass:
+          1. Builds a {(language, qualified_name) → class_id} index from all
+             ClassSymbol instances.
+          2. For each MethodSymbol with enclosing_class_id=None and language="go",
+             derives the expected class qualified_name from the method's own
+             qualified_name ("pkg.TypeName.MethodName" → "pkg.TypeName"), looks
+             it up, and — if found — sets enclosing_class_id and emits a resolved
+             CONTAINS relationship.
+        """
+        # Build class lookup: (language, qualified_name) → symbol_id
+        class_index: dict[tuple[str, str], str] = {
+            (sym.language, sym.qualified_name): sym.id
+            for sym in symbols
+            if isinstance(sym, ClassSymbol)
+        }
+
+        new_rels: list[Relationship] = []
+        for sym in symbols:
+            if not isinstance(sym, MethodSymbol):
+                continue
+            if sym.language != "go" or sym.enclosing_class_id is not None:
+                continue
+
+            # qualified_name for Go method: "package.TypeName.MethodName"
+            parts = sym.qualified_name.rsplit(".", 2)
+            if len(parts) < 3:
+                continue  # malformed — skip
+
+            package_part, type_name, _ = parts
+            class_qualified = f"{package_part}.{type_name}"
+            class_id = class_index.get(("go", class_qualified))
+            if class_id is None:
+                continue  # type in an external package or truly unresolvable
+
+            sym.enclosing_class_id = class_id
+            new_rels.append(Relationship(
+                source_id=class_id,
+                kind=RelationKind.CONTAINS,
+                is_resolved=True,
+                target_id=sym.id,
+                target_name=None,
+            ))
+
+        relationships.extend(new_rels)
+
+    # ------------------------------------------------------------------
     # File walk
     # ------------------------------------------------------------------
 
     def _walk_files(self, root: Path) -> Iterator[Path]:
         """
-        Yield all files under `root`, skipping excluded directories.
+        Yield all files under `root`, skipping excluded directories and
+        excluded suffixes (_test.go).
         Uses os.walk with in-place pruning of excluded dir names so we never
-        descend into .git/, __pycache__/, node_modules/, etc.
+        descend into .git/, __pycache__/, node_modules/, testdata/, etc.
         """
         for dirpath, dirnames, filenames in os.walk(root):
             # Prune in-place — os.walk respects this and won't descend
@@ -179,4 +253,6 @@ class Indexer:
                 if d not in _EXCLUDED_DIRS and not d.endswith(".egg-info")
             )
             for filename in sorted(filenames):
+                if any(filename.endswith(suf) for suf in _EXCLUDED_SUFFIXES):
+                    continue
                 yield Path(dirpath) / filename

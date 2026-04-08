@@ -213,7 +213,7 @@ class TestMethodSymbol:
 
     def test_default_enclosing_class_id(self):
         method = MethodSymbol(**make_base_fields("do_thing"))
-        assert method.enclosing_class_id == ""
+        assert method.enclosing_class_id is None
 
 
 # ---------------------------------------------------------------------------

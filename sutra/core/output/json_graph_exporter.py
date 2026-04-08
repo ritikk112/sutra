@@ -176,6 +176,8 @@ class JsonGraphExporter:
             base["enclosing_class_id"] = sym.enclosing_class_id
             base["is_static"] = sym.is_static
             base["is_constructor"] = sym.is_constructor
+            if sym.receiver_kind is not None:
+                base["receiver_kind"] = sym.receiver_kind
         elif isinstance(sym, FunctionSymbol):
             base["kind"] = "function"
             base.update(self._function_fields(sym))

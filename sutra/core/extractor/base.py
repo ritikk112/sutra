@@ -94,9 +94,10 @@ class ClassSymbol(SymbolBase):
 @dataclass
 class MethodSymbol(FunctionSymbol):
     """A method belonging to a class. Inherits all FunctionSymbol fields."""
-    enclosing_class_id: str = ""    # moniker of the containing ClassSymbol
+    enclosing_class_id: Optional[str] = None  # moniker of containing ClassSymbol; None when cross-file (Go)
     is_static: bool = False
     is_constructor: bool = False    # __init__ / constructor / New
+    receiver_kind: Optional[str] = None  # "pointer" | "value" | None; Go only
 
 
 @dataclass
