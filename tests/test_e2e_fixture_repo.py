@@ -22,10 +22,13 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from sutra.core.embedder.fixture import DEFAULT_FIXTURE_DIMS, FixtureEmbedder
 from sutra.core.extractor.adapters.python import PythonAdapter
 from sutra.core.extractor.moniker import is_valid_moniker
 from sutra.core.indexer import Indexer
-from sutra.core.output.json_graph_exporter import DEFAULT_EMBEDDING_DIMS, JsonGraphExporter
+from sutra.core.output.json_graph_exporter import JsonGraphExporter
+
+DEFAULT_EMBEDDING_DIMS = DEFAULT_FIXTURE_DIMS  # 384
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -77,6 +80,7 @@ def indexed(tmp_path_factory: pytest.TempPathFactory):
     indexer = Indexer(
         adapters={"python": PythonAdapter()},
         exporter=JsonGraphExporter(),
+        embedder=FixtureEmbedder(),
     )
     result = indexer.index(root=_FIXTURE_REPO, repo_url=_REPO_URL, output_dir=out)
     with open(out / "graph.json", encoding="utf-8") as fh:

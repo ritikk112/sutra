@@ -1,0 +1,20 @@
+# Sutra configuration file.
+# Copy this file and adjust for your environment.
+
+embedder:
+  # provider: openai | local | fixture
+  #   openai  — calls OpenAI Embeddings API (requires OPENAI_API_KEY)
+  #   local   — sentence-transformers, runs fully offline (requires: pip install sentence-transformers)
+  #   fixture — deterministic fake vectors, used in tests and CI (no API key needed)
+  provider: openai
+
+  # OpenAI settings (used when provider: openai)
+  model: text-embedding-3-small
+  dimensions: 1536          # OpenAI supports dimension reduction; 1536 is native for text-embedding-3-small
+  batch_size: 100           # chunks per API call; max is 2048 but 100 keeps latency and blast radius small
+  api_key_env: OPENAI_API_KEY   # env var name that holds your key — never put the key itself here
+
+  # Local settings (used when provider: local)
+  # model: all-MiniLM-L6-v2
+  # dimensions: 384         # must match model's native output or LocalEmbedder raises at construction
+  # batch_size: 32

@@ -49,9 +49,11 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def booth_indexed(tmp_path_factory: pytest.TempPathFactory):
     out = tmp_path_factory.mktemp("booth_output")
+    from sutra.core.embedder.fixture import FixtureEmbedder
     indexer = Indexer(
         adapters={"python": PythonAdapter()},
         exporter=JsonGraphExporter(),
+        embedder=FixtureEmbedder(),
     )
     result = indexer.index(root=_SMOKE_REPO, repo_url=_BOOTH_URL, output_dir=out)
     with open(out / "graph.json", encoding="utf-8") as fh:
