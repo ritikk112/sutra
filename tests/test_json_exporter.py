@@ -4,6 +4,11 @@ Tests for JsonGraphExporter (Priority 5).
 Strategy: build a small but complete IndexResult with every symbol type, then
 verify all three output files satisfy their contracts.  No mocking — real numpy
 arrays, real JSON files, real filesystem writes to a tmp_path.
+
+After the Priority 9 embedder refactor, the exporter no longer generates its
+own fixture vectors.  Tests supply vectors via FixtureEmbedder, matching the
+production flow where the Indexer builds chunks, calls the embedder, and passes
+(vectors, monikers) to the exporter.
 """
 from __future__ import annotations
 
@@ -14,6 +19,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from sutra.core.embedder.fixture import DEFAULT_FIXTURE_DIMS, FixtureEmbedder
 from sutra.core.extractor.base import (
     ClassSymbol,
     File,
@@ -35,6 +41,11 @@ from sutra.core.output.json_graph_exporter import (
     SUTRA_VERSION,
     JsonGraphExporter,
 )
+
+# DEFAULT_EMBEDDING_DIMS is kept in json_graph_exporter for backward compat.
+# It equals DEFAULT_FIXTURE_DIMS (384).
+assert DEFAULT_EMBEDDING_DIMS == DEFAULT_FIXTURE_DIMS
+
 
 # ---------------------------------------------------------------------------
 # Shared fixture helpers
@@ -166,20 +177,48 @@ def _make_result() -> IndexResult:
     )
 
 
+def _make_embeddings(
+    result: IndexResult,
+    dims: int = DEFAULT_FIXTURE_DIMS,
+) -> tuple[np.ndarray, list[str]]:
+    """
+    Build fixture vectors and monikers for exporter tests.
+
+    Uses monikers as chunk text so no source files need to exist on disk.
+    The FixtureEmbedder produces deterministic float32 vectors.
+
+    Embeddable symbols are sorted by id — matching exporter's stable ordering
+    so embedding_id integers in graph.json are deterministic.
+    """
+    from sutra.core.extractor.base import FunctionSymbol, ClassSymbol, MethodSymbol
+    embeddable = sorted(
+        [s for s in result.symbols if isinstance(s, (FunctionSymbol, ClassSymbol, MethodSymbol))],
+        key=lambda s: s.id,
+    )
+    monikers = [s.id for s in embeddable]
+    # Use moniker as chunk text — content doesn't matter for exporter tests
+    vectors = FixtureEmbedder(dims=dims).embed(monikers)
+    return vectors, monikers
+
+
 # ---------------------------------------------------------------------------
 # Tests: output files are created
 # ---------------------------------------------------------------------------
 
 class TestOutputFiles:
     def test_three_files_are_created(self, tmp_path: Path) -> None:
-        JsonGraphExporter().export(_make_result(), tmp_path)
+        result = _make_result()
+        vectors, monikers = _make_embeddings(result)
+        JsonGraphExporter().export(result, tmp_path, vectors, monikers)
         assert (tmp_path / "graph.json").exists()
         assert (tmp_path / "embeddings.npy").exists()
         assert (tmp_path / "embeddings_index.json").exists()
 
     def test_creates_output_dir_if_missing(self, tmp_path: Path) -> None:
         out = tmp_path / "nested" / "output"
-        JsonGraphExporter().export(_make_result(), out)
+        result = _make_result()
+        vectors, monikers = _make_embeddings(result)
+        JsonGraphExporter().export(result, out, vectors, monikers)
         assert out.is_dir()
 
 
@@ -191,7 +230,9 @@ class TestGraphSchema:
     @pytest.fixture(autouse=True)
     def _export(self, tmp_path: Path) -> None:
         self.out = tmp_path
-        JsonGraphExporter().export(_make_result(), tmp_path)
+        result = _make_result()
+        vectors, monikers = _make_embeddings(result)
+        JsonGraphExporter().export(result, tmp_path, vectors, monikers)
         with open(tmp_path / "graph.json", encoding="utf-8") as fh:
             self.graph = json.load(fh)
 
@@ -247,7 +288,9 @@ class TestGraphSchema:
 class TestSymbolSerialisation:
     @pytest.fixture(autouse=True)
     def _export(self, tmp_path: Path) -> None:
-        JsonGraphExporter().export(_make_result(), tmp_path)
+        result = _make_result()
+        vectors, monikers = _make_embeddings(result)
+        JsonGraphExporter().export(result, tmp_path, vectors, monikers)
         with open(tmp_path / "graph.json", encoding="utf-8") as fh:
             graph = json.load(fh)
         self.syms = {s["id"]: s for s in graph["symbols"]}
@@ -313,7 +356,9 @@ class TestSymbolSerialisation:
 class TestOrdering:
     @pytest.fixture(autouse=True)
     def _export(self, tmp_path: Path) -> None:
-        JsonGraphExporter().export(_make_result(), tmp_path)
+        result = _make_result()
+        vectors, monikers = _make_embeddings(result)
+        JsonGraphExporter().export(result, tmp_path, vectors, monikers)
         with open(tmp_path / "graph.json", encoding="utf-8") as fh:
             self.graph = json.load(fh)
 
@@ -338,7 +383,9 @@ class TestOrdering:
 class TestRelationshipSerialisation:
     @pytest.fixture(autouse=True)
     def _export(self, tmp_path: Path) -> None:
-        JsonGraphExporter().export(_make_result(), tmp_path)
+        result = _make_result()
+        vectors, monikers = _make_embeddings(result)
+        JsonGraphExporter().export(result, tmp_path, vectors, monikers)
         with open(tmp_path / "graph.json", encoding="utf-8") as fh:
             self.rels = json.load(fh)["relationships"]
 
@@ -372,7 +419,9 @@ class TestEmbeddingsContract:
     @pytest.fixture(autouse=True)
     def _export(self, tmp_path: Path) -> None:
         self.out = tmp_path
-        JsonGraphExporter().export(_make_result(), tmp_path)
+        result = _make_result()
+        vectors, monikers = _make_embeddings(result)
+        JsonGraphExporter().export(result, tmp_path, vectors, monikers)
         with open(tmp_path / "graph.json", encoding="utf-8") as fh:
             self.graph = json.load(fh)
         with open(tmp_path / "embeddings_index.json", encoding="utf-8") as fh:
@@ -436,8 +485,9 @@ class TestDeterminism:
         out1 = tmp_path / "run1"
         out2 = tmp_path / "run2"
         result = _make_result()
-        JsonGraphExporter().export(result, out1)
-        JsonGraphExporter().export(result, out2)
+        vectors, monikers = _make_embeddings(result)
+        JsonGraphExporter().export(result, out1, vectors, monikers)
+        JsonGraphExporter().export(result, out2, vectors, monikers)
         arr1 = np.load(out1 / "embeddings.npy")
         arr2 = np.load(out2 / "embeddings.npy")
         np.testing.assert_array_equal(arr1, arr2)
@@ -446,8 +496,9 @@ class TestDeterminism:
         out1 = tmp_path / "run1"
         out2 = tmp_path / "run2"
         result = _make_result()
-        JsonGraphExporter().export(result, out1)
-        JsonGraphExporter().export(result, out2)
+        vectors, monikers = _make_embeddings(result)
+        JsonGraphExporter().export(result, out1, vectors, monikers)
+        JsonGraphExporter().export(result, out2, vectors, monikers)
         with open(out1 / "graph.json") as f1, open(out2 / "graph.json") as f2:
             g1, g2 = json.load(f1), json.load(f2)
         # generated_at will differ; compare everything else
@@ -471,7 +522,9 @@ class TestEdgeCases:
             commit_hash="0000000",
             languages={},
         )
-        JsonGraphExporter().export(result, tmp_path)
+        vectors = np.empty((0, DEFAULT_EMBEDDING_DIMS), dtype=np.float32)
+        monikers: list[str] = []
+        JsonGraphExporter().export(result, tmp_path, vectors, monikers)
         array = np.load(tmp_path / "embeddings.npy")
         assert array.shape == (0, DEFAULT_EMBEDDING_DIMS)
         assert array.dtype == np.float32
@@ -486,7 +539,8 @@ class TestEdgeCases:
 
     def test_custom_embedding_dims(self, tmp_path: Path) -> None:
         result = _make_result()
-        JsonGraphExporter(embedding_dims=128).export(result, tmp_path)
+        vectors, monikers = _make_embeddings(result, dims=128)
+        JsonGraphExporter(embedding_dims=128).export(result, tmp_path, vectors, monikers)
         array = np.load(tmp_path / "embeddings.npy")
         assert array.shape[1] == 128
         with open(tmp_path / "graph.json") as fh:
@@ -526,7 +580,9 @@ class TestEdgeCases:
             commit_hash="abc",
             languages={"python": 1},
         )
-        JsonGraphExporter().export(result, tmp_path)
+        vectors = np.empty((0, DEFAULT_EMBEDDING_DIMS), dtype=np.float32)
+        monikers: list[str] = []
+        JsonGraphExporter().export(result, tmp_path, vectors, monikers)
         array = np.load(tmp_path / "embeddings.npy")
         assert array.shape == (0, DEFAULT_EMBEDDING_DIMS)
         with open(tmp_path / "graph.json") as fh:
@@ -534,3 +590,10 @@ class TestEdgeCases:
         assert graph["embeddings"]["count"] == 0
         for s in graph["symbols"]:
             assert s["embedding_id"] is None
+
+    def test_mismatched_vectors_and_monikers_raises(self, tmp_path: Path) -> None:
+        result = _make_result()
+        vectors = np.zeros((5, 384), dtype=np.float32)
+        monikers = ["only_one_moniker"]
+        with pytest.raises(AssertionError, match="moniker_order"):
+            JsonGraphExporter().export(result, tmp_path, vectors, monikers)

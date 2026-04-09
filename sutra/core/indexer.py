@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
+from sutra.core.embedder.base import Embedder
+from sutra.core.embedder.chunk_builder import build_chunks
 from sutra.core.extractor.base import (
     ClassSymbol,
     IndexResult,
@@ -55,11 +57,12 @@ class Indexer:
     """
     Orchestrates a full repository indexing run.
 
-    Design: plug-and-play adapters and exporter.
+    Design: plug-and-play adapters, exporter, and embedder.
 
         indexer = Indexer(
             adapters={"python": PythonAdapter()},
             exporter=JsonGraphExporter(),
+            embedder=FixtureEmbedder(),   # or OpenAIEmbedder / LocalEmbedder
         )
         result = indexer.index(
             root=Path("/path/to/repo"),
@@ -67,8 +70,9 @@ class Indexer:
             output_dir=Path("/path/to/output"),
         )
 
-    Adding TypeScript in Priority 7 is one line:
-        adapters={"python": PythonAdapter(), "typescript": TypeScriptAdapter()}
+    The embedder is required — there is no None default.  Tests pass
+    FixtureEmbedder(); production passes whichever provider is configured.
+    Use sutra.core.embedder.factory.from_config() to build the right one.
 
     Contract:
     - Files that cannot be read (I/O error) are skipped; path + error go to
@@ -78,15 +82,21 @@ class Indexer:
       in the moniker generator — this is asserted loudly here, not swallowed.
     - File walk order is sorted globally, so two runs on the same repo produce
       identical IndexResults (modulo timestamps and commit SHA).
+    - Embedding chunks are built after all files are processed; the embedder
+      receives the full chunk list and batches internally.
+    - len(chunks) == len(monikers) == vectors.shape[0] is asserted before
+      the exporter is called.
     """
 
     def __init__(
         self,
         adapters: dict[str, Any],   # lang_string -> adapter with .extract()
         exporter: JsonGraphExporter,
+        embedder: Embedder,
     ) -> None:
         self.adapters = adapters
         self.exporter = exporter
+        self.embedder = embedder
 
     # ------------------------------------------------------------------
     # Public API
@@ -173,7 +183,18 @@ class Indexer:
             failed_files=failed_files,
         )
 
-        self.exporter.export(result, output_dir)
+        # Build embedding chunks from all extracted symbols, then embed.
+        # build_chunks sorts by sym.id for stable embedding_id assignment.
+        # The embedder receives the full chunk list and batches internally.
+        chunks, monikers = build_chunks(symbols, root)
+        vectors = self.embedder.embed(chunks)
+        assert len(chunks) == len(monikers) == vectors.shape[0], (
+            f"Embedding invariant violated: "
+            f"chunks={len(chunks)}, monikers={len(monikers)}, "
+            f"vectors.shape[0]={vectors.shape[0]}"
+        )
+
+        self.exporter.export(result, output_dir, vectors, monikers)
         return result
 
     # ------------------------------------------------------------------

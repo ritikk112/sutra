@@ -943,7 +943,8 @@ class TestCrossFileMethodLinking:
         all_rels = types_ext.relationships + config_ext.relationships
 
         # Run post-pass
-        indexer = Indexer(adapters={}, exporter=JsonGraphExporter())
+        from sutra.core.embedder.fixture import FixtureEmbedder
+        indexer = Indexer(adapters={}, exporter=JsonGraphExporter(), embedder=FixtureEmbedder())
         indexer._resolve_go_methods(all_symbols, all_rels)
 
         # Find SetHost
@@ -972,7 +973,8 @@ class TestCrossFileMethodLinking:
         all_symbols = types_ext.symbols + config_ext.symbols
         all_rels = types_ext.relationships + config_ext.relationships
 
-        indexer = Indexer(adapters={}, exporter=JsonGraphExporter())
+        from sutra.core.embedder.fixture import FixtureEmbedder
+        indexer = Indexer(adapters={}, exporter=JsonGraphExporter(), embedder=FixtureEmbedder())
         indexer._resolve_go_methods(all_symbols, all_rels)
 
         config = next(s for s in all_symbols if s.name == "Config")
@@ -1001,9 +1003,11 @@ class TestIndexerGoIntegration:
         (tmp_path / "main.go").write_bytes(b"package main\nfunc Main() {}\n")
         (tmp_path / "main_test.go").write_bytes(b"package main\nfunc TestMain() {}\n")
 
+        from sutra.core.embedder.fixture import FixtureEmbedder
         indexer = Indexer(
             adapters={"go": GoAdapter()},
             exporter=JsonGraphExporter(),
+            embedder=FixtureEmbedder(),
         )
         result = indexer.index(root=tmp_path, repo_url="https://github.com/test/r", output_dir=tmp_path / "out")
 

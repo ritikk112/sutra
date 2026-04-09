@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,10 +21,13 @@ from sutra.core.extractor.base import (
 
 SUTRA_VERSION = "0.1.0"
 SCHEMA_VERSION = "1"
+
+# Default embedding dimensions — 384 matches all-MiniLM-L6-v2.
+# Used as a fallback when no vectors are present (empty IndexResult).
 DEFAULT_EMBEDDING_DIMS = 384
 
-# Only these symbol types will receive embeddings in the real pipeline.
-# Modules and variables don't have meaningful body chunks to embed.
+# Only these symbol types receive embeddings.
+# VariableSymbol and ModuleSymbol have no meaningful body chunk.
 _EMBEDDABLE = (FunctionSymbol, ClassSymbol, MethodSymbol)
 
 
@@ -33,21 +35,26 @@ class JsonGraphExporter:
     """
     Writes an IndexResult to three files in output_dir:
 
-      graph.json           — full versioned schema (symbols, relationships, files, metadata)
-      embeddings.npy       — float32 array of shape (N, dims), one row per embeddable symbol
-      embeddings_index.json — list of monikers, index N → moniker for row N in .npy
+      graph.json            — full versioned schema (symbols, relationships, files, metadata)
+      embeddings.npy        — float32 array of shape (N, dims), one row per embeddable symbol
+      embeddings_index.json — ordered list of monikers; row N ↔ monikers[N] ↔ graph symbol
+                              with embedding_id == N
 
-    In this phase no real embedder is present.  Each embeddable symbol receives a
-    deterministic fixture vector seeded from sha256(moniker), so:
-      - Two runs on the same IndexResult produce identical bytes.
-      - Identical monikers always produce identical vectors.
-      - Tests can snapshot the .npy content.
+    Vectors are supplied by the caller (via the Indexer which delegates to an
+    Embedder implementation).  The exporter is not responsible for generating
+    vectors — it only writes them.
 
     Contract (three sources of truth that must agree):
       Row N in embeddings.npy
         == embeddings_index.json[N]  (the moniker)
         == graph.json symbol whose embedding_id == N
-    All three are built by _build_embeddings() so they cannot drift.
+    All three are derived from the same (vectors, moniker_order) pair so they
+    cannot drift.
+
+    `embedding_dims` in the constructor is used to write the `dims` field in
+    graph.json and as a fallback when vectors is empty (shape (0, dims)).
+    When non-empty vectors are passed, the actual dims are taken from
+    vectors.shape[1] — the constructor value is ignored.
     """
 
     def __init__(self, embedding_dims: int = DEFAULT_EMBEDDING_DIMS) -> None:
@@ -57,7 +64,26 @@ class JsonGraphExporter:
     # Public API
     # ------------------------------------------------------------------
 
-    def export(self, result: IndexResult, output_dir: Path) -> None:
+    def export(
+        self,
+        result: IndexResult,
+        output_dir: Path,
+        vectors: np.ndarray,
+        moniker_order: list[str],
+    ) -> None:
+        """
+        Write graph.json, embeddings.npy, and embeddings_index.json to output_dir.
+
+        `vectors`      — float32 array of shape (N, dims); one row per embeddable symbol.
+        `moniker_order` — list of N monikers; vectors[i] is the embedding for moniker_order[i].
+
+        Invariant enforced: len(moniker_order) == vectors.shape[0].
+        """
+        assert len(moniker_order) == vectors.shape[0], (
+            f"moniker_order has {len(moniker_order)} entries but vectors has "
+            f"{vectors.shape[0]} rows — they must match."
+        )
+
         output_dir.mkdir(parents=True, exist_ok=True)
 
         # Stable ordering for deterministic output
@@ -68,17 +94,18 @@ class JsonGraphExporter:
         )
         sorted_files = sorted(result.files, key=lambda f: f.path)
 
-        # Build all three embedding outputs in one place — they cannot drift
-        embeddable = [s for s in sorted_symbols if isinstance(s, _EMBEDDABLE)]
-        array, index = self._build_embeddings(embeddable)
-        moniker_to_row: dict[str, int] = {m: i for i, m in enumerate(index)}
+        # Build moniker → row-index mapping from the supplied moniker_order
+        moniker_to_row: dict[str, int] = {m: i for i, m in enumerate(moniker_order)}
+
+        # Determine dims: from vectors if non-empty, else constructor fallback
+        dims = int(vectors.shape[1]) if vectors.shape[0] > 0 else self.embedding_dims
 
         # Write embeddings.npy
-        np.save(output_dir / "embeddings.npy", array)
+        np.save(output_dir / "embeddings.npy", vectors)
 
         # Write embeddings_index.json
         (output_dir / "embeddings_index.json").write_text(
-            json.dumps(index, indent=2), encoding="utf-8"
+            json.dumps(moniker_order, indent=2), encoding="utf-8"
         )
 
         # Write graph.json
@@ -103,8 +130,8 @@ class JsonGraphExporter:
             "embeddings": {
                 "file": "embeddings.npy",
                 "index_file": "embeddings_index.json",
-                "dims": self.embedding_dims,
-                "count": len(index),
+                "dims": dims,
+                "count": len(moniker_order),
                 "dtype": "float32",
             },
             "failed_files": [
@@ -115,33 +142,6 @@ class JsonGraphExporter:
         (output_dir / "graph.json").write_text(
             json.dumps(graph, indent=2), encoding="utf-8"
         )
-
-    # ------------------------------------------------------------------
-    # Embedding helpers
-    # ------------------------------------------------------------------
-
-    def _build_embeddings(
-        self, embeddable: list[Symbol]
-    ) -> tuple[np.ndarray, list[str]]:
-        """
-        Return (array, index) where:
-          - array  is float32, shape (len(embeddable), self.embedding_dims)
-          - index  is a list of monikers in the same order as array rows
-
-        Each row is deterministic: seeded from sha256(moniker) % 2^32.
-        """
-        rows: list[np.ndarray] = []
-        index: list[str] = []
-        for sym in embeddable:
-            seed = int(hashlib.sha256(sym.id.encode()).hexdigest(), 16) % (2**32)
-            rng = np.random.default_rng(seed)
-            rows.append(rng.random(self.embedding_dims).astype(np.float32))
-            index.append(sym.id)
-        if rows:
-            array = np.stack(rows).astype(np.float32)
-        else:
-            array = np.empty((0, self.embedding_dims), dtype=np.float32)
-        return array, index
 
     # ------------------------------------------------------------------
     # Serialisation helpers
