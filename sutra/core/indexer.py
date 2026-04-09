@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator, Optional
 
 from sutra.core.embedder.base import Embedder
 from sutra.core.embedder.chunk_builder import build_chunks
@@ -20,6 +20,10 @@ from sutra.core.extractor.base import (
 from sutra.core.extractor.moniker import repo_name_from_url
 from sutra.core.git_metadata import resolve_commit_hash
 from sutra.core.output.json_graph_exporter import JsonGraphExporter
+
+if TYPE_CHECKING:
+    from sutra.core.graph.postgres_age import AGEWriter
+    from sutra.core.graph.pgvector_store import PGVectorStore
 
 
 # ---------------------------------------------------------------------------
@@ -93,10 +97,14 @@ class Indexer:
         adapters: dict[str, Any],   # lang_string -> adapter with .extract()
         exporter: JsonGraphExporter,
         embedder: Embedder,
+        age_writer: Optional["AGEWriter"] = None,
+        pgvector_store: Optional["PGVectorStore"] = None,
     ) -> None:
         self.adapters = adapters
         self.exporter = exporter
         self.embedder = embedder
+        self.age_writer = age_writer
+        self.pgvector_store = pgvector_store
 
     # ------------------------------------------------------------------
     # Public API
@@ -195,6 +203,16 @@ class Indexer:
         )
 
         self.exporter.export(result, output_dir, vectors, monikers)
+
+        # Optional sinks — write to graph DB if configured.
+        # pgvector is written BEFORE AGE: if AGE fails, orphaned vector rows are
+        # harmless (keyed by moniker, not AGE node ID); the reverse leaves AGE
+        # nodes pointing at missing vectors.
+        if self.pgvector_store is not None:
+            self.pgvector_store.write(monikers, vectors)
+        if self.age_writer is not None:
+            self.age_writer.write_repository(result)
+
         return result
 
     # ------------------------------------------------------------------
