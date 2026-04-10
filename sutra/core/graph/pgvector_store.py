@@ -91,14 +91,61 @@ class PGVectorStore:
     # Public API
     # ------------------------------------------------------------------
 
-    def setup(self) -> None:
+    def setup(self, recreate: bool = False) -> None:
         """
         Idempotent setup: ensure the pgvector extension, embeddings table,
         and HNSW index all exist.  Safe to call multiple times.
+
+        Parameters
+        ----------
+        recreate : bool
+            When True, DROP the existing embeddings table before recreating it
+            at the new dimension.  WARNING: this destroys all existing embeddings.
+            Use when switching embedder providers (e.g. local→openai) that change
+            vector dimensions.  CLI equivalent: --recreate-embeddings-table.
+
+        Raises
+        ------
+        ValueError
+            If the table already exists with a different vector dimension and
+            recreate=False.  The error message names both dimensions and tells
+            the user to either drop the table manually or pass recreate=True.
         """
         with self._conn:
             with self._conn.cursor() as cur:
                 cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
+
+                if recreate:
+                    cur.execute(f"DROP TABLE IF EXISTS {self._table}")
+                else:
+                    # Detect existing table dimension before CREATE TABLE is a no-op.
+                    # to_regclass() returns NULL (not an error) when table absent.
+                    cur.execute(
+                        """
+                        SELECT atttypmod
+                        FROM pg_attribute
+                        WHERE attrelid = to_regclass(%s)
+                          AND attname = 'embedding'
+                          AND attnum > 0
+                          AND NOT attisdropped
+                        """,
+                        (self._table,),
+                    )
+                    row = cur.fetchone()
+                    if row is not None:
+                        existing_dims = row[0]
+                        if existing_dims != self._dims:
+                            raise ValueError(
+                                f"Dimension mismatch: table '{self._table}' has "
+                                f"vector({existing_dims}) but PGVectorStore was "
+                                f"configured with dims={self._dims}. "
+                                f"Either drop the table manually "
+                                f"(DROP TABLE {self._table}) and re-run, "
+                                f"or pass recreate=True to setup() "
+                                f"(CLI: --recreate-embeddings-table). "
+                                f"WARNING: recreate destroys all existing embeddings."
+                            )
+
                 cur.execute(f"""
                     CREATE TABLE IF NOT EXISTS {self._table} (
                         moniker TEXT PRIMARY KEY,
@@ -135,9 +182,12 @@ class PGVectorStore:
 
         if vectors.shape[1] != self._dims:
             raise ValueError(
-                f"Vector dimension mismatch: store configured for {self._dims} dims, "
-                f"got vectors with {vectors.shape[1]} dims.  "
-                f"Ensure embedder.dimensions matches PGVectorStore dims."
+                f"Embedding dimension mismatch: got vectors of shape {vectors.shape} "
+                f"but PGVectorStore was configured with dims={self._dims}. "
+                f"This usually means the embedder config changed without recreating "
+                f"the {self._table} table. Drop the table "
+                f"(DROP TABLE {self._table}) and re-run, "
+                f"or use --recreate-embeddings-table."
             )
         if len(monikers) != vectors.shape[0]:
             raise ValueError(
