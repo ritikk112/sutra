@@ -1,6 +1,11 @@
 .venv
 __pycache__/
 scripts/
+.codex
+.env
 
 PROGRESS.md
 RESEARCH.md
+frontend/web/node_modules/
+frontend/api/static/*
+!frontend/api/static/.gitkeep
