@@ -310,6 +310,132 @@ class AGEWriter:
                 file=sys.stderr,
             )
 
+    def delete_symbols(self, monikers: list[str]) -> None:
+        """
+        DETACH DELETE a specific set of Symbol nodes by moniker (id property).
+
+        Used by IncrementalUpdater to remove symbols that disappeared from a
+        modified file, or all symbols in a deleted file.  Also detaches all
+        edges (CALLS, CONTAINS, etc.) originating from or pointing at these nodes.
+
+        No-op if monikers is empty or any moniker is already absent.
+
+        Parameters
+        ----------
+        monikers : list[str]
+            Symbol monikers (the `id` property on Symbol nodes).
+        """
+        if not monikers:
+            return
+
+        # Build an inline Cypher list: ['mon1', 'mon2', ...]
+        id_list = "[" + ", ".join(_cypher_val(m) for m in monikers) + "]"
+        with self._conn.cursor() as cur:
+            self._run(cur,
+                f"""
+                    MATCH (n:{SYMBOL_LABEL})
+                    WHERE n.id IN {id_list}
+                    DETACH DELETE n
+                    RETURN count(n)
+                """,
+                return_spec="cnt agtype",
+            )
+
+    def update_commit_sha(self, repo_name: str, new_sha: str) -> None:
+        """
+        Atomically set Repository.commit_sha to `new_sha`.
+
+        Single MATCH + SET — no read-then-write, no race window.
+
+        INVARIANT: called LAST in IncrementalUpdater.update() after all file
+        processing succeeds.  This is the recovery checkpoint — if the updater
+        fails before reaching this call, the SHA remains at the old value and a
+        re-run will diff the same range again (idempotent recovery).
+
+        Parameters
+        ----------
+        repo_name : str
+            The repository name as stored on the Repository node.
+        new_sha : str
+            The new commit SHA to record.
+        """
+        from datetime import datetime, timezone  # noqa: PLC0415
+        indexed_at = datetime.now(timezone.utc).isoformat()
+        with self._conn.cursor() as cur:
+            self._run(cur,
+                f"""
+                    MATCH (r:{REPO_LABEL} {{name: {_cypher_val(repo_name)}}})
+                    SET r.commit_sha = {_cypher_val(new_sha)},
+                        r.indexed_at = {_cypher_val(indexed_at)}
+                    RETURN r
+                """,
+            )
+
+    def delete_relationships_from(self, source_monikers: list[str]) -> None:
+        """
+        Delete all outbound edges from Symbol nodes with the given monikers.
+
+        Used by IncrementalUpdater before re-inserting relationships for
+        changed/deleted files.  Clears stale CALLS, CONTAINS, etc. edges so
+        the graph does not accumulate stale edges after symbol bodies change.
+
+        Parameters
+        ----------
+        source_monikers : list[str]
+            Monikers of the source Symbol nodes whose outbound edges to delete.
+        """
+        if not source_monikers:
+            return
+
+        id_list = "[" + ", ".join(_cypher_val(m) for m in source_monikers) + "]"
+        with self._conn.cursor() as cur:
+            self._run(cur,
+                f"""
+                    MATCH (a:{SYMBOL_LABEL})-[r]->()
+                    WHERE a.id IN {id_list}
+                    DELETE r
+                    RETURN count(r)
+                """,
+                return_spec="cnt agtype",
+            )
+
+    def write_symbol_direct(
+        self,
+        sym: Any,
+        repo_name: str,
+        indexed_at: str,
+    ) -> None:
+        """
+        Upsert a single Symbol node outside of write_repository().
+
+        Used by IncrementalUpdater to write individual added/changed symbols
+        without constructing a full IndexResult.
+        """
+        with self._conn.cursor() as cur:
+            self._write_symbol(cur, sym, repo_name, indexed_at)
+
+    def write_relationships_direct(self, relationships: list) -> int:
+        """
+        Write a list of relationships in a single transaction.
+
+        Returns the count of skipped unresolved relationships.
+        Used by IncrementalUpdater after writing updated symbols.
+        """
+
+        class _FakeResult:
+            def __init__(self, rels: list) -> None:
+                self.relationships = rels
+
+        with self._conn.cursor() as cur:
+            cur.execute("BEGIN")
+            try:
+                skipped = self._write_relationships(cur, _FakeResult(relationships))
+                cur.execute("COMMIT")
+            except Exception:
+                cur.execute("ROLLBACK")
+                raise
+        return skipped
+
     def close(self) -> None:
         """Close the underlying psycopg2 connection."""
         if not self._conn.closed:
