@@ -86,3 +86,15 @@ captures = query.captures(tree.root_node)
 ```
 
 `captures` returns a dict of `{capture_name: list[Node]}` in v0.25.x (not a list of tuples as in older versions — confirm behavior when implementing).
+
+## Steps to run the pipeline:
+- cd /home/ritik/Desktop/sutra
+- source .venv/bin/activate
+- export SUTRA_PG_URL=postgresql://postgres:postgers@localhost:5433/postgres
+- git clone https://github.com/gin-gonic/gin /tmp/gin-repo
+
+- python -m pipelines.full_index \
+  --root /tmp/gin-repo \
+  --repo-url https://github.com/gin-gonic/gin \
+  --output-dir /tmp/gin-out \
+  --pg-url $SUTRA_PG_URL
