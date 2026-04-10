@@ -19,6 +19,7 @@ from sutra.core.extractor.base import (
 )
 from sutra.core.extractor.moniker import repo_name_from_url
 from sutra.core.git_metadata import resolve_commit_hash
+from sutra.core.gitignore_filter import GitignoreFilter
 from sutra.core.output.json_graph_exporter import JsonGraphExporter
 
 if TYPE_CHECKING:
@@ -99,12 +100,14 @@ class Indexer:
         embedder: Embedder,
         age_writer: Optional["AGEWriter"] = None,
         pgvector_store: Optional["PGVectorStore"] = None,
+        gitignore_filter: Optional[GitignoreFilter] = None,
     ) -> None:
         self.adapters = adapters
         self.exporter = exporter
         self.embedder = embedder
         self.age_writer = age_writer
         self.pgvector_store = pgvector_store
+        self.gitignore_filter = gitignore_filter
 
     # ------------------------------------------------------------------
     # Public API
@@ -280,10 +283,14 @@ class Indexer:
 
     def _walk_files(self, root: Path) -> Iterator[Path]:
         """
-        Yield all files under `root`, skipping excluded directories and
-        excluded suffixes (_test.go).
+        Yield all files under `root`, skipping excluded directories,
+        excluded suffixes (_test.go), and gitignored files.
+
         Uses os.walk with in-place pruning of excluded dir names so we never
         descend into .git/, __pycache__/, node_modules/, testdata/, etc.
+
+        If a GitignoreFilter was supplied at construction, each candidate file
+        is also checked against .gitignore rules before being yielded.
         """
         for dirpath, dirnames, filenames in os.walk(root):
             # Prune in-place — os.walk respects this and won't descend
@@ -294,4 +301,9 @@ class Indexer:
             for filename in sorted(filenames):
                 if any(filename.endswith(suf) for suf in _EXCLUDED_SUFFIXES):
                     continue
-                yield Path(dirpath) / filename
+                abs_path = Path(dirpath) / filename
+                if self.gitignore_filter is not None:
+                    rel = str(abs_path.relative_to(root)).replace("\\", "/")
+                    if self.gitignore_filter.should_ignore(rel):
+                        continue
+                yield abs_path

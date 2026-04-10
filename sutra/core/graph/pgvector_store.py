@@ -185,6 +185,29 @@ class PGVectorStore:
             )
             return [(row[0], float(row[1])) for row in cur.fetchall()]
 
+    def delete(self, monikers: list[str]) -> None:
+        """
+        Delete embeddings for the given monikers.
+
+        Used by IncrementalUpdater to remove embeddings for symbols that
+        disappeared (deleted from source or file deleted).  Idempotent —
+        deleting a moniker that does not exist is a no-op.
+
+        Parameters
+        ----------
+        monikers : list[str]
+            Symbol monikers to delete.
+        """
+        if not monikers:
+            return
+
+        with self._conn:
+            with self._conn.cursor() as cur:
+                cur.execute(
+                    f"DELETE FROM {self._table} WHERE moniker = ANY(%s)",
+                    (monikers,),
+                )
+
     def close(self) -> None:
         """Close the underlying psycopg2 connection."""
         if not self._conn.closed:

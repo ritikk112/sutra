@@ -185,3 +185,42 @@ class IndexResult:
     failed_files: list[tuple[str, str]] = field(default_factory=list)
     # Each entry: (repo_relative_path, error_message) — files the indexer
     # could not read or that the adapter raised an exception on.
+
+
+@dataclass
+class UpdateResult:
+    """
+    Output of an incremental update run.
+
+    Counts refer to *symbols* processed, not files.
+
+    Fields
+    ------
+    added : int
+        New monikers not previously in the graph.
+    updated : int
+        Existing monikers whose body_hash changed — re-extracted and re-embedded.
+    deleted : int
+        Monikers that disappeared (symbol removed or file deleted).
+    skipped : int
+        Monikers whose body_hash was unchanged — no DB or embedder touch.
+    fell_back_to_full_index : bool
+        True when the changed-file ratio exceeded the fallback threshold and
+        the updater delegated to Indexer.index(replace=True) instead.
+    old_commit_sha : str | None
+        The commit SHA the repo was indexed at before this run.
+        None when the Repository node did not exist (first run).
+    new_commit_sha : str
+        The commit SHA the repo is indexed at after this run.
+    failed_files : list[tuple[str, str]]
+        Per-file errors: (repo_relative_path, error_message).
+        Mirrors IndexResult.failed_files for consistent error surfacing.
+    """
+    added: int
+    updated: int
+    deleted: int
+    skipped: int
+    fell_back_to_full_index: bool
+    old_commit_sha: Optional[str]
+    new_commit_sha: str
+    failed_files: list[tuple[str, str]] = field(default_factory=list)
