@@ -70,6 +70,7 @@ class JsonGraphExporter:
         output_dir: Path,
         vectors: np.ndarray,
         moniker_order: list[str],
+        embedding_usage: Optional[dict] = None,
     ) -> None:
         """
         Write graph.json, embeddings.npy, and embeddings_index.json to output_dir.
@@ -134,6 +135,7 @@ class JsonGraphExporter:
                 "count": len(moniker_order),
                 "dtype": "float32",
             },
+            "embedding_usage": embedding_usage,
             "failed_files": [
                 {"path": path, "error": error}
                 for path, error in result.failed_files
