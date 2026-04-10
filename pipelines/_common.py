@@ -55,6 +55,7 @@ def build_dependencies(
     pg_url: Optional[str] = None,
     graph_name: Optional[str] = None,
     dims: Optional[int] = None,
+    recreate_embeddings: bool = False,
 ) -> PipelineDeps:
     """
     Construct all pipeline dependencies from config.
@@ -69,6 +70,10 @@ def build_dependencies(
         AGE graph name.  None → DEFAULT_GRAPH_NAME.
     dims : int | None
         Embedding dimensionality for pgvector.  None → derived from embedder.
+    recreate_embeddings : bool
+        When True, DROP and recreate the embeddings table at setup time.
+        WARNING: destroys all existing embeddings.  Use when switching
+        embedder providers that change vector dimensions.
     """
     adapters: dict[str, Any] = {
         "python": PythonAdapter(),
@@ -92,7 +97,7 @@ def build_dependencies(
 
         vec_dims = dims if dims is not None else embedder.dimensions
         pgvector_store = PGVectorStore(pg_url, dims=vec_dims)
-        pgvector_store.setup()
+        pgvector_store.setup(recreate=recreate_embeddings)
 
     return PipelineDeps(
         adapters=adapters,

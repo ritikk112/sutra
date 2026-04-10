@@ -41,16 +41,35 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", required=True, type=Path, help="Repository root path")
     parser.add_argument("--repo-url", required=True, help="Canonical remote URL")
     parser.add_argument("--output-dir", required=True, type=Path, help="Output directory")
-    parser.add_argument("--config", type=Path, default=None, help="Path to sutra.yaml")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("config/sutra.yaml"),
+        help="Path to sutra.yaml (default: config/sutra.yaml)",
+    )
     parser.add_argument("--pg-url", default=None, help="PostgreSQL connection string")
     parser.add_argument(
         "--replace", action="store_true",
         help="DETACH DELETE existing symbols before writing (re-index mode).",
     )
+    parser.add_argument(
+        "--recreate-embeddings-table",
+        action="store_true",
+        dest="recreate_embeddings_table",
+        help=(
+            "DROP and recreate the sutra_embeddings table before indexing. "
+            "WARNING: destroys all existing embeddings. Use when switching "
+            "embedder providers that change vector dimensions (e.g. local→openai)."
+        ),
+    )
     args = parser.parse_args(argv)
 
     pg_url = args.pg_url or os.environ.get("SUTRA_PG_URL")
-    deps = build_dependencies(config_path=args.config, pg_url=pg_url)
+    deps = build_dependencies(
+        config_path=args.config,
+        pg_url=pg_url,
+        recreate_embeddings=args.recreate_embeddings_table,
+    )
 
     try:
         gitignore_filter = GitignoreFilter(args.root)
@@ -78,6 +97,23 @@ def main(argv: list[str] | None = None) -> int:
             f"Full index complete: {len(result.symbols)} symbols, "
             f"{len(result.files)} files, commit {result.commit_hash}"
         )
+        usage = deps.embedder.usage_stats()
+        if usage:
+            total = usage.get("total_tokens", 0)
+            cost = usage.get("estimated_cost_usd", 0.0)
+            model = usage.get("model", "unknown")
+            rate = usage.get("usd_per_1m_tokens", 0.0)
+            print(
+                "Embedding usage: "
+                f"model={model}, total_tokens={total}, "
+                f"estimated_cost_usd=${float(cost):.8f} "
+                f"(rate=${float(rate):.4f}/1M tokens)"
+            )
+        else:
+            print(
+                "Embedding usage unavailable: provider does not expose token usage "
+                "(e.g. fixture/local embedder)."
+            )
         if result.failed_files:
             print(f"Failed files ({len(result.failed_files)}):", file=sys.stderr)
             for path, err in result.failed_files:
