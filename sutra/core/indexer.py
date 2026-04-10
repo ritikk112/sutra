@@ -199,13 +199,14 @@ class Indexer:
         # The embedder receives the full chunk list and batches internally.
         chunks, monikers = build_chunks(symbols, root)
         vectors = self.embedder.embed(chunks)
+        embedding_usage = self.embedder.usage_stats()
         assert len(chunks) == len(monikers) == vectors.shape[0], (
             f"Embedding invariant violated: "
             f"chunks={len(chunks)}, monikers={len(monikers)}, "
             f"vectors.shape[0]={vectors.shape[0]}"
         )
 
-        self.exporter.export(result, output_dir, vectors, monikers)
+        self.exporter.export(result, output_dir, vectors, monikers, embedding_usage=embedding_usage)
 
         # Optional sinks — write to graph DB if configured.
         # pgvector is written BEFORE AGE: if AGE fails, orphaned vector rows are

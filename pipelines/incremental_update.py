@@ -37,7 +37,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", required=True, type=Path, help="Repository root path")
     parser.add_argument("--repo-url", required=True, help="Canonical remote URL")
     parser.add_argument("--output-dir", required=True, type=Path, help="Output directory")
-    parser.add_argument("--config", type=Path, default=None, help="Path to sutra.yaml")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("config/sutra.yaml"),
+        help="Path to sutra.yaml (default: config/sutra.yaml)",
+    )
     parser.add_argument("--pg-url", default=None, help="PostgreSQL connection string")
     args = parser.parse_args(argv)
 

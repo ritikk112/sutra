@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Any
 
 import numpy as np
 
@@ -30,3 +31,11 @@ class Embedder(ABC):
         chunk list and the embedder batches internally.  This means event-loop
         setup cost (for async providers) is paid once per embed() call, not per batch.
         """
+
+    def usage_stats(self) -> dict[str, Any] | None:
+        """
+        Optional provider-specific usage metadata for the most recent embed run.
+
+        Returns None for providers that do not expose token/accounting data.
+        """
+        return None

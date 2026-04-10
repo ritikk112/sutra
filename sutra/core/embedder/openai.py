@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import numpy as np
 from openai import OpenAI
 
@@ -38,6 +40,10 @@ class OpenAIEmbedder(Embedder):
         self._model = model
         self._dimensions = dimensions
         self._batch_size = batch_size
+        self._usage_prompt_tokens = 0
+        self._usage_total_tokens = 0
+        self._usage_request_count = 0
+        self._last_estimated_cost_usd = 0.0
         # max_retries=3: SDK handles exponential back-off for rate limits / 5xx.
         self._client = OpenAI(api_key=api_key, max_retries=3)
 
@@ -49,6 +55,11 @@ class OpenAIEmbedder(Embedder):
         if not chunks:
             return np.empty((0, self._dimensions), dtype=np.float32)
 
+        self._usage_prompt_tokens = 0
+        self._usage_total_tokens = 0
+        self._usage_request_count = 0
+        self._last_estimated_cost_usd = 0.0
+
         all_vectors: list[np.ndarray] = []
 
         for i in range(0, len(chunks), self._batch_size):
@@ -58,6 +69,11 @@ class OpenAIEmbedder(Embedder):
                 input=batch,
                 dimensions=self._dimensions,
             )
+            usage = getattr(response, "usage", None)
+            if usage is not None:
+                self._usage_prompt_tokens += int(getattr(usage, "prompt_tokens", 0) or 0)
+                self._usage_total_tokens += int(getattr(usage, "total_tokens", 0) or 0)
+            self._usage_request_count += 1
             # Sort by index to guarantee order — API doesn't guarantee it.
             batch_vectors = [
                 np.array(item.embedding, dtype=np.float32)
@@ -70,4 +86,37 @@ class OpenAIEmbedder(Embedder):
             f"Shape mismatch: expected ({len(chunks)}, {self._dimensions}), "
             f"got {result.shape}"
         )
+        self._last_estimated_cost_usd = (
+            self._usage_total_tokens / 1_000_000
+        ) * self._usd_per_1m_tokens()
         return result
+
+    def usage_stats(self) -> dict[str, float | int | str]:
+        return {
+            "provider": "openai",
+            "model": self._model,
+            "prompt_tokens": self._usage_prompt_tokens,
+            "total_tokens": self._usage_total_tokens,
+            "request_count": self._usage_request_count,
+            "usd_per_1m_tokens": self._usd_per_1m_tokens(),
+            "estimated_cost_usd": round(self._last_estimated_cost_usd, 8),
+        }
+
+    def _usd_per_1m_tokens(self) -> float:
+        """
+        Return pricing used for cost estimation.
+
+        Override with SUTRA_EMBED_COST_PER_1M_TOKENS to track current billing.
+        """
+        env = os.environ.get("SUTRA_EMBED_COST_PER_1M_TOKENS", "").strip()
+        if env:
+            try:
+                return float(env)
+            except ValueError:
+                pass
+
+        default_by_model = {
+            "text-embedding-3-small": 0.02,
+            "text-embedding-3-large": 0.13,
+        }
+        return float(default_by_model.get(self._model, 0.02))
