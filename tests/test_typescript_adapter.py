@@ -623,6 +623,29 @@ function run(): void {}
         ids = [s.id for s in r.symbols]
         assert len(ids) == len(set(ids)), "Duplicate monikers found"
 
+    def test_duplicate_interface_declaration_no_crash(self):
+        # TypeScript files sometimes contain two interface declarations with
+        # the same name (copy-paste or merge-conflict artifacts). Both produce
+        # the same moniker; the second should be silently skipped rather than
+        # crashing the indexer.
+        src = """
+export interface VoiceRecording {
+  id: string;
+  url: string;
+}
+
+export interface VoiceRecording {
+  id: string;
+  duration: number;
+}
+"""
+        r = extract(src)
+        ids = [s.id for s in r.symbols]
+        assert len(ids) == len(set(ids)), "Duplicate monikers produced"
+        # Only one VoiceRecording symbol should be present (the first one wins)
+        voice_syms = [s for s in r.symbols if getattr(s, "name", None) == "VoiceRecording"]
+        assert len(voice_syms) == 1
+
     def test_full_integration(self):
         """Realistic module — every symbol type present, all relationships populated."""
         src = """

@@ -1051,6 +1051,20 @@ class TypeScriptAdapter:
         symbols: list[Symbol],
         relationships: list[Relationship],
     ) -> None:
+        # Track IDs emitted so far within this file. TypeScript allows
+        # declaration merging (same name as interface + class) and source files
+        # can have duplicate interface declarations (copy-paste / merge
+        # conflicts). Both produce identical monikers; we keep only the first.
+        seen_ids: set[str] = {module_id}
+
+        def _add_symbol(sym: Symbol) -> bool:
+            """Append sym if its id is not already seen. Returns True on success."""
+            if sym.id in seen_ids:
+                return False
+            seen_ids.add(sym.id)
+            symbols.append(sym)
+            return True
+
         for child in root.children:
             # Imports
             if child.type == "import_statement":
@@ -1086,7 +1100,8 @@ class TypeScriptAdapter:
                 )
                 if cls is None:
                     continue
-                symbols.append(cls)
+                if not _add_symbol(cls):
+                    continue
                 relationships.append(Relationship(
                     source_id=module_id,
                     kind=RelationKind.CONTAINS,
@@ -1115,7 +1130,9 @@ class TypeScriptAdapter:
                     methods, method_rels = _walk_class_body(
                         body_node, source, file_path, builder, mod_qname, cls
                     )
-                    symbols.extend(methods)
+                    for m in methods:
+                        if _add_symbol(m):
+                            pass  # relationships already in method_rels
                     relationships.extend(method_rels)
 
             # Interfaces
@@ -1125,7 +1142,8 @@ class TypeScriptAdapter:
                 )
                 if iface is None:
                     continue
-                symbols.append(iface)
+                if not _add_symbol(iface):
+                    continue
                 relationships.append(Relationship(
                     source_id=module_id,
                     kind=RelationKind.CONTAINS,
@@ -1146,7 +1164,9 @@ class TypeScriptAdapter:
                         methods, method_rels = _walk_class_body(
                             ic, source, file_path, builder, mod_qname, iface
                         )
-                        symbols.extend(methods)
+                        for m in methods:
+                            if _add_symbol(m):
+                                pass  # relationships already in method_rels
                         relationships.extend(method_rels)
 
             # Enums
@@ -1156,7 +1176,8 @@ class TypeScriptAdapter:
                 )
                 if enum_sym is None:
                     continue
-                symbols.append(enum_sym)
+                if not _add_symbol(enum_sym):
+                    continue
                 relationships.append(Relationship(
                     source_id=module_id,
                     kind=RelationKind.CONTAINS,
@@ -1171,7 +1192,8 @@ class TypeScriptAdapter:
                 )
                 if alias_sym is None:
                     continue
-                symbols.append(alias_sym)
+                if not _add_symbol(alias_sym):
+                    continue
                 relationships.append(Relationship(
                     source_id=module_id,
                     kind=RelationKind.CONTAINS,
@@ -1186,7 +1208,8 @@ class TypeScriptAdapter:
                 )
                 if fn is None:
                     continue
-                symbols.append(fn)
+                if not _add_symbol(fn):
+                    continue
                 relationships.append(Relationship(
                     source_id=module_id,
                     kind=RelationKind.CONTAINS,
@@ -1242,7 +1265,8 @@ class TypeScriptAdapter:
                         )
                         if fn is None:
                             continue
-                        symbols.append(fn)
+                        if not _add_symbol(fn):
+                            continue
                         relationships.append(Relationship(
                             source_id=module_id,
                             kind=RelationKind.CONTAINS,
@@ -1268,7 +1292,8 @@ class TypeScriptAdapter:
                         )
                         if var is None:
                             continue
-                        symbols.append(var)
+                        if not _add_symbol(var):
+                            continue
                         relationships.append(Relationship(
                             source_id=module_id,
                             kind=RelationKind.CONTAINS,

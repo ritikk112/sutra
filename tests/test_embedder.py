@@ -217,8 +217,11 @@ class TestChunkBuilderFunctionChunks:
         assert chunk.startswith("Function: pkg.my_func")
         assert "File: pkg/a.py" in chunk
         assert "Signature: def my_func() -> None" in chunk
-        assert "Body:" in chunk
-        assert "def my_func() -> None:" in chunk
+        assert "Implementation:" in chunk
+        # Body is the pure implementation — signature line is stripped, only body remains
+        assert "    pass" in chunk
+        # Signature must NOT be duplicated inside the implementation block
+        assert chunk.count("def my_func") == 1
 
     def test_function_chunk_with_docstring(self, tmp_path: Path) -> None:
         src = "def foo() -> None:\n    '''A docstring.'''\n    pass\n"
@@ -241,14 +244,14 @@ class TestChunkBuilderFunctionChunks:
         assert chunks[0].startswith("Method: pkg.MyClass.my_method")
 
     def test_function_body_truncated_at_max_lines(self, tmp_path: Path) -> None:
-        # Source: 1 "def" line + (_MAX_FUNC_LINES + 20) body lines = total_src_lines
-        # After truncating at _MAX_FUNC_LINES: remaining = total_src_lines - _MAX_FUNC_LINES
+        # Source: 1 "def" line (signature) + (_MAX_FUNC_LINES + extra) pure body lines.
+        # Fix 1 strips the signature line before truncation, so only the pure body
+        # lines count toward _MAX_FUNC_LINES.  expected_remaining = extra.
         extra = 20
         body_lines_count = _MAX_FUNC_LINES + extra
         lines = ["def big_func() -> None:"] + [f"    x = {i}" for i in range(body_lines_count)]
         src = "\n".join(lines) + "\n"
-        total_src_lines = len(lines)  # 1 + body_lines_count
-        expected_remaining = total_src_lines - _MAX_FUNC_LINES
+        expected_remaining = extra  # signature stripped; only body lines truncated
         _make_source_file(tmp_path, "pkg/a.py", src)
 
         func = _make_func(byte_start=0, byte_end=len(src.encode()))
@@ -257,13 +260,13 @@ class TestChunkBuilderFunctionChunks:
         chunk = chunks[0]
         # Truncation marker must appear
         assert f"... ({expected_remaining} more lines)" in chunk
-        # The truncated body must have exactly _MAX_FUNC_LINES lines in the Body section
-        body_section = chunk.split("Body:\n", 1)[1]
-        body_section_lines = body_section.split("\n")
+        # Implementation section must have exactly _MAX_FUNC_LINES lines before the marker
+        impl_section = chunk.split("Implementation:\n", 1)[1]
+        impl_section_lines = impl_section.split("\n")
         # Last line is the "... (N more lines)" marker
-        assert body_section_lines[-1] == f"... ({expected_remaining} more lines)"
-        # Before the marker: _MAX_FUNC_LINES lines
-        assert len(body_section_lines) - 1 == _MAX_FUNC_LINES
+        assert impl_section_lines[-1] == f"... ({expected_remaining} more lines)"
+        # Before the marker: exactly _MAX_FUNC_LINES lines
+        assert len(impl_section_lines) - 1 == _MAX_FUNC_LINES
 
     def test_hard_char_cap(self, tmp_path: Path) -> None:
         # Single-line function body that exceeds _MAX_CHARS
@@ -324,8 +327,6 @@ class TestChunkBuilderClassChunks:
 
     def test_class_methods_truncated_at_max(self, tmp_path: Path) -> None:
         cls = _make_class()
-        # Build 200 MethodSymbol instances — all pointing to cls but not in symbols list
-        # chunk_builder collects method names from symbols; build them all
         many_methods = [
             MethodSymbol(
                 id=f"sutra python repo pkg/a.py MyClass#m{i}().",
@@ -351,12 +352,6 @@ class TestChunkBuilderClassChunks:
             for i in range(200)
         ]
 
-        # build_chunks only embeds cls (ClassSymbol); methods are collected for the Methods: line
-        # But methods also need source if they're embeddable — pass only cls to avoid file reads
-        chunks, monikers = build_chunks([cls], tmp_path)
-        # class_methods for cls will be empty because methods not in symbols list
-        # To properly test truncation, we need to pass all symbols
-        # chunk_builder collects class_methods from ALL symbols in the list
         src = "\n".join(f"    def m{i}(self): pass" for i in range(200)) + "\n"
         _make_source_file(tmp_path, "pkg/a.py", src)
 
@@ -364,14 +359,15 @@ class TestChunkBuilderClassChunks:
         cls_chunk = next(c for c, m in zip(chunks, monikers) if "Class:" in c)
 
         assert f"... ({200 - _MAX_CLASS_METHODS} more)" in cls_chunk
-        # Exactly _MAX_CLASS_METHODS method names before the truncation suffix
-        methods_line = next(
-            line for line in cls_chunk.splitlines() if line.startswith("Methods:")
-        )
-        # Count method names (everything before the "... (N more)" part)
-        before_ellipsis = methods_line.split(", ... (")[0]
-        listed_names = [n.strip() for n in before_ellipsis.replace("Methods: ", "").split(",")]
-        assert len(listed_names) == _MAX_CLASS_METHODS
+        # Fix 5: Methods block is multi-line — each method on its own indented line.
+        # Count the non-ellipsis method lines after "Methods:".
+        chunk_lines = cls_chunk.splitlines()
+        methods_start = next(i for i, ln in enumerate(chunk_lines) if ln == "Methods:")
+        method_lines = [
+            ln for ln in chunk_lines[methods_start + 1:]
+            if ln.startswith("  ") and not ln.strip().startswith("...")
+        ]
+        assert len(method_lines) == _MAX_CLASS_METHODS
 
     def test_class_no_docstring_no_docstring_line(self, tmp_path: Path) -> None:
         cls = _make_class(docstring=None)

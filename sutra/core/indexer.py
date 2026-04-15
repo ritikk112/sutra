@@ -197,7 +197,7 @@ class Indexer:
         # Build embedding chunks from all extracted symbols, then embed.
         # build_chunks sorts by sym.id for stable embedding_id assignment.
         # The embedder receives the full chunk list and batches internally.
-        chunks, monikers = build_chunks(symbols, root)
+        chunks, monikers = build_chunks(symbols, root, relationships)
         vectors = self.embedder.embed(chunks)
         embedding_usage = self.embedder.usage_stats()
         assert len(chunks) == len(monikers) == vectors.shape[0], (

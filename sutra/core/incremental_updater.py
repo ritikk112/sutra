@@ -326,7 +326,7 @@ class IncrementalUpdater:
 
         # 4. Embed added + changed symbols only (unchanged skipped entirely).
         if symbols_to_write:
-            chunks, embed_monikers = build_chunks(symbols_to_write, root)
+            chunks, embed_monikers = build_chunks(symbols_to_write, root, new_rels)
             if chunks:
                 vectors = self.embedder.embed(chunks)
                 assert len(chunks) == len(embed_monikers) == vectors.shape[0]
