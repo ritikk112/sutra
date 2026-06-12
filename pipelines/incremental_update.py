@@ -50,22 +50,33 @@ def main(argv: list[str] | None = None) -> int:
 
     deps = build_dependencies(config_path=args.config, pg_url=pg_url)
     try:
-        if deps.age_writer is None or deps.age_reader is None or deps.pgvector_store is None:
+        if (
+            deps.graph_writer is None
+            or deps.reader is None
+            or deps.state_store is None
+            or deps.pgvector_store is None
+        ):
             print(
                 "Error: --pg-url or SUTRA_PG_URL is required for incremental update.",
                 file=sys.stderr,
             )
             return 1
 
+        from sutra.core.resolver import HeuristicResolver
+
         gitignore_filter = GitignoreFilter(args.root)
         updater = IncrementalUpdater(
             adapters=deps.adapters,
             embedder=deps.embedder,
-            age_writer=deps.age_writer,
-            age_reader=deps.age_reader,
+            graph_writer=deps.graph_writer,
+            reader=deps.reader,
+            state_store=deps.state_store,
             pgvector_store=deps.pgvector_store,
             gitignore_filter=gitignore_filter,
             exporter=deps.exporter,
+            # P20-lite: used by the full-reindex fallback path only; the
+            # per-file path leaves new edges unresolved (see class docstring).
+            resolver=HeuristicResolver(),
         )
 
         result = updater.update(args.root, args.repo_url, args.output_dir)

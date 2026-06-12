@@ -158,15 +158,24 @@ def test_full_roundtrip_1536_dims() -> None:
         store.write(monikers, vecs)
 
         # Query with the exact vector for "sym::alpha" — it should be nearest.
+        # VectorStore contract: (moniker, cosine SIMILARITY) best-first.
         results = store.search(vecs[0], k=3)
         assert len(results) == 3
-        top_moniker, top_dist = results[0]
+        top_moniker, top_sim = results[0]
         assert top_moniker == "sym::alpha"
-        assert top_dist < 1e-5, f"Expected near-zero distance for exact match, got {top_dist}"
+        assert abs(top_sim - 1.0) < 1e-5, (
+            f"Expected similarity ≈ 1.0 for exact match, got {top_sim}"
+        )
+        sims = [s for _, s in results]
+        assert sims == sorted(sims, reverse=True), "results must be best-first"
 
         # All three monikers must appear in results.
         result_monikers = {m for m, _ in results}
         assert result_monikers == set(monikers)
+
+        # filter_monikers restricts the candidate set BEFORE the top-k cut.
+        filtered = store.search(vecs[0], k=3, filter_monikers=["sym::beta"])
+        assert [m for m, _ in filtered] == ["sym::beta"]
     finally:
         store.close()
         _drop_table(_TEST_TABLE)

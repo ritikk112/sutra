@@ -22,21 +22,27 @@ This file is the authoritative reference for the development environment. Update
 | `numpy` | 2.4.4 | Required for .npy embeddings file — confirmed installed |
 
 | `gitpython` | 3.1.46 | Git clone/diff operations — confirmed installed |
-
-**Missing — must install before use:**
-- `sentence-transformers` — only if using local embedder (Phase 1 can skip)
+| `rustworkx` | 0.17.1 | In-memory graph for MCP-side traversal (Phase 2) |
+| `rank-bm25` | 0.2.2 | In-memory BM25 channel (Phase 2 P15) |
+| `mcp` | 1.27.2 | Official MCP Python SDK (FastMCP) — Phase 2 P19 |
+| `torch` | 2.12.0+cpu | CPU-only build (installed via `--index-url https://download.pytorch.org/whl/cpu` — do NOT reinstall from PyPI, the CUDA build is ~5GB) |
+| `sentence-transformers` | 5.5.1 | Local embedder (all-MiniLM-L6-v2) + cross-encoder reranker |
+| `fastapi` | 0.136.3 | **Upgraded from 0.116.1** — mcp requires starlette ≥1.x; old fastapi pinned starlette <0.48 |
+| `starlette` | 1.2.1 | Pulled by mcp 1.27.2 |
+| `pyright` | 1.1.410 | P20-full LSP resolver (`--resolver lsp`); bundles its own node runtime |
 
 ## PostgreSQL
 
 - **Version:** 16
 - **Host:** `localhost`
-- **Port:** `5433` (non-default — always specify in connection strings)
-- **Running in:** Docker container
-- **Extensions installed:** Apache AGE, pgvector
+- **Port:** `5434` (non-default — always specify in connection strings; 5432/5433/5437 in use by other Postgres containers)
+- **Running in:** Docker container `sutra-postgres` (image `sutra-pgvector:latest`)
+- **Volume:** named volume `sutra-pg-data` (persists across container restarts)
+- **Extensions installed:** pgvector (AGE removed in Phase 2 P0)
 
 ### Connection string template
 ```
-postgresql://USER:PASSWORD@localhost:5433/DBNAME
+postgresql://USER:PASSWORD@localhost:5434/DBNAME
 ```
 
 ### Verify extensions are active
@@ -46,15 +52,6 @@ FROM pg_available_extensions
 WHERE name IN ('age', 'vector');
 ```
 
-## Apache AGE
-
-- AGE supports PostgreSQL 11–16 — PG 16 is within range.
-- AGE uses openCypher via a SQL wrapper. Queries look like:
-  ```sql
-  SELECT * FROM ag_catalog.cypher('graph_name', $$ MATCH (n) RETURN n $$) AS (n ag_catalog.agtype);
-  ```
-- `CREATE EXTENSION age;` must be run per database. The `ag_catalog` schema must be in `search_path`.
-
 ## pgvector
 
 - Embedding vectors stored as `vector(dimensions)` column type.
@@ -63,7 +60,7 @@ WHERE name IN ('age', 'vector');
 
 ## Docker
 
-- Postgres container runs on port **5433** (mapped from container's 5432).
+- Postgres container runs on port **5434** (mapped from container's 5432).
 - `Dockerfile` and `docker-entrypoint-initdb.d/` are present in repo root — likely initializes AGE + pgvector extensions on first run.
 
 ## tree-sitter API Notes (v0.25.x)
@@ -90,7 +87,7 @@ captures = query.captures(tree.root_node)
 ## Steps to run the pipeline:
 - cd /home/ritik/Desktop/sutra
 - source .venv/bin/activate
-- export SUTRA_PG_URL=postgresql://postgres:postgers@localhost:5433/postgres
+- export SUTRA_PG_URL=postgresql://postgres:postgers@localhost:5434/postgres
 - git clone https://github.com/gin-gonic/gin /tmp/gin-repo
 
 - python -m pipelines.full_index \
@@ -98,3 +95,19 @@ captures = query.captures(tree.root_node)
   --repo-url https://github.com/gin-gonic/gin \
   --output-dir /tmp/gin-out \
   --pg-url $SUTRA_PG_URL
+
+## Postgres container management
+
+Start (if stopped):
+- `docker start sutra-postgres`
+
+Stop (without losing data — volume persists):
+- `docker stop sutra-postgres`
+
+Rebuild image (after Dockerfile changes):
+- `docker stop sutra-postgres && docker rm sutra-postgres`
+- `docker build -t sutra-pgvector:latest .`
+- `docker run -d --name sutra-postgres -p 5434:5432 -e POSTGRES_PASSWORD=postgers -v sutra-pg-data:/var/lib/postgresql/data sutra-pgvector:latest`
+
+Reset all data (DESTRUCTIVE):
+- `docker stop sutra-postgres && docker rm sutra-postgres && docker volume rm sutra-pg-data`

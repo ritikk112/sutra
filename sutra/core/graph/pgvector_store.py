@@ -3,13 +3,13 @@ pgvector embedding store for Sutra.
 
 PGVectorStore upserts embedding vectors (keyed by symbol moniker) into a
 PostgreSQL table using the pgvector extension.  It is an optional sink —
-Indexer accepts it as a constructor parameter alongside AGEWriter.
+Indexer accepts it as a constructor parameter alongside the GraphWriter.
 
 Write ordering
 --------------
-In Indexer.index(), pgvector is written BEFORE AGE.  If AGE fails, the
-pgvector data is orphaned (keyed by moniker, not by AGE node ID) but
-harmless — a re-run overwrites it.  The reverse order is worse: AGE nodes
+In Indexer.index(), pgvector is written BEFORE the graph store.  If the
+graph write fails, orphaned pgvector rows are harmless (keyed by moniker)
+and a re-run overwrites them.  The reverse order is worse: graph rows
 pointing at missing vectors.
 
 Dimension enforcement
@@ -31,8 +31,8 @@ already exists, `CREATE INDEX IF NOT EXISTS` is a no-op.
 
 Connection lifecycle
 --------------------
-Same pattern as AGEWriter: one psycopg2 connection per instance, explicit
-close() or context manager.  Credentials in conn_str are never logged.
+One psycopg2 connection per instance, explicit close() or context manager.
+Credentials in conn_str are never logged.
 
     store = PGVectorStore(conn_str, dims=384)
     store.setup()
@@ -48,15 +48,16 @@ Or:
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Collection, Optional
 
 import numpy as np
 import psycopg2
 
 from sutra.core.graph.schema import DEFAULT_TABLE_NAME
+from sutra.core.vector_store.base import VectorStore
 
 
-class PGVectorStore:
+class PGVectorStore(VectorStore):
     """
     Stores and retrieves embedding vectors in PostgreSQL via pgvector.
 
@@ -208,9 +209,10 @@ class PGVectorStore:
         self,
         query_vec: np.ndarray,
         k: int = 10,
+        filter_monikers: Optional[Collection[str]] = None,
     ) -> list[tuple[str, float]]:
         """
-        Find the k nearest embeddings by cosine distance.
+        Find the k nearest embeddings by cosine similarity.
 
         Parameters
         ----------
@@ -218,22 +220,34 @@ class PGVectorStore:
             Shape (dims,), dtype float32.
         k : int
             Number of results to return.
+        filter_monikers : Collection[str], optional
+            Restrict the search to these monikers BEFORE the top-k cut
+            (VectorStore contract — used by the P16 kind filter).
 
         Returns
         -------
         list[tuple[str, float]]
-            List of (moniker, cosine_distance) sorted nearest-first (distance 0
-            means identical vectors; distance 2 means maximally dissimilar).
+            (moniker, cosine_similarity) sorted best-first.  Similarity is
+            1 - pgvector's `<=>` cosine distance: 1 = identical,
+            -1 = opposite — the shared VectorStore score semantics.
         """
+        params: list[Any] = [query_vec.tolist()]
+        where = ""
+        if filter_monikers is not None:
+            where = "WHERE moniker = ANY(%s) "
+            params.append(list(filter_monikers))
+        params.append(k)
+
         with self._conn.cursor() as cur:
             cur.execute(
                 f"SELECT moniker, embedding <=> %s::vector AS dist "
                 f"FROM {self._table} "
+                f"{where}"
                 f"ORDER BY dist "
                 f"LIMIT %s",
-                (query_vec.tolist(), k),
+                params,
             )
-            return [(row[0], float(row[1])) for row in cur.fetchall()]
+            return [(row[0], 1.0 - float(row[1])) for row in cur.fetchall()]
 
     def delete(self, monikers: list[str]) -> None:
         """

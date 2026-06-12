@@ -2,16 +2,18 @@
 Shared dependency construction for Sutra pipelines.
 
 Both full_index.py and incremental_update.py need the same set of objects:
-adapters, embedder, AGEWriter, PGVectorStore, etc.  This module builds them
-from a config path and environment so the two CLIs don't duplicate the logic.
+adapters, embedder, graph writer/reader/state, pgvector store, etc.  This
+module builds them from a config path and environment so the two CLIs don't
+duplicate the logic.
 
 Usage
 -----
     deps = build_dependencies(config_path=Path("config/sutra.yaml"), pg_url=pg_url)
-    # deps.adapters, deps.embedder, deps.age_writer, deps.pgvector_store, ...
+    # deps.adapters, deps.embedder, deps.graph_writer, deps.reader,
+    # deps.state_store, deps.pgvector_store, ...
 
-The caller is responsible for calling setup() on the writers and close() when done
-(or using them as context managers).
+The caller is responsible for calling setup() on the writers and close() when
+done (or using them as context managers).
 """
 from __future__ import annotations
 
@@ -24,9 +26,11 @@ from sutra.core.extractor.adapters.go import GoAdapter
 from sutra.core.extractor.adapters.python import PythonAdapter
 from sutra.core.extractor.adapters.typescript import TypeScriptAdapter
 from sutra.core.gitignore_filter import GitignoreFilter
-from sutra.core.graph.age_reader import AGEReader
-from sutra.core.graph.postgres_age import AGEWriter
+from sutra.core.graph.base import GraphWriter, IncrementalReader
 from sutra.core.graph.pgvector_store import PGVectorStore
+from sutra.core.graph.sql_reader import SqlIncrementalReader
+from sutra.core.graph.sql_state import SqlIndexStateStore
+from sutra.core.graph.sql_writer import SqlGraphWriter
 from sutra.core.output.json_graph_exporter import JsonGraphExporter
 
 
@@ -36,16 +40,19 @@ class PipelineDeps:
     adapters: dict[str, Any]
     embedder: Any            # Embedder
     exporter: JsonGraphExporter
-    age_writer: Optional[AGEWriter]
-    age_reader: Optional[AGEReader]
+    graph_writer: Optional[GraphWriter]
+    reader: Optional[IncrementalReader]
+    state_store: Optional[SqlIndexStateStore]
     pgvector_store: Optional[PGVectorStore]
 
     def close(self) -> None:
-        """Close all DB connections."""
-        if self.age_writer:
-            self.age_writer.close()
-        if self.age_reader:
-            self.age_reader.close()
+        """Close all DB connections.  Idempotent."""
+        if self.graph_writer:
+            self.graph_writer.close()
+        if self.reader:
+            self.reader.close()
+        if self.state_store:
+            self.state_store.close()
         if self.pgvector_store:
             self.pgvector_store.close()
 
@@ -53,7 +60,6 @@ class PipelineDeps:
 def build_dependencies(
     config_path: Optional[Path] = None,
     pg_url: Optional[str] = None,
-    graph_name: Optional[str] = None,
     dims: Optional[int] = None,
     recreate_embeddings: bool = False,
 ) -> PipelineDeps:
@@ -66,8 +72,6 @@ def build_dependencies(
         Path to sutra.yaml.  None → FixtureEmbedder (CI/test mode).
     pg_url : str | None
         PostgreSQL connection string.  None → no DB sinks (JSON-only mode).
-    graph_name : str | None
-        AGE graph name.  None → DEFAULT_GRAPH_NAME.
     dims : int | None
         Embedding dimensionality for pgvector.  None → derived from embedder.
     recreate_embeddings : bool
@@ -84,16 +88,17 @@ def build_dependencies(
     embedder = from_config(config_path)
     exporter = JsonGraphExporter()
 
-    age_writer: Optional[AGEWriter] = None
-    age_reader: Optional[AGEReader] = None
+    graph_writer: Optional[GraphWriter] = None
+    reader: Optional[IncrementalReader] = None
+    state_store: Optional[SqlIndexStateStore] = None
     pgvector_store: Optional[PGVectorStore] = None
 
     if pg_url:
-        kw = {"graph_name": graph_name} if graph_name else {}
-        age_writer = AGEWriter(pg_url, **kw)
-        age_writer.setup()
+        graph_writer = SqlGraphWriter(pg_url)
+        graph_writer.setup()
 
-        age_reader = AGEReader(pg_url, graph_name or age_writer._graph_name)
+        reader = SqlIncrementalReader(pg_url)
+        state_store = SqlIndexStateStore(pg_url)
 
         vec_dims = dims if dims is not None else embedder.dimensions
         pgvector_store = PGVectorStore(pg_url, dims=vec_dims)
@@ -103,7 +108,8 @@ def build_dependencies(
         adapters=adapters,
         embedder=embedder,
         exporter=exporter,
-        age_writer=age_writer,
-        age_reader=age_reader,
+        graph_writer=graph_writer,
+        reader=reader,
+        state_store=state_store,
         pgvector_store=pgvector_store,
     )

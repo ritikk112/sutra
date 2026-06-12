@@ -1,0 +1,10 @@
+# Optional ML extras — NOT force-installed (SUTRA_PHASE2.md P18).
+#
+# Needed only for:
+#   - LocalEmbedder (provider: local in sutra.yaml; the P12 eval harness)
+#   - the cross-encoder reranker (sutra/core/retrieval/reranker.py)
+#
+# Install CPU-only torch FIRST, or pip will pull the ~5GB CUDA build:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements-ml.txt
+sentence-transformers==5.5.1
