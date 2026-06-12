@@ -88,13 +88,42 @@ class MonikerBuilder:
         """Top-level function: name()."""
         return self._build(file_path, f"{func_name}().")
 
-    def for_method(self, file_path: str, class_name: str, method_name: str) -> str:
-        """Instance/class/static method: ClassName#method_name()."""
-        return self._build(file_path, f"{class_name}#{method_name}().")
+    def for_method(
+        self,
+        file_path: str,
+        class_name: str,
+        method_name: str,
+        *,
+        enclosing: tuple[str, ...] = (),
+    ) -> str:
+        """Instance/class/static method: ClassName#method_name().
 
-    def for_class(self, file_path: str, class_name: str) -> str:
-        """Class or interface: ClassName#"""
-        return self._build(file_path, f"{class_name}#")
+        `enclosing` is the chain of outer class names (outermost first) when
+        the method's class is nested, e.g. enclosing=("Outer",) class_name="Inner"
+        → "Outer#Inner#method_name()."  Defaults to () for the common
+        top-level-class case, keeping the descriptor "ClassName#method_name()."
+        """
+        prefix = "".join(f"{c}#" for c in enclosing)
+        return self._build(file_path, f"{prefix}{class_name}#{method_name}().")
+
+    def for_class(
+        self,
+        file_path: str,
+        class_name: str,
+        *,
+        enclosing: tuple[str, ...] = (),
+    ) -> str:
+        """Class or interface: ClassName#
+
+        `enclosing` is the chain of outer class names (outermost first) when
+        the class is nested, e.g. enclosing=("Outer",) class_name="Config"
+        → "Outer#Config#".  Defaults to () for top-level classes, keeping the
+        descriptor "ClassName#".  Descriptor stacking mirrors for_method and
+        SCIP descriptor semantics, and is what makes same-named nested classes
+        (e.g. Pydantic's `class Config`) produce distinct monikers.
+        """
+        prefix = "".join(f"{c}#" for c in enclosing)
+        return self._build(file_path, f"{prefix}{class_name}#")
 
     def for_variable(self, file_path: str, var_name: str) -> str:
         """Module-level or class-level variable/constant: name."""

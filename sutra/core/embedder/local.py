@@ -48,10 +48,15 @@ class LocalEmbedder(Embedder):
                 f"different model."
             )
         self._dimensions = dimensions
+        self._model_name = model_name
 
     @property
     def dimensions(self) -> int:
         return self._dimensions
+
+    @property
+    def model_id(self) -> str:
+        return f"sentence-transformers/{self._model_name}"
 
     def embed(self, chunks: list[str]) -> np.ndarray:
         if not chunks:

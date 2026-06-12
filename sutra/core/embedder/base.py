@@ -22,6 +22,20 @@ class Embedder(ABC):
     def dimensions(self) -> int:
         """Number of dimensions per embedding vector."""
 
+    @property
+    @abstractmethod
+    def model_id(self) -> str:
+        """
+        Stable identifier of the embedding model, recorded in the artifact.
+
+        The consumer (MCP / retrieval) compares its query-time embedder's
+        model_id against the artifact's recorded value and refuses to mix
+        vectors from different models.  Examples:
+            "fixture-384"
+            "sentence-transformers/all-MiniLM-L6-v2"
+            "openai/text-embedding-3-small"
+        """
+
     @abstractmethod
     def embed(self, chunks: list[str]) -> np.ndarray:
         """

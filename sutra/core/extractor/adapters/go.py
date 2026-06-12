@@ -511,6 +511,11 @@ class GoAdapter:
 
         name = _node_text(name_node, source_bytes)
 
+        # Blank identifier does NOT introduce a binding (Go spec) — `func _()`
+        # can never be called and two of them collide on one moniker.  Skip.
+        if name == "_":
+            return None, []
+
         # init() disambiguation — multiple init() per file is valid Go
         if name == "init":
             line_start = node.start_point[0] + 1
@@ -584,6 +589,11 @@ class GoAdapter:
             return None, []
 
         method_name = _node_text(name_node, source_bytes)
+
+        # Blank-identifier method (`func (r T) _()`) — not a binding, skip.
+        if method_name == "_":
+            return None, []
+
         visibility, is_exported = _go_visibility(method_name)
 
         receiver_type_name, receiver_kind = self._parse_receiver(
@@ -707,6 +717,11 @@ class GoAdapter:
                 continue
 
             type_name = _node_text(name_node, source_bytes)
+
+            # Blank-identifier type (`type _ int`) — not a binding, skip.
+            if type_name == "_":
+                continue
+
             visibility, is_exported = _go_visibility(type_name)
 
             if type_node.type == "struct_type":
@@ -977,6 +992,12 @@ class GoAdapter:
                 type_text = "<inferred>"  # untyped var — type inferred from RHS
 
             for var_name in names:
+                # Blank identifier — interface-compliance assertions like
+                # `var _ Render = (*JSON)(nil)` (gin has 14 in one file).
+                # Not a binding per the Go spec; emitting it collides on
+                # the moniker '_.'.  Skip.
+                if var_name == "_":
+                    continue
                 visibility, is_exported = _go_visibility(var_name)
                 var_id = mb.for_variable(file_path, var_name)
                 syms.append(VariableSymbol(

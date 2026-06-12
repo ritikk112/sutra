@@ -123,6 +123,37 @@ def _find_enclosing_class(node: Node) -> Optional[Node]:
     return None
 
 
+def _enclosing_class_names(node: Node) -> tuple[str, ...]:
+    """
+    Names of the classes enclosing `node`, outermost first, EXCLUDING `node`
+    itself.
+
+    Used to build stacked descriptors for nested classes/methods so that
+    same-named nested classes (e.g. Pydantic's `class Config`) get distinct
+    monikers.  Examples (walking up from the inner node):
+      - class Outer: class Config: ...   _enclosing_class_names(Config) → ("Outer",)
+      - class Outer: class Inner: def m  _enclosing_class_names(m)      → ("Outer", "Inner")
+      - top-level class / method          → ()
+
+    A function_definition encountered while walking up breaks the chain: a
+    class defined inside a function is not a true nested type for moniker
+    purposes (and Phase 1 does not track function-local symbols), mirroring
+    _find_enclosing_class which stops at the first enclosing function.
+    """
+    names: list[str] = []
+    current = node.parent
+    while current is not None:
+        if current.type == "class_definition":
+            name_node = current.child_by_field_name("name")
+            if name_node is not None:
+                names.append(_txt(name_node))
+        elif current.type == "function_definition":
+            break
+        current = current.parent
+    names.reverse()
+    return tuple(names)
+
+
 def _find_enclosing_function(node: Node) -> Optional[Node]:
     """
     Walk up ancestors. Returns the nearest enclosing function_definition,
@@ -556,6 +587,12 @@ class PythonAdapter:
         # In tree-sitter-python 0.25.0, these are expression_statement → assignment
         # where assignment has a "type" field (annotation). NOT an annotated_assignment
         # node — that node type does not exist in this grammar version.
+        #
+        # Re-annotating the same name later in the module is legal Python and
+        # must not emit a second symbol with the same moniker — the first
+        # declaration site is canonical (same dedup discipline as the TS
+        # adapter's seen_ids and the Go blank-identifier skip).
+        seen_var_ids: set[str] = set()
         for child in tree.root_node.children:
             if child.type == "expression_statement":
                 for sub in child.children:
@@ -565,7 +602,8 @@ class PythonAdapter:
                             var = self._build_variable(
                                 sub, file_path, source_bytes, builder, mod_qname
                             )
-                            if var:
+                            if var and var.id not in seen_var_ids:
+                                seen_var_ids.add(var.id)
                                 symbols.append(var)
                                 relationships.append(Relationship(
                                     source_id=module_id,
@@ -611,10 +649,16 @@ class PythonAdapter:
         body = node.child_by_field_name("body")
         body_bytes = source[body.start_byte:body.end_byte] if body else b""
 
+        # Nested-class chain (outermost first), e.g. ("MeetingResponse",) for an
+        # inner `class Config`.  Empty for top-level classes — keeps the moniker
+        # and qualified_name unchanged in the common case.
+        enclosing = _enclosing_class_names(node)
+        qual_path = ".".join((*enclosing, name))
+
         return ClassSymbol(
-            id=builder.for_class(file_path, name),
+            id=builder.for_class(file_path, name, enclosing=enclosing),
             name=name,
-            qualified_name=f"{mod_qname}.{name}",
+            qualified_name=f"{mod_qname}.{qual_path}",
             file_path=file_path,
             location=_location(node),
             body_hash=_sha256(body_bytes),
@@ -684,10 +728,20 @@ class PythonAdapter:
         is_static = any("staticmethod" in d for d in decorators)
         is_classmethod = any("classmethod" in d for d in decorators)
 
+        # Full enclosing-class chain of the method (outermost first), including
+        # the method's own class as the last element.  For a method in a nested
+        # class this is ("Outer", "Inner"); the prefix before the method's own
+        # class ("Outer") is what makes nested-class methods uniquely named.
+        chain = _enclosing_class_names(node)
+        method_enclosing = chain[:-1] if chain else ()
+        qual_path = ".".join((*chain, name)) if chain else f"{cls_sym.name}.{name}"
+
         return MethodSymbol(
-            id=builder.for_method(file_path, cls_sym.name, name),
+            id=builder.for_method(
+                file_path, cls_sym.name, name, enclosing=method_enclosing
+            ),
             name=name,
-            qualified_name=f"{mod_qname}.{cls_sym.name}.{name}",
+            qualified_name=f"{mod_qname}.{qual_path}",
             file_path=file_path,
             location=_location(node),
             body_hash=_sha256(body_bytes),
