@@ -1,0 +1,146 @@
+# Query-analyzer lexicon (P16).  Checked in, pure data — no LLM anywhere.
+#
+# kind_nouns: explicit words that name a symbol kind.  When a query contains
+# nouns from exactly ONE group, that group's kinds become the kind_hint.
+# Nouns from MULTIPLE groups → ambiguous → no hint (conservative).
+#
+# behavioral_verbs: verbs implying the query wants something that DOES the
+# action — a callable.  Used as a kind hint only when no explicit kind noun
+# is present.  Matched after lemma-lite normalization (saves/saving/saved →
+# save), so list lemmas only.
+
+kind_nouns:
+  callable:
+    kinds: [function, method]
+    nouns:
+      - function
+      - functions
+      - method
+      - methods
+      - func
+      - handler
+      - handlers
+      - hook
+      - hooks
+      - middleware
+      - endpoint
+      - endpoints
+      - callback
+      - routine
+      - helper
+      - util
+      - utility
+  class:
+    kinds: [class]
+    nouns:
+      - class
+      - classes
+      - model
+      - models
+      - interface
+      - interfaces
+      - struct
+      - structs
+      - schema
+      - schemas
+      - type
+      - types
+      - entity
+      - entities
+      - dataclass
+      - props
+      - enum
+      - singleton
+      - dto
+  module:
+    kinds: [module]
+    nouns:
+      # NOTE: "file"/"files" are deliberately ABSENT — in real queries they
+      # almost always name a data object ("form file", "file to disk"), not
+      # a code module, and as kind nouns they hijacked verb-derived hints.
+      - module
+      - modules
+      - package
+      - packages
+  variable:
+    kinds: [variable]
+    nouns:
+      - variable
+      - variables
+      - constant
+      - constants
+      - flag
+      - flags
+      - setting
+      - settings
+
+# Collocation blockers: a kind noun does NOT count when the word right
+# before it is listed here — it names a DATA property, not a symbol kind.
+# Found on pehchaan: "allowed image type" hinted {class} and the kind
+# filter dropped the expected method outright.
+noun_collocation_blockers:
+  type: [content, image, file, mime, media, data, return]
+  types: [content, image, file, mime, media, data, return]
+
+behavioral_verbs:
+  - save
+  - store
+  - persist
+  - write
+  - read
+  - load
+  - fetch
+  - get
+  - retrieve
+  - create
+  - insert
+  - update
+  - delete
+  - remove
+  - upload
+  - download
+  - send
+  - receive
+  - attach
+  - decode
+  - encode
+  - parse
+  - serialize
+  - deserialize
+  - render
+  - bind
+  - validate
+  - verify
+  - recover
+  - retry
+  - listen
+  - start
+  - stop
+  - run
+  - register
+  - poll
+  - generate
+  - compute
+  - calculate
+  - resolve
+  - detect
+  - check
+  - handle
+  - process
+  - transform
+  - convert
+  - filter
+  - sort
+  - search
+  - find
+  - debounce
+  - throttle
+  - cache
+  - log
+  - authenticate
+  - authorize
+  - connect
+  - close
+  - open
+  - redirect
+  - abort

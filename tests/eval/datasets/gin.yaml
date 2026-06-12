@@ -1,0 +1,71 @@
+# P12 eval dataset — gin (Go HTTP framework / service)
+# Repo: https://github.com/gin-gonic/gin @ v1.10.0
+#       (75ccf94d605a05fe24817fc2f166f6f2959d5cea)
+# Expected monikers verified against tests/eval/artifacts/gin/graph.json.
+repo: gin
+cases:
+  # ----- behavioral -----
+  - query: "middleware that recovers from panics and returns 500"
+    category: behavioral
+    expected:
+      - "sutra go gin recovery.go Recovery()."
+      - "sutra go gin recovery.go RecoveryWithWriter()."
+      - "sutra go gin recovery.go CustomRecovery()."
+      - "sutra go gin recovery.go CustomRecoveryWithWriter()."
+
+  - query: "function that serializes a struct as json into the response body"
+    category: behavioral
+    expected:
+      - "sutra go gin context.go Context#JSON()."
+      - "sutra go gin context.go Context#PureJSON()."
+      - "sutra go gin context.go Context#IndentedJSON()."
+
+  - query: "how does gin figure out the real client ip address"
+    category: behavioral
+    expected:
+      - "sutra go gin context.go Context#ClientIP()."
+
+  - query: "save an uploaded multipart form file to disk"
+    category: behavioral
+    expected:
+      - "sutra go gin context.go Context#SaveUploadedFile()."
+
+  - query: "function that binds the request body to a struct based on content type"
+    category: behavioral
+    expected:
+      - "sutra go gin context.go Context#ShouldBind()."
+      - "sutra go gin context.go Context#Bind()."
+      - "sutra go gin context.go Context#ShouldBindWith()."
+      - "sutra go gin binding/binding.go Default()."
+
+  # ----- entity -----
+  - query: "the router group type that manages route prefixes"
+    category: entity
+    expected:
+      - "sutra go gin routergroup.go RouterGroup#"
+    kind_filter: class
+
+  # ----- paraphrase -----
+  - query: "start the http server and listen for requests"
+    category: paraphrase
+    expected:
+      - "sutra go gin gin.go Engine#Run()."
+      - "sutra go gin gin.go Engine#RunListener()."
+      - "sutra go gin gin.go Engine#RunTLS()."
+
+  - query: "register a global middleware on the engine"
+    category: paraphrase
+    expected:
+      - "sutra go gin gin.go Engine#Use()."
+      - "sutra go gin routergroup.go RouterGroup#Use()."
+
+  - query: "set the handlers for 404 not found routes"
+    category: paraphrase
+    expected:
+      - "sutra go gin gin.go Engine#NoRoute()."
+
+  # ----- exact-name -----
+  - query: "BasicAuthForRealm"
+    category: exact-name
+    expected:
+      - "sutra go gin auth.go BasicAuthForRealm()."
