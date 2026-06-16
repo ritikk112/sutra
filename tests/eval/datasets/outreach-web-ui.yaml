@@ -1,0 +1,69 @@
+# P12 eval dataset — outreach-web-ui (TypeScript React frontend)
+# Repo: /home/ritik/Desktop/outreach-frontend/outreach-web-ui (local snapshot,
+# not git-controlled — commit_sha recorded as "unknown" in the artifact).
+# Expected monikers verified against tests/eval/artifacts/outreach-web-ui/graph.json.
+repo: outreach-web-ui
+cases:
+  # ----- known-failure -----
+  # THE motivating Phase 1 failure, verbatim.  The token-attaching code is an
+  # anonymous axios request interceptor in api-client.ts — the only symbol
+  # that can represent it is the module.  The vector channel can never win
+  # this one (modules are not embedded); lexical/moniker channels must.
+  - query: "a global function that attaches token to outgoing requests"
+    category: known-failure
+    expected:
+      - "sutra typescript outreach-web-ui src/lib/api-client.ts src/lib/api-client/"
+
+  # ----- behavioral -----
+  - query: "function that decodes the jwt token payload"
+    category: behavioral
+    expected:
+      - "sutra typescript outreach-web-ui src/lib/jwt-utils.ts decodeJWT()."
+      - "sutra typescript outreach-web-ui src/lib/api-client.ts decodeJWT()."
+
+  - query: "how do we get the user id from the auth token"
+    category: behavioral
+    expected:
+      - "sutra typescript outreach-web-ui src/lib/jwt-utils.ts getUserIdFromToken()."
+
+  - query: "function that uploads the bulk import file to the backend"
+    category: behavioral
+    expected:
+      - "sutra typescript outreach-web-ui src/services/bulkImports.ts uploadFile()."
+      - "sutra typescript outreach-web-ui src/services/bulkImportV2.ts uploadV2()."
+
+  - query: "download the csv template for bulk imports"
+    category: behavioral
+    expected:
+      - "sutra typescript outreach-web-ui src/services/bulkImports.ts downloadTemplate()."
+      - "sutra typescript outreach-web-ui src/services/bulkImportV2.ts downloadV2Template()."
+
+  - query: "hook that polls the progress of a bulk import job"
+    category: behavioral
+    expected:
+      - "sutra typescript outreach-web-ui src/hooks/useBulkImportProgress.ts useBulkImportProgress()."
+      - "sutra typescript outreach-web-ui src/hooks/useBulkImportV2Progress.ts useBulkImportV2Progress()."
+
+  # ----- entity -----
+  - query: "props for the edit deal modal"
+    category: entity
+    expected:
+      - "sutra typescript outreach-web-ui src/components/Deals/EditDealModal.tsx EditDealModalProps#"
+    kind_filter: class
+
+  # ----- paraphrase -----
+  - query: "debounce a changing value"
+    category: paraphrase
+    expected:
+      - "sutra typescript outreach-web-ui src/hooks/use-debounce.ts useDebounce()."
+
+  - query: "detect whether the viewport is mobile sized"
+    category: paraphrase
+    expected:
+      - "sutra typescript outreach-web-ui src/hooks/use-mobile.ts useIsMobile()."
+
+  # ----- exact-name -----
+  - query: "lazyRetry"
+    category: exact-name
+    expected:
+      - "sutra typescript outreach-web-ui src/lib/lazy-retry.ts lazyRetry()."

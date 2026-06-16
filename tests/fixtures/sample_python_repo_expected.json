@@ -1,10 +1,12 @@
 {
+  "embedding_usage": null,
   "embeddings": {
     "count": 6,
     "dims": 384,
     "dtype": "float32",
     "file": "embeddings.npy",
-    "index_file": "embeddings_index.json"
+    "index_file": "embeddings_index.json",
+    "model_id": "fixture-384"
   },
   "failed_files": [],
   "files": [

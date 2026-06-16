@@ -71,6 +71,7 @@ class JsonGraphExporter:
         vectors: np.ndarray,
         moniker_order: list[str],
         embedding_usage: Optional[dict] = None,
+        embedding_model_id: Optional[str] = None,
     ) -> None:
         """
         Write graph.json, embeddings.npy, and embeddings_index.json to output_dir.
@@ -134,6 +135,7 @@ class JsonGraphExporter:
                 "dims": dims,
                 "count": len(moniker_order),
                 "dtype": "float32",
+                "model_id": embedding_model_id,
             },
             "embedding_usage": embedding_usage,
             "failed_files": [

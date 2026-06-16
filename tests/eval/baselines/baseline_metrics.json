@@ -1,0 +1,405 @@
+{
+  "ks": [
+    1,
+    5,
+    10
+  ],
+  "overall": {
+    "n": 32,
+    "recall@1": 0.59375,
+    "recall@5": 0.8125,
+    "recall@10": 0.9375,
+    "mrr": 0.7023809523809523
+  },
+  "by_category": {
+    "behavioral": {
+      "n": 15,
+      "recall@1": 0.8,
+      "recall@5": 0.8,
+      "recall@10": 0.9333333333333333,
+      "mrr": 0.8194444444444445
+    },
+    "entity": {
+      "n": 4,
+      "recall@1": 0.5,
+      "recall@5": 0.75,
+      "recall@10": 1.0,
+      "mrr": 0.65625
+    },
+    "exact-name": {
+      "n": 4,
+      "recall@1": 0.5,
+      "recall@5": 1.0,
+      "recall@10": 1.0,
+      "mrr": 0.6875
+    },
+    "known-failure": {
+      "n": 2,
+      "recall@1": 0.0,
+      "recall@5": 0.5,
+      "recall@10": 0.5,
+      "mrr": 0.16666666666666666
+    },
+    "paraphrase": {
+      "n": 7,
+      "recall@1": 0.42857142857142855,
+      "recall@5": 0.8571428571428571,
+      "recall@10": 1.0,
+      "mrr": 0.6394557823129252
+    }
+  },
+  "per_query": [
+    {
+      "query": "which function saves the meeting in the database",
+      "repo": "booth",
+      "category": "behavioral",
+      "first_hit_rank": 6,
+      "top": [
+        "sutra python booth controllers/meeting.py get_meetings().",
+        "sutra python booth service/meeting.py MeetingService#",
+        "sutra python booth controllers/meeting.py delete_meeting()."
+      ]
+    },
+    {
+      "query": "function that uploads a voice note audio file to s3",
+      "repo": "booth",
+      "category": "behavioral",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra python booth clients/s3_client.py S3Client#upload_voice_note().",
+        "sutra python booth clients/s3_client.py S3Client#",
+        "sutra python booth service/meeting.py MeetingService#upload_voice_note()."
+      ]
+    },
+    {
+      "query": "where do we generate presigned urls for audio playback",
+      "repo": "booth",
+      "category": "behavioral",
+      "first_hit_rank": null,
+      "top": [
+        "sutra python booth controllers/meeting.py upload_voice_note().",
+        "sutra python booth clients/s3_client.py S3Client#_validate_audio_file().",
+        "sutra python booth clients/s3_client.py S3Client#upload_voice_note()."
+      ]
+    },
+    {
+      "query": "function that retries a database transaction when it fails",
+      "repo": "booth",
+      "category": "behavioral",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra python booth database/postgres_dal.py _transaction_retry().",
+        "sutra python booth database/postgres_dal.py PostgresDAL#_safe_commit().",
+        "sutra python booth database/__init__.py TransactionContext#__aexit__()."
+      ]
+    },
+    {
+      "query": "which function soft deletes a voice note",
+      "repo": "booth",
+      "category": "behavioral",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra python booth service/meeting.py MeetingService#soft_delete_voice_note().",
+        "sutra python booth clients/s3_client.py S3Client#delete_voice_note().",
+        "sutra python booth controllers/meeting.py delete_voice_note()."
+      ]
+    },
+    {
+      "query": "the Meeting database model",
+      "repo": "booth",
+      "category": "entity",
+      "first_hit_rank": 2,
+      "top": [
+        "sutra python booth controllers/meeting.py get_meetings().",
+        "sutra python booth models/meeting.py Meeting#",
+        "sutra python booth models/meeting.py MeetingResponse#Config#"
+      ]
+    },
+    {
+      "query": "request model for creating a visitor by a partner",
+      "repo": "booth",
+      "category": "entity",
+      "first_hit_rank": 8,
+      "top": [
+        "sutra python booth controllers/partner.py create_visitor_by_partner().",
+        "sutra python booth service/partner.py PartnerService#create_visitor_profile().",
+        "sutra python booth service/partner.py PartnerService#"
+      ]
+    },
+    {
+      "query": "application startup and shutdown lifecycle handling",
+      "repo": "booth",
+      "category": "paraphrase",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra python booth main.py app_lifespan().",
+        "sutra python booth database/postgres_singleton.py PostgresSingleton#close_connection().",
+        "sutra python booth database/postgres_dal.py PostgresDAL#close_session()."
+      ]
+    },
+    {
+      "query": "database connection singleton",
+      "repo": "booth",
+      "category": "paraphrase",
+      "first_hit_rank": 3,
+      "top": [
+        "sutra python booth database/postgres_singleton.py PostgresSingleton#close_connection().",
+        "sutra python booth database/postgres_singleton.py PostgresSingleton#get_engine().",
+        "sutra python booth database/postgres_singleton.py PostgresSingleton#"
+      ]
+    },
+    {
+      "query": "get_visitors_onboarded_by_usher",
+      "repo": "booth",
+      "category": "exact-name",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra python booth controllers/usher.py get_visitors_onboarded_by_usher().",
+        "sutra python booth service/usher.py UsherService#",
+        "sutra python booth service/usher.py UsherService#get_visitors_onboarded_by_usher()."
+      ]
+    },
+    {
+      "query": "PostgresDALWrapper find_one",
+      "repo": "booth",
+      "category": "exact-name",
+      "first_hit_rank": 4,
+      "top": [
+        "sutra python booth database/postgres_dal.py PostgresDAL#find_one().",
+        "sutra python booth database/__init__.py PostgresDALWrapper#find_all().",
+        "sutra python booth database/__init__.py PostgresDALWrapper#find_many()."
+      ]
+    },
+    {
+      "query": "which function saves the visitor in db",
+      "repo": "booth",
+      "category": "known-failure",
+      "first_hit_rank": 3,
+      "top": [
+        "sutra python booth service/visitor.py VisitorService#",
+        "sutra python booth service/visitor.py VisitorService#delete_visitor().",
+        "sutra python booth service/partner.py PartnerService#create_visitor_profile()."
+      ]
+    },
+    {
+      "query": "middleware that recovers from panics and returns 500",
+      "repo": "gin",
+      "category": "behavioral",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra go gin recovery.go Recovery().",
+        "sutra go gin recovery.go RecoveryWithWriter().",
+        "sutra go gin recovery.go CustomRecovery()."
+      ]
+    },
+    {
+      "query": "function that serializes a struct as json into the response body",
+      "repo": "gin",
+      "category": "behavioral",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra go gin context.go Context#IndentedJSON().",
+        "sutra go gin context.go Context#JSON().",
+        "sutra go gin render/json.go IndentedJSON#WriteContentType()."
+      ]
+    },
+    {
+      "query": "how does gin figure out the real client ip address",
+      "repo": "gin",
+      "category": "behavioral",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra go gin context.go Context#ClientIP().",
+        "sutra go gin gin.go Engine#SetTrustedProxies().",
+        "sutra go gin gin.go Engine#isTrustedProxy()."
+      ]
+    },
+    {
+      "query": "save an uploaded multipart form file to disk",
+      "repo": "gin",
+      "category": "behavioral",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra go gin context.go Context#SaveUploadedFile().",
+        "sutra go gin context.go Context#MultipartForm().",
+        "sutra go gin binding/multipart_form_mapping.go setArrayOfMultipartFormFiles()."
+      ]
+    },
+    {
+      "query": "function that binds the request body to a struct based on content type",
+      "repo": "gin",
+      "category": "behavioral",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra go gin context.go Context#Bind().",
+        "sutra go gin context.go Context#ShouldBind().",
+        "sutra go gin context.go Context#ContentType()."
+      ]
+    },
+    {
+      "query": "the router group type that manages route prefixes",
+      "repo": "gin",
+      "category": "entity",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra go gin routergroup.go RouterGroup#",
+        "sutra go gin routergroup.go IRouter#",
+        "sutra go gin routergroup.go RouterGroup#Group()."
+      ]
+    },
+    {
+      "query": "start the http server and listen for requests",
+      "repo": "gin",
+      "category": "paraphrase",
+      "first_hit_rank": 2,
+      "top": [
+        "sutra go gin gin.go Engine#ServeHTTP().",
+        "sutra go gin gin.go Engine#Run().",
+        "sutra go gin gin.go Engine#RunListener()."
+      ]
+    },
+    {
+      "query": "register a global middleware on the engine",
+      "repo": "gin",
+      "category": "paraphrase",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra go gin gin.go Engine#Use().",
+        "sutra go gin ginS/gins.go Use().",
+        "sutra go gin gin.go New()."
+      ]
+    },
+    {
+      "query": "set the handlers for 404 not found routes",
+      "repo": "gin",
+      "category": "paraphrase",
+      "first_hit_rank": 2,
+      "top": [
+        "sutra go gin routergroup.go RouterGroup#Handle().",
+        "sutra go gin gin.go Engine#NoRoute().",
+        "sutra go gin routergroup.go RouterGroup#handle()."
+      ]
+    },
+    {
+      "query": "BasicAuthForRealm",
+      "repo": "gin",
+      "category": "exact-name",
+      "first_hit_rank": 2,
+      "top": [
+        "sutra go gin auth.go BasicAuth().",
+        "sutra go gin auth.go BasicAuthForRealm().",
+        "sutra go gin auth.go BasicAuthForProxy()."
+      ]
+    },
+    {
+      "query": "a global function that attaches token to outgoing requests",
+      "repo": "outreach-web-ui",
+      "category": "known-failure",
+      "first_hit_rank": null,
+      "top": [
+        "sutra typescript outreach-web-ui src/lib/api-client.ts decodeJWT().",
+        "sutra typescript outreach-web-ui src/lib/jwt-utils.ts getUserIdFromToken().",
+        "sutra typescript outreach-web-ui src/lib/jwt-utils.ts decodeJWT()."
+      ]
+    },
+    {
+      "query": "function that decodes the jwt token payload",
+      "repo": "outreach-web-ui",
+      "category": "behavioral",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra typescript outreach-web-ui src/lib/jwt-utils.ts decodeJWT().",
+        "sutra typescript outreach-web-ui src/lib/api-client.ts decodeJWT().",
+        "sutra typescript outreach-web-ui src/lib/jwt-utils.ts getUserIdFromToken()."
+      ]
+    },
+    {
+      "query": "how do we get the user id from the auth token",
+      "repo": "outreach-web-ui",
+      "category": "behavioral",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra typescript outreach-web-ui src/lib/jwt-utils.ts getUserIdFromToken().",
+        "sutra typescript outreach-web-ui src/lib/api-client.ts decodeJWT().",
+        "sutra typescript outreach-web-ui src/context/AuthContext.tsx AuthContextType#"
+      ]
+    },
+    {
+      "query": "function that uploads the bulk import file to the backend",
+      "repo": "outreach-web-ui",
+      "category": "behavioral",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra typescript outreach-web-ui src/services/bulkImportV2.ts uploadV2().",
+        "sutra typescript outreach-web-ui src/services/bulkImports.ts uploadFile().",
+        "sutra typescript outreach-web-ui src/services/bulkImports.ts listImports()."
+      ]
+    },
+    {
+      "query": "download the csv template for bulk imports",
+      "repo": "outreach-web-ui",
+      "category": "behavioral",
+      "first_hit_rank": 8,
+      "top": [
+        "sutra typescript outreach-web-ui src/types/bulkImportV2.ts BulkV2MalformedRow#",
+        "sutra typescript outreach-web-ui src/types/bulkImportV2.ts BulkV2ListResponse#",
+        "sutra typescript outreach-web-ui src/types/bulkImportV2.ts BulkV2ListItem#"
+      ]
+    },
+    {
+      "query": "hook that polls the progress of a bulk import job",
+      "repo": "outreach-web-ui",
+      "category": "behavioral",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra typescript outreach-web-ui src/hooks/useBulkImportV2Progress.ts useBulkImportV2Progress().",
+        "sutra typescript outreach-web-ui src/hooks/useBulkImportV2Workflows.ts hasNonTerminal().",
+        "sutra typescript outreach-web-ui src/services/bulkImports.ts uploadFile()."
+      ]
+    },
+    {
+      "query": "props for the edit deal modal",
+      "repo": "outreach-web-ui",
+      "category": "entity",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra typescript outreach-web-ui src/components/Deals/EditDealModal.tsx EditDealModalProps#",
+        "sutra typescript outreach-web-ui src/components/Deals/EditDealContactModal.tsx EditDealContactModalProps#",
+        "sutra typescript outreach-web-ui src/components/Deals/EditDealOrganizationModal.tsx EditDealOrganizationModal()."
+      ]
+    },
+    {
+      "query": "debounce a changing value",
+      "repo": "outreach-web-ui",
+      "category": "paraphrase",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra typescript outreach-web-ui src/hooks/use-debounce.ts useDebounce().",
+        "sutra typescript outreach-web-ui src/components/Deals/EditDealOrganizationModal.tsx EditDealOrganizationModal().",
+        "sutra typescript outreach-web-ui src/components/ui/use-toast.ts reducer()."
+      ]
+    },
+    {
+      "query": "detect whether the viewport is mobile sized",
+      "repo": "outreach-web-ui",
+      "category": "paraphrase",
+      "first_hit_rank": 7,
+      "top": [
+        "sutra typescript outreach-web-ui src/components/copilot/DraggableFab.tsx clampToViewport().",
+        "sutra typescript outreach-web-ui src/components/pages/companies/CreateCompanyModal.tsx toSelectedPort().",
+        "sutra typescript outreach-web-ui src/components/copilot/DraggableFab.tsx defaultPosition()."
+      ]
+    },
+    {
+      "query": "lazyRetry",
+      "repo": "outreach-web-ui",
+      "category": "exact-name",
+      "first_hit_rank": 1,
+      "top": [
+        "sutra typescript outreach-web-ui src/lib/lazy-retry.ts lazyRetry().",
+        "sutra typescript outreach-web-ui src/lib/utils.ts getUserInitials().",
+        "sutra typescript outreach-web-ui src/components/copilot/MessageRenderers.tsx hasGenerativeUI()."
+      ]
+    }
+  ]
+}

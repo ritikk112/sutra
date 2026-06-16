@@ -23,8 +23,9 @@ from sutra.core.gitignore_filter import GitignoreFilter
 from sutra.core.output.json_graph_exporter import JsonGraphExporter
 
 if TYPE_CHECKING:
-    from sutra.core.graph.postgres_age import AGEWriter
+    from sutra.core.graph.base import GraphWriter
     from sutra.core.graph.pgvector_store import PGVectorStore
+    from sutra.core.resolver.base import Resolver
 
 
 # ---------------------------------------------------------------------------
@@ -98,16 +99,18 @@ class Indexer:
         adapters: dict[str, Any],   # lang_string -> adapter with .extract()
         exporter: JsonGraphExporter,
         embedder: Embedder,
-        age_writer: Optional["AGEWriter"] = None,
+        graph_writer: Optional["GraphWriter"] = None,
         pgvector_store: Optional["PGVectorStore"] = None,
         gitignore_filter: Optional[GitignoreFilter] = None,
+        resolver: Optional["Resolver"] = None,
     ) -> None:
         self.adapters = adapters
         self.exporter = exporter
         self.embedder = embedder
-        self.age_writer = age_writer
+        self.graph_writer = graph_writer
         self.pgvector_store = pgvector_store
         self.gitignore_filter = gitignore_filter
+        self.resolver = resolver
 
     # ------------------------------------------------------------------
     # Public API
@@ -118,6 +121,7 @@ class Indexer:
         root: Path,
         repo_url: str,
         output_dir: Path,
+        replace: bool = False,
     ) -> IndexResult:
         """
         Index the repository at `root` and write output to `output_dir`.
@@ -125,6 +129,10 @@ class Indexer:
         `repo_url` is the canonical remote URL used to derive the repo name
         and populate the repository block in graph.json.  It is not fetched —
         the indexer only reads local files.
+
+        When `replace=True`, the graph_writer is asked to delete all existing
+        symbols for this repo before writing the new ones (re-index mode).
+        Default False (additive upsert).  No-op when graph_writer is None.
 
         Returns the assembled IndexResult (also written to output_dir).
         """
@@ -183,6 +191,21 @@ class Indexer:
         if "go" in language_counts:
             self._resolve_go_methods(symbols, relationships)
 
+        # Optional CALLS resolution (P20).  Runs BEFORE chunk building, but
+        # resolvers only set target_id/is_resolved — target_name is untouched,
+        # so chunks (and therefore embeddings) are identical with and without
+        # a resolver.  Opt-in: None preserves Phase 1 behavior exactly.
+        if self.resolver is not None:
+            res_stats = self.resolver.resolve(symbols, relationships)
+            if res_stats.matchable:
+                import sys
+                print(
+                    f"[resolver] CALLS: {res_stats.resolved}/{res_stats.matchable} "
+                    f"matchable resolved ({res_stats.resolution_rate:.0%}) "
+                    f"by_rule={res_stats.by_rule}",
+                    file=sys.stderr,
+                )
+
         result = IndexResult(
             repository=Repository(url=repo_url, name=repo_name),
             files=file_records,
@@ -206,16 +229,23 @@ class Indexer:
             f"vectors.shape[0]={vectors.shape[0]}"
         )
 
-        self.exporter.export(result, output_dir, vectors, monikers, embedding_usage=embedding_usage)
+        self.exporter.export(
+            result,
+            output_dir,
+            vectors,
+            monikers,
+            embedding_usage=embedding_usage,
+            embedding_model_id=self.embedder.model_id,
+        )
 
         # Optional sinks — write to graph DB if configured.
-        # pgvector is written BEFORE AGE: if AGE fails, orphaned vector rows are
-        # harmless (keyed by moniker, not AGE node ID); the reverse leaves AGE
-        # nodes pointing at missing vectors.
+        # pgvector is written BEFORE the graph: if the graph write fails,
+        # orphaned vector rows are harmless (keyed by moniker); the reverse
+        # leaves graph rows pointing at missing vectors.
         if self.pgvector_store is not None:
             self.pgvector_store.write(monikers, vectors)
-        if self.age_writer is not None:
-            self.age_writer.write_repository(result)
+        if self.graph_writer is not None:
+            self.graph_writer.write_repository(result, replace=replace)
 
         return result
 

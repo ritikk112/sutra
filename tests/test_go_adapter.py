@@ -606,6 +606,65 @@ class TestVarDeclaration:
 
 
 # ---------------------------------------------------------------------------
+# Blank identifier (_) — does NOT introduce a binding (Go spec).
+# Surfaced by gin v1.10.0: render/render.go has 14 interface-compliance
+# assertions (`var _ Render = (*JSON)(nil)`) that collided on moniker '_.'.
+# ---------------------------------------------------------------------------
+
+class TestBlankIdentifier:
+    def test_blank_vars_not_extracted(self):
+        """Interface-compliance assertions must produce no VariableSymbol."""
+        src = (
+            "package render\n"
+            "var (\n"
+            "\t_ Render = (*JSON)(nil)\n"
+            "\t_ Render = (*XML)(nil)\n"
+            "\t_ Render = (*YAML)(nil)\n"
+            ")\n"
+        )
+        result = extract(src)
+        assert sym_by_name(result, "_") is None
+        ids = [s.id for s in result.symbols]
+        assert len(ids) == len(set(ids)), "duplicate monikers from blank vars"
+
+    def test_blank_var_mixed_with_real_var(self):
+        """Real names in the same block still extract; only _ is skipped."""
+        src = (
+            "package main\n"
+            "var (\n"
+            "\t_ Handler = (*Mux)(nil)\n"
+            "\tDefaultTimeout int = 30\n"
+            ")\n"
+        )
+        result = extract(src)
+        assert sym_by_name(result, "_") is None
+        assert sym_by_name(result, "DefaultTimeout") is not None
+
+    def test_blank_const_not_extracted(self):
+        src = "package main\nconst (\n\t_ = iota\n\tKB = 1 << (10 * iota)\n)\n"
+        result = extract(src)
+        assert sym_by_name(result, "_") is None
+        assert sym_by_name(result, "KB") is not None
+
+    def test_blank_function_not_extracted(self):
+        """`func _()` is legal Go but can never be called — not a symbol."""
+        src = "package main\nfunc _() {}\nfunc _() {}\nfunc Real() {}\n"
+        result = extract(src)
+        assert sym_by_name(result, "_") is None
+        assert sym_by_name(result, "Real") is not None
+        ids = [s.id for s in result.symbols]
+        assert len(ids) == len(set(ids))
+
+    def test_blank_type_not_extracted(self):
+        src = "package main\ntype _ int\ntype _ string\ntype Real struct{}\n"
+        result = extract(src)
+        assert sym_by_name(result, "_") is None
+        assert sym_by_name(result, "Real") is not None
+        ids = [s.id for s in result.symbols]
+        assert len(ids) == len(set(ids))
+
+
+# ---------------------------------------------------------------------------
 # Import handling
 # ---------------------------------------------------------------------------
 

@@ -29,6 +29,10 @@ class FixtureEmbedder(Embedder):
     def dimensions(self) -> int:
         return self._dims
 
+    @property
+    def model_id(self) -> str:
+        return f"fixture-{self._dims}"
+
     def embed(self, chunks: list[str]) -> np.ndarray:
         if not chunks:
             return np.empty((0, self._dims), dtype=np.float32)

@@ -377,6 +377,77 @@ class TestClassSymbol:
 
 
 # ---------------------------------------------------------------------------
+# Nested classes — regression for duplicate-moniker bug (booth meeting.py)
+# Two `class Config:` nested in different outer classes (Pydantic v1 pattern)
+# must produce DISTINCT monikers that encode the enclosing class.
+# ---------------------------------------------------------------------------
+
+class TestNestedClasses:
+    _SRC = (
+        "class VoiceNoteResponse:\n"
+        "    id: int\n"
+        "    class Config:\n"
+        "        from_attributes = True\n"
+        "\n"
+        "class MeetingResponse:\n"
+        "    id: int\n"
+        "    class Config:\n"
+        "        from_attributes = True\n"
+    )
+
+    def _classes(self, extraction):
+        return [s for s in extraction.symbols if isinstance(s, ClassSymbol)]
+
+    def test_no_duplicate_monikers(self, adapter):
+        result = extract(adapter, self._SRC)
+        ids = [s.id for s in result.symbols]
+        assert len(ids) == len(set(ids)), (
+            "Duplicate monikers: "
+            f"{[i for i in ids if ids.count(i) > 1]}"
+        )
+
+    def test_nested_class_descriptor_includes_parent(self, adapter):
+        result = extract(adapter, self._SRC)
+        configs = [c for c in self._classes(result) if c.name == "Config"]
+        assert len(configs) == 2
+        descriptors = {c.id.split(" ", 4)[4] for c in configs}
+        assert descriptors == {
+            "VoiceNoteResponse#Config#",
+            "MeetingResponse#Config#",
+        }
+
+    def test_nested_class_qualified_name_includes_parent(self, adapter):
+        result = extract(adapter, self._SRC)
+        configs = [c for c in self._classes(result) if c.name == "Config"]
+        qnames = {c.qualified_name for c in configs}
+        assert qnames == {
+            "src.services.user.VoiceNoteResponse.Config",
+            "src.services.user.MeetingResponse.Config",
+        }
+
+    def test_top_level_class_descriptor_unchanged(self, adapter):
+        """Regression guard: non-nested classes keep the bare `Name#` form."""
+        result = extract(adapter, self._SRC)
+        top = next(c for c in self._classes(result) if c.name == "MeetingResponse")
+        assert top.id == (
+            "sutra python my-app src/services/user.py MeetingResponse#"
+        )
+
+    def test_method_in_nested_class_has_full_path(self, adapter):
+        src = (
+            "class Outer:\n"
+            "    class Inner:\n"
+            "        def validate(self):\n"
+            "            pass\n"
+        )
+        result = extract(adapter, src)
+        method = sym_by_name(result, "validate")
+        assert method is not None
+        descriptor = method.id.split(" ", 4)[4]
+        assert descriptor == "Outer#Inner#validate()."
+
+
+# ---------------------------------------------------------------------------
 # MethodSymbol
 # ---------------------------------------------------------------------------
 
@@ -508,6 +579,29 @@ class TestVariableSymbol:
         result = extract(adapter, src)
         var = sym_by_name(result, "MAX")
         assert var.id == "sutra python my-app src/services/user.py MAX."
+
+    def test_reassigned_annotated_variable_extracted_once(self, adapter):
+        """Re-annotating the same module-level name is legal Python; the
+        adapter must emit ONE VariableSymbol (first declaration site), not
+        a duplicate moniker per assignment.  Same latent bug class as the
+        Go blank-identifier collision found on gin (P12)."""
+        src = (
+            "config: dict = {}\n"
+            "config: dict = {'mode': 'prod'}\n"
+        )
+        result = extract(adapter, src)
+        vars_named = [s for s in result.symbols if s.name == "config"]
+        assert len(vars_named) == 1
+        # First declaration site wins — line 1
+        assert vars_named[0].location.line_start == 1
+        ids = [s.id for s in result.symbols]
+        assert len(ids) == len(set(ids)), "duplicate monikers from reassignment"
+        # CONTAINS must also appear exactly once for the variable
+        contains_to_var = [
+            r for r in result.relationships
+            if r.kind == RelationKind.CONTAINS and r.target_id == vars_named[0].id
+        ]
+        assert len(contains_to_var) == 1
 
 
 # ---------------------------------------------------------------------------

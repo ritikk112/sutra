@@ -51,6 +51,10 @@ class OpenAIEmbedder(Embedder):
     def dimensions(self) -> int:
         return self._dimensions
 
+    @property
+    def model_id(self) -> str:
+        return f"openai/{self._model}"
+
     def embed(self, chunks: list[str]) -> np.ndarray:
         if not chunks:
             return np.empty((0, self._dimensions), dtype=np.float32)

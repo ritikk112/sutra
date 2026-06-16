@@ -9,3 +9,4 @@ RESEARCH.md
 frontend/web/node_modules/
 frontend/api/static/*
 !frontend/api/static/.gitkeep
+tests/eval/artifacts/

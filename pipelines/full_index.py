@@ -50,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pg-url", default=None, help="PostgreSQL connection string")
     parser.add_argument(
         "--replace", action="store_true",
-        help="DETACH DELETE existing symbols before writing (re-index mode).",
+        help="Delete existing symbols for this repo before writing (re-index mode).",
     )
     parser.add_argument(
         "--recreate-embeddings-table",
@@ -60,6 +60,18 @@ def main(argv: list[str] | None = None) -> int:
             "DROP and recreate the sutra_embeddings table before indexing. "
             "WARNING: destroys all existing embeddings. Use when switching "
             "embedder providers that change vector dimensions (e.g. local→openai)."
+        ),
+    )
+    parser.add_argument(
+        "--resolver",
+        choices=["heuristic", "lsp", "none"],
+        default="heuristic",
+        help=(
+            "CALLS resolution strategy. 'heuristic' (default) resolves "
+            "intra-repo calls by local/import/unique rules (P20-lite); "
+            "'lsp' chains the heuristic with pyright type inference for "
+            "the ambiguous residue — Python files only, needs pyright "
+            "installed (P20-full); 'none' preserves Phase 1 behavior."
         ),
     )
     args = parser.parse_args(argv)
@@ -73,25 +85,32 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         gitignore_filter = GitignoreFilter(args.root)
+
+        resolver = None
+        if args.resolver == "heuristic":
+            from sutra.core.resolver import HeuristicResolver
+            resolver = HeuristicResolver()
+        elif args.resolver == "lsp":
+            from sutra.core.resolver import HeuristicResolver
+            from sutra.core.resolver.lsp_resolver import ChainResolver, LspResolver
+            # Cheap rules first; pyright only sees the ambiguous residue.
+            resolver = ChainResolver(
+                HeuristicResolver(), LspResolver(root=args.root)
+            )
+
         indexer = Indexer(
             adapters=deps.adapters,
             exporter=deps.exporter,
             embedder=deps.embedder,
-            age_writer=deps.age_writer,
+            graph_writer=deps.graph_writer,
             pgvector_store=deps.pgvector_store,
             gitignore_filter=gitignore_filter,
+            resolver=resolver,
         )
 
-        # If replace=True and age_writer is present, pass replace to write_repository.
-        # Indexer.index() does not expose replace directly; set it on the writer.
-        if args.replace and deps.age_writer is not None:
-            _orig = deps.age_writer.write_repository
-
-            def _replace_write(result, replace=False):  # type: ignore[override]
-                return _orig(result, replace=True)
-            deps.age_writer.write_repository = _replace_write  # type: ignore[method-assign]
-
-        result = indexer.index(args.root, args.repo_url, args.output_dir)
+        result = indexer.index(
+            args.root, args.repo_url, args.output_dir, replace=args.replace
+        )
 
         print(
             f"Full index complete: {len(result.symbols)} symbols, "

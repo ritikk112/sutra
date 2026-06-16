@@ -1,8 +1,13 @@
 """
 Integration tests for P11: Incremental Update Pipeline.
 
-All tests in TestAGEReader, TestIncrementalUpdater, and TestGitDiffer require
-a live PostgreSQL connection with AGE + pgvector installed.
+Migrated from the AGE-backed version when PR 2 swapped Apache AGE for plain
+Postgres SQL tables.  All test intents are preserved; only the storage
+backend changed.
+
+Reader/state tests (independent of the updater) live in test_sql_graph.py.
+This file focuses on the updater's behaviour: per-file diff, fallback
+threshold, recovery invariant, gitignore, etc.
 
 Gating
 ------
@@ -10,20 +15,17 @@ Gating
 
 If SUTRA_PG_URL is not set, all DB-dependent tests are skipped.
 
-Fixture git repos
------------------
-Hermetic git repos are created in a temp directory for each test that needs
-git history.  Each test initialises a fresh repo, makes commits, and asserts
-against the DB state.  Teardown drops the test graph and table.
-
-Test graph / table names are isolated from production names to prevent
-pollution.
+Test isolation
+--------------
+The SQL graph tables are real production names (sutra_repositories,
+sutra_symbols, sutra_relationships).  Acceptable because this is a
+dev DB; do NOT run against a database holding live graph data.
+truncate-between-tests fixture provides isolation.
 """
 from __future__ import annotations
 
 import os
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import Generator
 
@@ -36,7 +38,6 @@ pytestmark = pytest.mark.skipif(
 )
 
 # ── Test isolation names ────────────────────────────────────────────────────
-_TEST_GRAPH = "_sutra_incremental_test_graph"
 _TEST_TABLE = "_sutra_incremental_test_embeddings"
 _TEST_DIMS = 4   # tiny vectors — fast, no real embedder needed
 
@@ -45,9 +46,10 @@ from sutra.core.embedder.fixture import FixtureEmbedder
 from sutra.core.extractor.base import UpdateResult
 from sutra.core.git_differ import ChangedFiles, changed_files
 from sutra.core.gitignore_filter import GitignoreFilter
-from sutra.core.graph.age_reader import AGEReader
-from sutra.core.graph.postgres_age import AGEWriter
 from sutra.core.graph.pgvector_store import PGVectorStore
+from sutra.core.graph.sql_reader import SqlIncrementalReader
+from sutra.core.graph.sql_state import SqlIndexStateStore
+from sutra.core.graph.sql_writer import SqlGraphWriter
 from sutra.core.incremental_updater import IncrementalUpdater
 from sutra.core.indexer import Indexer
 from sutra.core.output.json_graph_exporter import JsonGraphExporter
@@ -55,18 +57,26 @@ from sutra.core.output.json_graph_exporter import JsonGraphExporter
 
 # ── Teardown helpers (free functions — destructive ops out of prod classes) ─
 
-def _drop_graph(pg_url: str, graph_name: str) -> None:
+def _drop_sql_tables(pg_url: str) -> None:
     import psycopg2
     conn = psycopg2.connect(pg_url)
     conn.autocommit = True
     with conn.cursor() as cur:
-        cur.execute("LOAD 'age'")
-        cur.execute("SET search_path = ag_catalog, \"$user\", public")
+        cur.execute("DROP TABLE IF EXISTS sutra_relationships")
+        cur.execute("DROP TABLE IF EXISTS sutra_symbols")
+        cur.execute("DROP TABLE IF EXISTS sutra_repositories")
+    conn.close()
+
+
+def _truncate_sql_tables(pg_url: str) -> None:
+    import psycopg2
+    conn = psycopg2.connect(pg_url)
+    conn.autocommit = True
+    with conn.cursor() as cur:
         cur.execute(
-            "SELECT count(*) FROM ag_catalog.ag_graph WHERE name = %s", (graph_name,)
+            "TRUNCATE sutra_relationships, sutra_symbols, sutra_repositories "
+            "RESTART IDENTITY CASCADE"
         )
-        if cur.fetchone()[0] > 0:
-            cur.execute("SELECT drop_graph(%s, true)", (graph_name,))
     conn.close()
 
 
@@ -77,6 +87,20 @@ def _drop_table(pg_url: str, table_name: str) -> None:
         with conn.cursor() as cur:
             cur.execute(f"DROP TABLE IF EXISTS {table_name}")
     conn.close()
+
+
+# ── Module-level setup / teardown ────────────────────────────────────────────
+
+def setup_module(module: object) -> None:
+    """Create SQL tables once for the whole test session."""
+    _drop_sql_tables(PG_URL)
+    w = SqlGraphWriter(PG_URL)
+    w.setup()
+    w.close()
+
+
+def teardown_module(module: object) -> None:
+    _drop_sql_tables(PG_URL)
 
 
 # ── Git repo fixture helpers ─────────────────────────────────────────────────
@@ -96,7 +120,6 @@ def _init_repo(tmp: Path, repo_name: str = "test_repo") -> Path:
     _git(repo, "init")
     _git(repo, "config", "user.email", "test@test.com")
     _git(repo, "config", "user.name", "Test")
-    # Initial empty commit
     _git(repo, "commit", "--allow-empty", "-m", "init")
     return repo
 
@@ -133,25 +156,37 @@ def _embedder():
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
-@pytest.fixture()
-def age_writer() -> Generator[AGEWriter, None, None]:
-    writer = AGEWriter(PG_URL, graph_name=_TEST_GRAPH)
-    writer.setup()
-    try:
-        yield writer
-    finally:
-        writer.close()
-        _drop_graph(PG_URL, _TEST_GRAPH)
+@pytest.fixture(autouse=True)
+def _truncate_between_tests() -> None:
+    """Empty SQL tables before every test for isolation."""
+    _truncate_sql_tables(PG_URL)
 
 
 @pytest.fixture()
-def age_reader(age_writer) -> Generator[AGEReader, None, None]:
-    # age_writer fixture ensures the graph exists; reader shares the same graph
-    reader = AGEReader(PG_URL, graph_name=_TEST_GRAPH)
+def graph_writer() -> Generator[SqlGraphWriter, None, None]:
+    w = SqlGraphWriter(PG_URL)
     try:
-        yield reader
+        yield w
     finally:
-        reader.close()
+        w.close()
+
+
+@pytest.fixture()
+def reader() -> Generator[SqlIncrementalReader, None, None]:
+    r = SqlIncrementalReader(PG_URL)
+    try:
+        yield r
+    finally:
+        r.close()
+
+
+@pytest.fixture()
+def state_store() -> Generator[SqlIndexStateStore, None, None]:
+    s = SqlIndexStateStore(PG_URL)
+    try:
+        yield s
+    finally:
+        s.close()
 
 
 @pytest.fixture()
@@ -166,12 +201,15 @@ def pgvector_store() -> Generator[PGVectorStore, None, None]:
 
 
 @pytest.fixture()
-def updater(age_writer, age_reader, pgvector_store) -> IncrementalUpdater:
+def updater(
+    graph_writer, reader, state_store, pgvector_store
+) -> IncrementalUpdater:
     return IncrementalUpdater(
         adapters=_adapters(),
         embedder=_embedder(),
-        age_writer=age_writer,
-        age_reader=age_reader,
+        graph_writer=graph_writer,
+        reader=reader,
+        state_store=state_store,
         pgvector_store=pgvector_store,
         exporter=JsonGraphExporter(),
     )
@@ -185,16 +223,16 @@ def tmp_repo(tmp_path) -> Generator[Path, None, None]:
 def _full_index(
     repo: Path,
     repo_url: str,
-    age_writer: AGEWriter,
+    graph_writer: SqlGraphWriter,
     pgvector_store: PGVectorStore,
     output_dir: Path,
 ) -> None:
-    """Helper to run a full index into the test graph/table."""
+    """Helper to run a full index into the test SQL tables."""
     indexer = Indexer(
         adapters=_adapters(),
         exporter=JsonGraphExporter(),
         embedder=_embedder(),
-        age_writer=age_writer,
+        graph_writer=graph_writer,
         pgvector_store=pgvector_store,
     )
     indexer.index(repo, repo_url, output_dir)
@@ -267,54 +305,6 @@ class TestGitDiffer:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# TestAGEReader — reader in isolation
-# ═══════════════════════════════════════════════════════════════════════════════
-
-class TestAGEReader:
-    """Test AGEReader independently before exercising via the full updater."""
-
-    def test_get_last_commit_sha_none_for_unknown_repo(self, age_reader):
-        sha = age_reader.get_last_commit_sha("nonexistent_repo_xyz")
-        assert sha is None
-
-    def test_get_last_commit_sha_returns_correct_value(
-        self, tmp_path, age_writer, age_reader, pgvector_store
-    ):
-        repo = _init_repo(tmp_path)
-        repo_url = "https://github.com/test/reader-repo"
-        sha1 = _write_and_commit(repo, {"foo.py": "x = 1\n"}, "first")
-
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
-
-        result = age_reader.get_last_commit_sha("reader-repo")
-        assert result == sha1
-
-    def test_get_symbols_for_files_returns_moniker_body_hash(
-        self, tmp_path, age_writer, age_reader, pgvector_store
-    ):
-        repo = _init_repo(tmp_path)
-        repo_url = "https://github.com/test/reader2-repo"
-        _write_and_commit(repo, {"mod.py": "def hello(): pass\n"}, "c1")
-
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
-
-        syms = age_reader.get_symbols_for_files("reader2-repo", ["mod.py"])
-        assert len(syms) > 0
-        # All values are non-empty strings (body hashes)
-        for moniker, bh in syms.items():
-            assert isinstance(moniker, str) and moniker
-            assert isinstance(bh, str) and bh
-
-    def test_get_symbols_for_files_empty_list_returns_empty(self, age_reader):
-        result = age_reader.get_symbols_for_files("any-repo", [])
-        assert result == {}
-
-    def test_get_symbols_for_files_unknown_file_returns_empty(self, age_reader):
-        result = age_reader.get_symbols_for_files("any-repo", ["no_such_file.py"])
-        assert result == {}
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # TestIncrementalUpdater
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -322,12 +312,14 @@ class TestIncrementalUpdater:
 
     # ── Test 1: no-op on same SHA ───────────────────────────────────────────
 
-    def test_noop_on_same_sha(self, tmp_path, updater, age_writer, pgvector_store):
+    def test_noop_on_same_sha(
+        self, tmp_path, updater, graph_writer, pgvector_store
+    ):
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/noop-repo"
         _write_and_commit(repo, {"a.py": "def f(): pass\n"}, "c1")
 
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
 
         result = updater.update(repo, repo_url, tmp_path / "out")
 
@@ -340,11 +332,13 @@ class TestIncrementalUpdater:
 
     # ── Test 2: new file added ──────────────────────────────────────────────
 
-    def test_new_file_added(self, tmp_path, updater, age_writer, pgvector_store, age_reader):
+    def test_new_file_added(
+        self, tmp_path, updater, graph_writer, pgvector_store, reader
+    ):
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/add-repo"
         _write_and_commit(repo, {"a.py": "def f(): pass\n"}, "c1")
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
 
         _write_and_commit(repo, {"b.py": "def g(): return 1\n"}, "add b")
         result = updater.update(repo, repo_url, tmp_path / "out")
@@ -352,21 +346,21 @@ class TestIncrementalUpdater:
         assert result.added > 0
         assert result.fell_back_to_full_index is False
 
-        # b.py symbols should appear in AGE
-        syms = age_reader.get_symbols_for_files("add-repo", ["b.py"])
+        # b.py symbols should appear in the graph
+        syms = reader.get_symbols_for_files("add-repo", ["b.py"])
         assert len(syms) > 0
 
     # ── Test 3: modified file — changed body_hash updated ──────────────────
 
     def test_modified_file_updated(
-        self, tmp_path, updater, age_writer, pgvector_store, age_reader
+        self, tmp_path, updater, graph_writer, pgvector_store, reader
     ):
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/mod-repo"
         _write_and_commit(repo, {"m.py": "def f():\n    return 1\n"}, "c1")
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
 
-        old_syms = age_reader.get_symbols_for_files("mod-repo", ["m.py"])
+        old_syms = reader.get_symbols_for_files("mod-repo", ["m.py"])
 
         _write_and_commit(repo, {"m.py": "def f():\n    return 999\n"}, "modify")
         result = updater.update(repo, repo_url, tmp_path / "out")
@@ -374,28 +368,22 @@ class TestIncrementalUpdater:
         assert result.updated > 0
 
         # body_hash must differ from before
-        new_syms = age_reader.get_symbols_for_files("mod-repo", ["m.py"])
+        new_syms = reader.get_symbols_for_files("mod-repo", ["m.py"])
         for moniker in set(old_syms) & set(new_syms):
             assert old_syms[moniker] != new_syms[moniker]
 
     # ── Test 4: unchanged symbols skipped — no re-embed ────────────────────
 
     def test_unchanged_symbols_skipped(
-        self, tmp_path, age_writer, age_reader, pgvector_store
+        self, tmp_path, graph_writer, reader, state_store, pgvector_store
     ):
         """
         When two files exist but only one changes, the unchanged file's symbols
         must not be re-embedded.
 
-        Note: result.skipped counts *within-file* moniker skips (same body_hash
-        in a file that IS in the diff).  unchanged.py is file-level skipped —
-        it never appears in the git diff so _process_file is never called for it.
-        That's the actual performance guarantee: the unchanged file is completely
-        ignored, including its symbols.
-
-        We verify this by tracking which chunks were embedded.  If the function
-        name 'stable' (from unchanged.py) appears in any embedded chunk, it
-        means the file was incorrectly re-embedded.
+        We verify by tracking which chunks were embedded.  If the function name
+        'stable' (from unchanged.py) appears in any embedded chunk, the file
+        was incorrectly re-embedded.
         """
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/skip-repo"
@@ -407,7 +395,7 @@ class TestIncrementalUpdater:
             },
             "c1",
         )
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
 
         _write_and_commit(repo, {"changing.py": "def evolving():\n    return 2\n"}, "c2")
 
@@ -421,8 +409,9 @@ class TestIncrementalUpdater:
         tracking_updater = IncrementalUpdater(
             adapters=_adapters(),
             embedder=TrackingEmbedder(dims=_TEST_DIMS),
-            age_writer=age_writer,
-            age_reader=age_reader,
+            graph_writer=graph_writer,
+            reader=reader,
+            state_store=state_store,
             pgvector_store=pgvector_store,
             exporter=JsonGraphExporter(),
         )
@@ -432,14 +421,11 @@ class TestIncrementalUpdater:
         assert result.updated > 0   # changing.py symbols updated
         assert result.fell_back_to_full_index is False
 
-        # unchanged.py's function 'stable' must NOT appear in any embedded chunk.
-        # If it does, the file was incorrectly re-processed.
         for chunk in embedded_chunks:
             assert "stable" not in chunk, (
                 f"'stable' from unchanged.py appeared in an embedded chunk:\n{chunk}"
             )
 
-        # Only chunks from changing.py (the file in the diff) should be embedded.
         assert any("evolving" in c for c in embedded_chunks), (
             "Expected evolving() from changing.py to be embedded"
         )
@@ -447,23 +433,23 @@ class TestIncrementalUpdater:
     # ── Test 5: deleted file — symbols removed ──────────────────────────────
 
     def test_deleted_file_symbols_removed(
-        self, tmp_path, updater, age_writer, pgvector_store, age_reader
+        self, tmp_path, updater, graph_writer, pgvector_store, reader
     ):
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/del-repo"
         _write_and_commit(repo, {"doomed.py": "def bye(): pass\n"}, "c1")
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
 
         # Confirm symbols exist before deletion
-        syms_before = age_reader.get_symbols_for_files("del-repo", ["doomed.py"])
+        syms_before = reader.get_symbols_for_files("del-repo", ["doomed.py"])
         assert len(syms_before) > 0
         monikers_before = list(syms_before.keys())
 
         _delete_and_commit(repo, ["doomed.py"], "delete doomed")
         updater.update(repo, repo_url, tmp_path / "out")
 
-        # Symbols must be gone from AGE
-        syms_after = age_reader.get_symbols_for_files("del-repo", ["doomed.py"])
+        # Symbols must be gone from the graph
+        syms_after = reader.get_symbols_for_files("del-repo", ["doomed.py"])
         assert len(syms_after) == 0
 
         # Symbols must be gone from pgvector
@@ -476,12 +462,11 @@ class TestIncrementalUpdater:
     # ── Test 6: stale CALLS edges removed + new ones present ────────────────
 
     def test_stale_calls_edges_removed(
-        self, tmp_path, updater, age_writer, pgvector_store, age_reader
+        self, tmp_path, updater, graph_writer, pgvector_store, reader
     ):
         """
         A function gains then loses a call to another function.
-        After the update, the stale CALLS edge must be gone AND the
-        new state's edges (if any) must be present.
+        After the update, the stale CALLS edge must be gone.
         """
         import psycopg2
         repo = _init_repo(tmp_path)
@@ -498,7 +483,7 @@ class TestIncrementalUpdater:
             },
             "v1",
         )
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
 
         # v2: caller() no longer calls helper()
         _write_and_commit(
@@ -513,35 +498,36 @@ class TestIncrementalUpdater:
         )
         updater.update(repo, repo_url, tmp_path / "out")
 
-        # Query AGE for CALLS edges sourced from caller's moniker.
+        # Query the SQL relationships table for CALLS edges sourced from caller's moniker.
         conn = psycopg2.connect(PG_URL)
         conn.autocommit = True
         with conn.cursor() as cur:
-            cur.execute("LOAD 'age'")
-            cur.execute("SET search_path = ag_catalog, \"$user\", public")
             cur.execute(
-                f"SELECT * FROM cypher('{_TEST_GRAPH}', $$"
-                "  MATCH (a:Symbol)-[:CALLS]->(b:Symbol)"
-                "  WHERE a.name = 'caller'"
-                "  RETURN b.name"
-                "$$) AS (target agtype)"
+                """
+                SELECT s_target.name
+                FROM sutra_relationships r
+                JOIN sutra_symbols s_src ON s_src.moniker = r.source_id
+                JOIN sutra_symbols s_target ON s_target.moniker = r.target_id
+                WHERE s_src.name = 'caller'
+                  AND r.kind = 'calls'
+                """
             )
             rows = cur.fetchall()
         conn.close()
 
         # caller no longer calls helper — edge must be gone
-        called_names = {str(r[0]).strip('"') for r in rows}
+        called_names = {row[0] for row in rows}
         assert "helper" not in called_names
 
     # ── Test 7: renamed file — delete + add ─────────────────────────────────
 
     def test_renamed_file(
-        self, tmp_path, updater, age_writer, pgvector_store, age_reader
+        self, tmp_path, updater, graph_writer, pgvector_store, reader
     ):
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/rename-repo"
         _write_and_commit(repo, {"old.py": "def old_func(): pass\n"}, "c1")
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
 
         # Rename: delete old.py, add new.py (same content — wasted re-embed, by design)
         _git(repo, "mv", "old.py", "new.py")
@@ -550,50 +536,44 @@ class TestIncrementalUpdater:
         result = updater.update(repo, repo_url, tmp_path / "out")
 
         # old.py symbols gone
-        old_syms = age_reader.get_symbols_for_files("rename-repo", ["old.py"])
+        old_syms = reader.get_symbols_for_files("rename-repo", ["old.py"])
         assert len(old_syms) == 0
 
         # new.py symbols present
-        new_syms = age_reader.get_symbols_for_files("rename-repo", ["new.py"])
+        new_syms = reader.get_symbols_for_files("rename-repo", ["new.py"])
         assert len(new_syms) > 0
 
     # ── Test 8: unknown last SHA → full re-index ────────────────────────────
 
     def test_unknown_last_sha_triggers_full_reindex(
-        self, tmp_path, updater, age_writer, pgvector_store, age_reader
+        self, tmp_path, updater, graph_writer, pgvector_store, reader
     ):
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/norepo-fallback"
         _write_and_commit(repo, {"src.py": "def x(): pass\n"}, "c1")
 
-        # Do NOT full-index first — Repository node doesn't exist.
+        # Do NOT full-index first — Repository row doesn't exist.
         result = updater.update(repo, repo_url, tmp_path / "out")
 
         assert result.fell_back_to_full_index is True
         assert result.old_commit_sha is None
 
-        # Symbols should now be in AGE
-        syms = age_reader.get_symbols_for_files("norepo-fallback", ["src.py"])
+        syms = reader.get_symbols_for_files("norepo-fallback", ["src.py"])
         assert len(syms) > 0
 
     # ── Test 9: gitignored file in diff → skipped ───────────────────────────
 
     def test_gitignored_file_skipped(
-        self, tmp_path, age_writer, age_reader, pgvector_store
+        self, tmp_path, graph_writer, reader, state_store, pgvector_store
     ):
         """
         A gitignored file that is force-added to git (git add -f) still
         appears in git diff, but the updater's GitignoreFilter must prevent
         it from being indexed.
-
-        Under normal use, gitignored files are never tracked and never appear
-        in the diff.  The filter is a belt-and-suspenders guard for force-added
-        files and for future .gitignore changes on already-tracked files.
         """
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/ignore-repo"
 
-        # Base commit with .gitignore that excludes vendor/
         _write_and_commit(
             repo,
             {
@@ -602,7 +582,7 @@ class TestIncrementalUpdater:
             },
             "c1",
         )
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
 
         # Force-add a gitignored file so it appears in the git diff.
         vendor_py = repo / "vendor" / "lib.py"
@@ -615,8 +595,9 @@ class TestIncrementalUpdater:
         upd = IncrementalUpdater(
             adapters=_adapters(),
             embedder=_embedder(),
-            age_writer=age_writer,
-            age_reader=age_reader,
+            graph_writer=graph_writer,
+            reader=reader,
+            state_store=state_store,
             pgvector_store=pgvector_store,
             gitignore_filter=gitignore_filter,
             exporter=JsonGraphExporter(),
@@ -624,18 +605,17 @@ class TestIncrementalUpdater:
         upd.update(repo, repo_url, tmp_path / "out")
 
         # vendor/lib.py symbols must NOT be indexed despite being in the diff
-        syms = age_reader.get_symbols_for_files("ignore-repo", ["vendor/lib.py"])
+        syms = reader.get_symbols_for_files("ignore-repo", ["vendor/lib.py"])
         assert len(syms) == 0
 
     # ── Test 10: threshold exceeded → full re-index ─────────────────────────
 
     def test_threshold_exceeded_triggers_full_reindex(
-        self, tmp_path, age_writer, age_reader, pgvector_store
+        self, tmp_path, graph_writer, reader, state_store, pgvector_store
     ):
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/threshold-repo"
 
-        # Create 4 files
         _write_and_commit(
             repo,
             {
@@ -646,9 +626,9 @@ class TestIncrementalUpdater:
             },
             "base",
         )
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
 
-        # Modify 3 out of 4 files (75% > 50% threshold)
+        # Modify 3 of 4 files (75% > 50% threshold)
         _write_and_commit(
             repo,
             {
@@ -659,12 +639,12 @@ class TestIncrementalUpdater:
             "mass change",
         )
 
-        # Low threshold to guarantee trigger
         upd = IncrementalUpdater(
             adapters=_adapters(),
             embedder=_embedder(),
-            age_writer=age_writer,
-            age_reader=age_reader,
+            graph_writer=graph_writer,
+            reader=reader,
+            state_store=state_store,
             pgvector_store=pgvector_store,
             exporter=JsonGraphExporter(),
             fallback_threshold=0.5,
@@ -676,13 +656,14 @@ class TestIncrementalUpdater:
     # ── Test 11: mid-run failure recovery ────────────────────────────────────
 
     def test_mid_run_failure_recovery(
-        self, tmp_path, age_writer, age_reader, pgvector_store
+        self, tmp_path, graph_writer, reader, state_store, pgvector_store
     ):
         """
         Simulate a failure after processing the first file.
         Assert:
-          (a) commit_sha is still the OLD value in AGE
-          (b) Re-running with no failure completes and reaches new SHA
+          (a) commit_sha advances to sha2 because partial success advances
+              the per-file state and update_commit_sha is called LAST.
+          (b) Re-running with no failure completes and is a no-op.
         """
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/recovery-repo"
@@ -691,7 +672,7 @@ class TestIncrementalUpdater:
             {"x.py": "def x(): pass\n", "y.py": "def y(): pass\n"},
             "base",
         )
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
 
         sha2 = _write_and_commit(
             repo,
@@ -712,32 +693,29 @@ class TestIncrementalUpdater:
         upd = IncrementalUpdater(
             adapters=_adapters(),
             embedder=_embedder(),
-            age_writer=age_writer,
-            age_reader=age_reader,
+            graph_writer=graph_writer,
+            reader=reader,
+            state_store=state_store,
             pgvector_store=pgvector_store,
             exporter=JsonGraphExporter(),
-            fallback_threshold=1.0,  # disable threshold — test incremental path specifically
+            fallback_threshold=1.0,  # disable threshold — test incremental path
         )
         upd._process_file = lambda *a, **kw: failing_process(upd, *a, **kw)
 
         result = upd.update(repo, repo_url, tmp_path / "out")
 
-        # (a) Failure is recorded in failed_files, not re-raised
         assert len(result.failed_files) > 0
 
-        # INVARIANT: commit_sha was still patched to sha2 after partial success.
-        # Because update_commit_sha is called LAST, the partial state is still
-        # tracked at sha2 (we process whatever succeeds then still advance SHA).
-        # The failed file is in failed_files for the caller to handle.
-        sha_in_age = age_reader.get_last_commit_sha("recovery-repo")
-        assert sha_in_age == sha2
+        sha_now = state_store.get_last_commit_sha("recovery-repo")
+        assert sha_now == sha2
 
         # (b) Re-running (same SHA, different updater) → no-op now
         upd2 = IncrementalUpdater(
             adapters=_adapters(),
             embedder=_embedder(),
-            age_writer=age_writer,
-            age_reader=age_reader,
+            graph_writer=graph_writer,
+            reader=reader,
+            state_store=state_store,
             pgvector_store=pgvector_store,
             exporter=JsonGraphExporter(),
         )
@@ -749,21 +727,19 @@ class TestIncrementalUpdater:
     # ── Test 12: deleted moniker gone from pgvector search ──────────────────
 
     def test_deleted_symbol_gone_from_pgvector(
-        self, tmp_path, updater, age_writer, pgvector_store, age_reader
+        self, tmp_path, updater, graph_writer, pgvector_store, reader
     ):
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/pvdel-repo"
         _write_and_commit(repo, {"gone.py": "def vanish(): pass\n"}, "c1")
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
 
-        # Grab monikers before deletion
-        before = age_reader.get_symbols_for_files("pvdel-repo", ["gone.py"])
+        before = reader.get_symbols_for_files("pvdel-repo", ["gone.py"])
         assert before
 
         _delete_and_commit(repo, ["gone.py"], "delete gone")
         updater.update(repo, repo_url, tmp_path / "out")
 
-        # Search pgvector — deleted monikers must not appear
         query = np.zeros(_TEST_DIMS, dtype=np.float32)
         results = {r[0] for r in pgvector_store.search(query, k=100)}
         for m in before:
@@ -772,29 +748,28 @@ class TestIncrementalUpdater:
     # ── Test 13: idempotent re-run ──────────────────────────────────────────
 
     def test_idempotent_rerun(
-        self, tmp_path, updater, age_writer, pgvector_store, age_reader
+        self, tmp_path, updater, graph_writer, pgvector_store, reader
     ):
         """Running update twice on the same committed state is a no-op."""
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/idem-repo"
-        sha1 = _write_and_commit(repo, {"a.py": "def f(): pass\n"}, "c1")
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
-        sha2 = _write_and_commit(repo, {"a.py": "def f(): return 1\n"}, "c2")
+        _write_and_commit(repo, {"a.py": "def f(): pass\n"}, "c1")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
+        _write_and_commit(repo, {"a.py": "def f(): return 1\n"}, "c2")
 
         r1 = updater.update(repo, repo_url, tmp_path / "out")
-        syms1 = age_reader.get_symbols_for_files("idem-repo", ["a.py"])
+        syms1 = reader.get_symbols_for_files("idem-repo", ["a.py"])
 
         r2 = updater.update(repo, repo_url, tmp_path / "out")
-        syms2 = age_reader.get_symbols_for_files("idem-repo", ["a.py"])
+        syms2 = reader.get_symbols_for_files("idem-repo", ["a.py"])
 
-        # Second run is a no-op (same SHA)
         assert r2.added == 0 and r2.updated == 0 and r2.deleted == 0
         assert syms1 == syms2
 
     # ── Test 14: empty diff still patches commit_sha ────────────────────────
 
     def test_empty_diff_patches_commit_sha(
-        self, tmp_path, updater, age_writer, pgvector_store, age_reader
+        self, tmp_path, updater, graph_writer, pgvector_store, reader, state_store
     ):
         """
         If a commit changes only non-indexable files (e.g. README.md),
@@ -804,7 +779,7 @@ class TestIncrementalUpdater:
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/emptydiff-repo"
         sha1 = _write_and_commit(repo, {"src.py": "def f(): pass\n"}, "c1")
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
 
         sha2 = _write_and_commit(repo, {"README.md": "# hello\n"}, "docs only")
 
@@ -814,29 +789,29 @@ class TestIncrementalUpdater:
         assert result.updated == 0
         assert result.deleted == 0
         assert result.fell_back_to_full_index is False
-        # commit_sha MUST be patched even when nothing indexable changed
-        sha_in_age = age_reader.get_last_commit_sha("emptydiff-repo")
-        assert sha_in_age == sha2
+        sha_now = state_store.get_last_commit_sha("emptydiff-repo")
+        assert sha_now == sha2
         assert result.new_commit_sha == sha2
         assert result.old_commit_sha == sha1
 
     # ── Test 15: UpdateResult fell_back flag is honest ──────────────────────
 
     def test_fell_back_to_full_index_flag(
-        self, tmp_path, age_writer, age_reader, pgvector_store
+        self, tmp_path, graph_writer, reader, state_store, pgvector_store
     ):
         """UpdateResult.fell_back_to_full_index is False for normal incremental."""
         repo = _init_repo(tmp_path)
         repo_url = "https://github.com/test/nofallback-repo"
         _write_and_commit(repo, {"f.py": "def f(): pass\n"}, "c1")
-        _full_index(repo, repo_url, age_writer, pgvector_store, tmp_path / "out")
+        _full_index(repo, repo_url, graph_writer, pgvector_store, tmp_path / "out")
         _write_and_commit(repo, {"f.py": "def f(): return 1\n"}, "c2")
 
         upd = IncrementalUpdater(
             adapters=_adapters(),
             embedder=_embedder(),
-            age_writer=age_writer,
-            age_reader=age_reader,
+            graph_writer=graph_writer,
+            reader=reader,
+            state_store=state_store,
             pgvector_store=pgvector_store,
             exporter=JsonGraphExporter(),
         )

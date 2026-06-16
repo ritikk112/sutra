@@ -34,13 +34,14 @@ Dependency injection
 ---------------------
 IncrementalUpdater does NOT subclass Indexer — different lifecycle, different
 inputs, different outputs.  It shares adapters, embedder, and writers by
-reference.  All five writer/reader objects are pre-constructed by the caller:
+reference.  All writer/reader/state objects are pre-constructed by the caller:
 
     updater = IncrementalUpdater(
         adapters={"python": PythonAdapter()},
         embedder=FixtureEmbedder(),
-        age_writer=age_writer,
-        age_reader=age_reader,
+        graph_writer=graph_writer,
+        reader=reader,
+        state_store=state_store,
         pgvector_store=pgvector_store,
         gitignore_filter=GitignoreFilter(root),
     )
@@ -73,9 +74,9 @@ from sutra.core.extractor.moniker import repo_name_from_url
 from sutra.core.git_differ import changed_files
 from sutra.core.git_metadata import resolve_commit_hash
 from sutra.core.gitignore_filter import GitignoreFilter
-from sutra.core.graph.age_reader import AGEReader
-from sutra.core.graph.postgres_age import AGEWriter
+from sutra.core.graph.base import GraphWriter, IncrementalReader
 from sutra.core.graph.pgvector_store import PGVectorStore
+from sutra.core.graph.sql_state import SqlIndexStateStore
 from sutra.core.indexer import Indexer, _EXTENSION_MAP, _EXCLUDED_DIRS, _EXCLUDED_SUFFIXES
 
 # Fallback threshold: if ≥ this fraction of indexable files changed, skip
@@ -93,10 +94,13 @@ class IncrementalUpdater:
         Same adapter registry as Indexer — language string → adapter with .extract().
     embedder : Embedder
         Embedding provider.  Must match the dimensions of the existing pgvector store.
-    age_writer : AGEWriter
-        Pre-constructed AGEWriter.  Must have setup() already called.
-    age_reader : AGEReader
-        Pre-constructed AGEReader pointing at the same graph.
+    graph_writer : GraphWriter
+        Pre-constructed graph writer.  Must have setup() already called.
+    reader : IncrementalReader
+        Pre-constructed reader pointing at the same store.
+    state_store : SqlIndexStateStore
+        Per-repo state (last commit SHA, indexed_at timestamp).  Concrete
+        class — see graph/sql_state.py rationale (one impl, no ABC needed).
     pgvector_store : PGVectorStore
         Pre-constructed PGVectorStore.  Must have setup() already called.
     gitignore_filter : GitignoreFilter | None
@@ -107,27 +111,38 @@ class IncrementalUpdater:
         Default 0.5 (50%).  Set to 1.0 to disable the fallback.
     exporter : JsonGraphExporter | None
         Optional — only used when falling back to full re-index via Indexer.
+    resolver : Resolver | None
+        Optional CALLS resolver (P20-lite).  Flows to the fallback Indexer
+        so a full re-index resolves intra-repo calls.  KNOWN GAP, deliberate:
+        the per-file incremental path leaves NEW relationships unresolved
+        (resolution needs the whole-repo symbol map; per-file diffs don't
+        have it) — identical to Phase 1 behavior, refreshed on the next
+        full index.  Revisit if resolved-edge staleness ever matters.
     """
 
     def __init__(
         self,
         adapters: dict[str, Any],
         embedder: Embedder,
-        age_writer: AGEWriter,
-        age_reader: AGEReader,
+        graph_writer: GraphWriter,
+        reader: IncrementalReader,
+        state_store: SqlIndexStateStore,
         pgvector_store: PGVectorStore,
         gitignore_filter: Optional[GitignoreFilter] = None,
         fallback_threshold: float = _DEFAULT_FALLBACK_THRESHOLD,
         exporter: Any = None,
+        resolver: Any = None,
     ) -> None:
         self.adapters = adapters
         self.embedder = embedder
-        self.age_writer = age_writer
-        self.age_reader = age_reader
+        self.graph_writer = graph_writer
+        self.reader = reader
+        self.state_store = state_store
         self.pgvector_store = pgvector_store
         self.gitignore_filter = gitignore_filter
         self.fallback_threshold = fallback_threshold
         self.exporter = exporter
+        self.resolver = resolver
 
     # ------------------------------------------------------------------
     # Public API
@@ -159,7 +174,7 @@ class IncrementalUpdater:
         """
         repo_name = repo_name_from_url(repo_url)
         current_sha = resolve_commit_hash(root)
-        old_sha = self.age_reader.get_last_commit_sha(repo_name)
+        old_sha = self.state_store.get_last_commit_sha(repo_name)
 
         # ── No-op: same SHA ────────────────────────────────────────────
         # Incremental update is commit-scoped.  Uncommitted working-tree
@@ -240,7 +255,7 @@ class IncrementalUpdater:
         # INVARIANT: patch commit_sha LAST — this is the recovery checkpoint.
         # If anything above raised, the SHA is NOT updated.  Re-running the
         # updater will see the same old_sha and retry the same diff range.
-        self.age_writer.update_commit_sha(repo_name, current_sha)
+        self.state_store.update_commit_sha(repo_name, current_sha)
 
         return UpdateResult(
             added=added_count,
@@ -282,7 +297,7 @@ class IncrementalUpdater:
         new_rels: list[Relationship] = extraction.relationships
 
         # Get old state from AGE
-        old_state: dict[str, str] = self.age_reader.get_symbols_for_files(
+        old_state: dict[str, str] = self.reader.get_symbols_for_files(
             repo_name, [rel_path]
         )
 
@@ -308,11 +323,11 @@ class IncrementalUpdater:
 
         # 1. Delete outbound edges from all affected source monikers.
         #    Wholesale replacement per-source-moniker: delete then re-insert.
-        self.age_writer.delete_relationships_from(affected_monikers)
+        self.graph_writer.delete_relationships_from(affected_monikers)
 
-        # 2. Delete removed symbols from AGE and pgvector.
+        # 2. Delete removed symbols from the graph store and pgvector.
         if deleted_monikers:
-            self.age_writer.delete_symbols(deleted_monikers)
+            self.graph_writer.delete_symbols(deleted_monikers)
             self.pgvector_store.delete(deleted_monikers)
 
         # 3. Write added + changed symbols.
@@ -322,7 +337,7 @@ class IncrementalUpdater:
         )
 
         for sym in symbols_to_write:
-            self.age_writer.write_symbol_direct(sym, repo_name, indexed_at)
+            self.graph_writer.write_symbol_direct(sym, repo_name, indexed_at)
 
         # 4. Embed added + changed symbols only (unchanged skipped entirely).
         if symbols_to_write:
@@ -340,7 +355,7 @@ class IncrementalUpdater:
             if r.source_id in affected_set
         ]
         if rels_to_write:
-            self.age_writer.write_relationships_direct(rels_to_write)
+            self.graph_writer.write_relationships_direct(rels_to_write)
 
         return (
             len(added_monikers),
@@ -351,7 +366,8 @@ class IncrementalUpdater:
 
     def _process_deleted_files(self, deleted_paths: frozenset[str]) -> int:
         """
-        Remove all symbols belonging to deleted files from AGE and pgvector.
+        Remove all symbols belonging to deleted files from the graph store
+        and pgvector.
 
         Returns the count of symbols deleted.
         """
@@ -359,18 +375,18 @@ class IncrementalUpdater:
             return 0
 
         # Collect all monikers for the deleted files in one reader call.
-        old_state = self.age_reader.get_symbols_for_files(
-            # repo_name not needed here — we're querying by file_path only.
-            # get_symbols_for_files does not filter by repo; that's fine because
-            # file_paths are globally unique repo-relative paths in practice.
-            repo_name="",  # unused in the Cypher query (file_path lookup only)
+        # repo_name is empty here — we're querying by file_path only (paths
+        # are globally unique repo-relative).  The SQL reader falls through
+        # to file_path-only match when repo_name is empty.
+        old_state = self.reader.get_symbols_for_files(
+            repo_name="",
             file_paths=list(deleted_paths),
         )
         monikers = list(old_state.keys())
 
         if monikers:
-            self.age_writer.delete_relationships_from(monikers)
-            self.age_writer.delete_symbols(monikers)
+            self.graph_writer.delete_relationships_from(monikers)
+            self.graph_writer.delete_symbols(monikers)
             self.pgvector_store.delete(monikers)
 
         return len(monikers)
@@ -454,11 +470,12 @@ class IncrementalUpdater:
             adapters=self.adapters,
             exporter=exporter,
             embedder=self.embedder,
-            age_writer=self.age_writer,
+            graph_writer=self.graph_writer,
             pgvector_store=self.pgvector_store,
             gitignore_filter=self.gitignore_filter,
+            resolver=self.resolver,
         )
-        result = indexer.index(root, repo_url, output_dir)
+        result = indexer.index(root, repo_url, output_dir, replace=True)
 
         return UpdateResult(
             added=len(result.symbols),

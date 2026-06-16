@@ -1,0 +1,83 @@
+# P12 eval dataset — booth (Python web backend)
+# Repo: /home/ritik/PycharmProjects/booth @ 6f7a26853f1bf38c0464872fb7bac9a8e3867773
+# Expected monikers verified against tests/eval/artifacts/booth/graph.json.
+# `expected` is ANY-OF — every listed moniker is an acceptable top hit.
+repo: booth
+cases:
+  # ----- behavioral -----
+  - query: "which function saves the meeting in the database"
+    category: behavioral
+    expected:
+      - "sutra python booth service/meeting.py MeetingService#create_meeting()."
+      - "sutra python booth controllers/meeting.py create_meeting()."
+    kind_filter: function
+
+  - query: "function that uploads a voice note audio file to s3"
+    category: behavioral
+    expected:
+      - "sutra python booth clients/s3_client.py S3Client#upload_voice_note()."
+      - "sutra python booth service/meeting.py MeetingService#upload_voice_note()."
+    kind_filter: function
+
+  - query: "where do we generate presigned urls for audio playback"
+    category: behavioral
+    expected:
+      - "sutra python booth clients/s3_client.py S3Client#_generate_signed_url()."
+
+  - query: "function that retries a database transaction when it fails"
+    category: behavioral
+    expected:
+      - "sutra python booth database/postgres_dal.py _transaction_retry()."
+
+  - query: "which function soft deletes a voice note"
+    category: behavioral
+    expected:
+      - "sutra python booth service/meeting.py MeetingService#soft_delete_voice_note()."
+      - "sutra python booth controllers/meeting.py delete_voice_note()."
+
+  # ----- entity -----
+  - query: "the Meeting database model"
+    category: entity
+    expected:
+      - "sutra python booth models/meeting.py Meeting#"
+    kind_filter: class
+
+  - query: "request model for creating a visitor by a partner"
+    category: entity
+    expected:
+      - "sutra python booth models/visitor.py CreateVisitorByPartnerRequest#"
+    kind_filter: class
+
+  # ----- paraphrase -----
+  - query: "application startup and shutdown lifecycle handling"
+    category: paraphrase
+    expected:
+      - "sutra python booth main.py app_lifespan()."
+
+  - query: "database connection singleton"
+    category: paraphrase
+    expected:
+      - "sutra python booth database/postgres_singleton.py PostgresSingleton#"
+      - "sutra python booth database/postgres_singleton.py PostgresSingleton#init_connection()."
+
+  # ----- exact-name -----
+  - query: "get_visitors_onboarded_by_usher"
+    category: exact-name
+    expected:
+      - "sutra python booth controllers/usher.py get_visitors_onboarded_by_usher()."
+      - "sutra python booth service/usher.py UsherService#get_visitors_onboarded_by_usher()."
+
+  - query: "PostgresDALWrapper find_one"
+    category: exact-name
+    expected:
+      - "sutra python booth database/__init__.py PostgresDALWrapper#find_one()."
+
+  # ----- known-failure -----
+  # The original Phase 1 failure shape: "which function saves X in db" returns
+  # the X request/response models instead of the writing function.
+  - query: "which function saves the visitor in db"
+    category: known-failure
+    expected:
+      - "sutra python booth service/partner.py PartnerService#create_visitor_profile()."
+      - "sutra python booth controllers/partner.py create_visitor_by_partner()."
+    kind_filter: function
