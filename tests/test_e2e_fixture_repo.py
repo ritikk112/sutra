@@ -127,7 +127,7 @@ class TestGraphSchema:
 
     def test_repository_block(self, indexed) -> None:
         repo = indexed["graph"]["repository"]
-        assert repo["name"] == "sample_python_repo"
+        assert repo["name"] == "test/sample_python_repo"
         assert repo["url"] == _REPO_URL
         assert "commit_sha" in repo
         assert "languages" in repo
@@ -171,7 +171,7 @@ class TestSymbolCounts:
     def test_known_module_moniker(self, indexed) -> None:
         ids = {s["id"] for s in indexed["graph"]["symbols"]}
         expected = (
-            "sutra python sample_python_repo "
+            "sutra python test/sample_python_repo "
             "src/services/user.py src/services/user/"
         )
         assert expected in ids
@@ -179,7 +179,7 @@ class TestSymbolCounts:
     def test_known_constructor_moniker(self, indexed) -> None:
         ids = {s["id"] for s in indexed["graph"]["symbols"]}
         expected = (
-            "sutra python sample_python_repo "
+            "sutra python test/sample_python_repo "
             "src/services/user.py UserService#__init__()."
         )
         assert expected in ids
@@ -187,7 +187,7 @@ class TestSymbolCounts:
     def test_known_variable_moniker(self, indexed) -> None:
         ids = {s["id"] for s in indexed["graph"]["symbols"]}
         expected = (
-            "sutra python sample_python_repo "
+            "sutra python test/sample_python_repo "
             "src/services/user.py MAX_RETRIES."
         )
         assert expected in ids
@@ -195,19 +195,19 @@ class TestSymbolCounts:
     def test_constructor_fields(self, indexed) -> None:
         syms = {s["id"]: s for s in indexed["graph"]["symbols"]}
         init = syms[
-            "sutra python sample_python_repo "
+            "sutra python test/sample_python_repo "
             "src/services/user.py UserService#__init__()."
         ]
         assert init["kind"] == "method"
         assert init["is_constructor"] is True
         assert init["enclosing_class_id"] == (
-            "sutra python sample_python_repo src/services/user.py UserService#"
+            "sutra python test/sample_python_repo src/services/user.py UserService#"
         )
 
     def test_variable_is_constant(self, indexed) -> None:
         syms = {s["id"]: s for s in indexed["graph"]["symbols"]}
         var = syms[
-            "sutra python sample_python_repo src/services/user.py MAX_RETRIES."
+            "sutra python test/sample_python_repo src/services/user.py MAX_RETRIES."
         ]
         assert var["kind"] == "variable"
         assert var["type_annotation"] == "int"
@@ -216,7 +216,7 @@ class TestSymbolCounts:
     def test_class_has_base(self, indexed) -> None:
         syms = {s["id"]: s for s in indexed["graph"]["symbols"]}
         cls = syms[
-            "sutra python sample_python_repo src/services/user.py UserService#"
+            "sutra python test/sample_python_repo src/services/user.py UserService#"
         ]
         assert cls["base_classes"] == ["Base"]
         assert cls["docstring"] == "Manages user operations."
@@ -224,7 +224,7 @@ class TestSymbolCounts:
     def test_module_docstring(self, indexed) -> None:
         syms = {s["id"]: s for s in indexed["graph"]["symbols"]}
         mod = syms[
-            "sutra python sample_python_repo "
+            "sutra python test/sample_python_repo "
             "src/services/user.py src/services/user/"
         ]
         assert mod["docstring"] == "User service module."
@@ -268,7 +268,7 @@ class TestRelationshipCounts:
         assert len(extends) == 1
         rel = extends[0]
         assert rel["source_id"] == (
-            "sutra python sample_python_repo src/services/user.py UserService#"
+            "sutra python test/sample_python_repo src/services/user.py UserService#"
         )
         assert rel["target_name"] == "Base"
         assert rel["is_resolved"] is False
@@ -281,7 +281,7 @@ class TestRelationshipCounts:
 
     def test_calls_from_bootstrap(self, indexed) -> None:
         bootstrap_id = (
-            "sutra python sample_python_repo "
+            "sutra python test/sample_python_repo "
             "src/services/user.py bootstrap()."
         )
         calls = [
@@ -295,7 +295,7 @@ class TestRelationshipCounts:
 
     def test_calls_from_create_user(self, indexed) -> None:
         create_user_id = (
-            "sutra python sample_python_repo "
+            "sutra python test/sample_python_repo "
             "src/services/user.py UserService#create_user()."
         )
         calls = [

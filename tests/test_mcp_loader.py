@@ -106,7 +106,7 @@ class TestAtomicArtifactWriter:
         target = tmp_path / "served"
         self._commit_generation(target, artifact_dir, "gen-1")
         snap = ArtifactLoader().load(target)
-        assert snap.repo_name == "sample_python_repo"
+        assert snap.repo_name == "test/sample_python_repo"
 
 
 # ---------------------------------------------------------------------------
@@ -118,8 +118,8 @@ class TestRegistry:
         registry = SnapshotRegistry()
         unit = build_serving_unit(artifact_dir, EmbedderCache())
         registry.swap(unit)
-        assert registry.repos() == ["sample_python_repo"]
-        assert registry.get("sample_python_repo") is unit
+        assert registry.repos() == ["test/sample_python_repo"]
+        assert registry.get("test/sample_python_repo") is unit
         assert registry.get("nope") is None
 
     def test_swap_replaces_old_unit_inflight_keeps_reference(
@@ -129,13 +129,13 @@ class TestRegistry:
         cache = EmbedderCache()
         old = build_serving_unit(artifact_dir, cache)
         registry.swap(old)
-        held = registry.get("sample_python_repo")   # an in-flight query's ref
+        held = registry.get("test/sample_python_repo")   # an in-flight query's ref
         new = build_serving_unit(artifact_dir, cache)
         registry.swap(new)
-        assert registry.get("sample_python_repo") is new
+        assert registry.get("test/sample_python_repo") is new
         # The held reference still serves — immutability is the guarantee.
         assert held is old
-        assert held.snapshot.repo_name == "sample_python_repo"
+        assert held.snapshot.repo_name == "test/sample_python_repo"
 
     def test_torn_artifact_rejected_old_keeps_serving(
         self, artifact_dir, tmp_path
@@ -152,7 +152,7 @@ class TestRegistry:
         with pytest.raises(ArtifactError, match="Torn artifact"):
             build_serving_unit(artifact_dir, cache)
         # Registry untouched — the old unit still serves.
-        assert registry.get("sample_python_repo") is good
+        assert registry.get("test/sample_python_repo") is good
 
     def test_schema_version_mismatch_rejected(self, artifact_dir) -> None:
         graph = json.loads((artifact_dir / "graph.json").read_text())
@@ -171,8 +171,8 @@ class TestRegistry:
 
         registry = SnapshotRegistry()
         loaded = scan_artifacts_root(root, registry, EmbedderCache())
-        assert loaded == ["sample_python_repo"]
-        assert registry.repos() == ["sample_python_repo"]
+        assert loaded == ["test/sample_python_repo"]
+        assert registry.repos() == ["test/sample_python_repo"]
 
     def test_scan_strict_raises_on_broken(self, tmp_path) -> None:
         root = tmp_path / "root"

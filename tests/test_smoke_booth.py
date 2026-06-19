@@ -108,7 +108,7 @@ class TestSmokeStructure:
 
     def test_repository_block(self, booth_indexed) -> None:
         repo = booth_indexed["graph"]["repository"]
-        assert repo["name"] == "booth"
+        assert repo["name"] == "ritikk112/booth"
         assert repo["url"] == _BOOTH_URL
         assert "commit_sha" in repo
         # Real git repo — commit SHA should be 40-char hex

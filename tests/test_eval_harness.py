@@ -125,7 +125,7 @@ class TestSearchResult:
 
 class TestArtifactLoader:
     def test_loads_fixture_artifact(self, snapshot, artifact) -> None:
-        assert snapshot.repo_name == "sample_python_repo"
+        assert snapshot.repo_name == "test/sample_python_repo"
         assert snapshot.schema_version == "1"
         assert snapshot.embedding_model_id == "fixture-384"
         assert snapshot.embedding_dims == 384
@@ -340,7 +340,7 @@ class TestHarness:
             cases.append(EvalCase(
                 query=chunk,
                 category="exact-name",
-                repo="sample_python_repo",
+                repo="test/sample_python_repo",
                 expected=(moniker,),
             ))
         return cases
@@ -356,7 +356,7 @@ class TestHarness:
 
     def test_run_eval_with_repo_mapping(self, retriever, artifact) -> None:
         cases = self._cases_from_chunks(artifact, n=2)
-        report = run_eval({"sample_python_repo": retriever}, cases)
+        report = run_eval({"test/sample_python_repo": retriever}, cases)
         assert report.aggregate()["recall@1"] == 1.0
 
     def test_run_eval_missing_repo_raises(self, retriever, artifact) -> None:

@@ -97,18 +97,18 @@ class TestTools:
         result = _call(server, "sutra_list_repos", {})
         repos = _payload(result)["result"]
         assert len(repos) == 1
-        assert repos[0]["repo"] == "sample_python_repo"
+        assert repos[0]["repo"] == "test/sample_python_repo"
         assert repos[0]["symbols"] == 8
         assert repos[0]["embedding_model"] == "fixture-384"
 
     def test_search_returns_ranked_symbols(self, server) -> None:
         result = _call(server, "sutra_search", {
-            "query": "create_user", "repo": "sample_python_repo", "top_k": 5,
+            "query": "create_user", "repo": "test/sample_python_repo", "top_k": 5,
         })
         hits = _payload(result)["result"]
         assert hits
         assert "create_user" in hits[0]["moniker"]
-        assert hits[0]["repo"] == "sample_python_repo"
+        assert hits[0]["repo"] == "test/sample_python_repo"
         assert hits[0]["file_path"] == "src/services/user.py"
         assert "rrf" in hits[0]["provenance"]
         assert hits[0]["line_start"] is not None
@@ -125,7 +125,7 @@ class TestTools:
         assert "Unknown repo" in result.content[0].text
 
     def test_get_symbol_with_callers_callees(self, server) -> None:
-        unit = server.registry.get("sample_python_repo")
+        unit = server.registry.get("test/sample_python_repo")
         create_user = next(m for m in unit.snapshot.symbols if "create_user" in m)
         generate_id = next(m for m in unit.snapshot.symbols if "_generate_id" in m)
 
@@ -136,7 +136,7 @@ class TestTools:
         assert generate_id in payload["callees"]
 
     def test_get_callers_and_callees(self, server) -> None:
-        unit = server.registry.get("sample_python_repo")
+        unit = server.registry.get("test/sample_python_repo")
         create_user = next(m for m in unit.snapshot.symbols if "create_user" in m)
         generate_id = next(m for m in unit.snapshot.symbols if "_generate_id" in m)
 
@@ -147,7 +147,7 @@ class TestTools:
         assert create_user in [c["moniker"] for c in callers]
 
     def test_expand_neighbors_with_kinds(self, server) -> None:
-        unit = server.registry.get("sample_python_repo")
+        unit = server.registry.get("test/sample_python_repo")
         create_user = next(m for m in unit.snapshot.symbols if "create_user" in m)
         neighbors = _payload(_call(server, "sutra_expand_neighbors", {
             "moniker": create_user, "depth": 2, "kinds": ["calls"],
@@ -197,7 +197,7 @@ class TestBootAndReload:
         server = SutraServer(artifacts_root=root, watch=True,
                              audit_db=tmp_path / "a.db")
         try:
-            old_unit = server.registry.get("sample_python_repo")
+            old_unit = server.registry.get("test/sample_python_repo")
 
             # Re-commit the same artifact through the atomic writer —
             # the .ready sentinel appears, the watcher must swap units.
@@ -212,9 +212,9 @@ class TestBootAndReload:
             fired = server.watcher.check_once()
             assert served in fired
 
-            new_unit = server.registry.get("sample_python_repo")
+            new_unit = server.registry.get("test/sample_python_repo")
             assert new_unit is not old_unit
-            assert new_unit.snapshot.repo_name == "sample_python_repo"
+            assert new_unit.snapshot.repo_name == "test/sample_python_repo"
         finally:
             server.watcher.stop()
 
@@ -225,7 +225,7 @@ class TestBootAndReload:
         server = SutraServer(artifacts_root=root, watch=True,
                              audit_db=tmp_path / "a.db")
         try:
-            old_unit = server.registry.get("sample_python_repo")
+            old_unit = server.registry.get("test/sample_python_repo")
 
             # Tear the on-disk artifact, then stamp .ready by hand (a
             # buggy producer).  The reload must fail INSIDE the callback
@@ -236,6 +236,6 @@ class TestBootAndReload:
 
             fired = server.watcher.check_once()
             assert served in fired   # watcher fired and survived the error
-            assert server.registry.get("sample_python_repo") is old_unit
+            assert server.registry.get("test/sample_python_repo") is old_unit
         finally:
             server.watcher.stop()
