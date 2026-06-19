@@ -19,6 +19,15 @@ from sutra.core.extractor.moniker import repo_dir_slug, repo_name_from_url
 JOB_STATUSES_FINISHED = {"succeeded", "failed", "cancelled"}
 
 
+def _child_env() -> dict[str, str]:
+    """Child indexing processes run JSON-only — never let them inherit
+    SUTRA_PG_URL, or full_index's env fallback would silently re-enable
+    Postgres writes the frontend deliberately omits."""
+    env = os.environ.copy()
+    env.pop("SUTRA_PG_URL", None)
+    return env
+
+
 def _full_index_cmd(
     python: str, root: Path, repo_url: str, output_dir: Path,
     config: Path, replace: bool,
@@ -306,7 +315,7 @@ class JobManager:
             cwd=str(self.repo_root),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env=os.environ.copy(),
+            env=_child_env(),
         )
 
         await asyncio.to_thread(self._set_pid, job_id, proc.pid)

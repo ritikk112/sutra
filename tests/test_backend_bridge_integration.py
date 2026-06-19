@@ -73,3 +73,4 @@ def test_reindex_bumps_ready_and_watcher_fires(tmp_path):
     os.utime(out / READY_SENTINEL,
              (before + 5, before + 5))   # guarantee a visible mtime bump
     assert watcher.check_once() == [out]
+    assert fired == [out]

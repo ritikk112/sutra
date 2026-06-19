@@ -48,7 +48,8 @@ async def startup() -> None:
 
     _check_pipeline_importable()
 
-    if not _pyright_available():
+    pyright_ok = _pyright_available()
+    if not pyright_ok:
         raise RuntimeError(
             "pyright-langserver not found, but the indexer runs --resolver lsp. "
             "Install it: pip install pyright"
@@ -62,7 +63,7 @@ async def startup() -> None:
     print(
         "[sutra-ui] startup: "
         f"repo_root={REPO_ROOT} artifacts_root={artifacts_root} "
-        f"pyright_ok=True openai_required={needs_openai} openai_key_set={openai_key_set}"
+        f"pyright_ok={pyright_ok} openai_required={needs_openai} openai_key_set={openai_key_set}"
     )
 
     global manager

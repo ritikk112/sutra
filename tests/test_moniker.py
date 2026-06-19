@@ -47,6 +47,12 @@ class TestRepoNameFromUrl:
     def test_internal_host_keeps_owner(self):
         assert repo_name_from_url("https://git.internal.io/team/sutra.git") == "team/sutra"
 
+    def test_http_scheme(self):
+        assert repo_name_from_url("http://github.com/org/app") == "org/app"
+
+    def test_repo_name_with_dots(self):
+        assert repo_name_from_url("https://github.com/org/my.app") == "org/my.app"
+
 
 # ---------------------------------------------------------------------------
 # MonikerBuilder — individual symbol kinds

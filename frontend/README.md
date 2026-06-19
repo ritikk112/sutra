@@ -19,7 +19,8 @@ make ui-run
 
 - Python env for this repo is active
 - Node.js + npm installed
-- PostgreSQL reachable via `SUTRA_PG_URL`
+- `pyright` installed (`pip install pyright`) — the indexer runs `--resolver lsp` and the API refuses to start without `pyright-langserver` on PATH
+- `SUTRA_ARTIFACTS_DIR` set (default: `~/.sutra/artifacts`) — indexed repos are written here and served to the MCP server
 - `OPENAI_API_KEY` set if `config/sutra.yaml` uses `embedder.provider: openai`
 
 ## Install
@@ -49,7 +50,7 @@ make ui-build
 ```bash
 cd /home/ritik/Desktop/sutra
 source .venv/bin/activate
-export SUTRA_PG_URL=postgresql://postgres:postgers@localhost:5433/postgres
+export SUTRA_ARTIFACTS_DIR=~/.sutra/artifacts   # optional: override artifact store location
 uvicorn frontend.api.main:app --host 127.0.0.1 --port 8000
 ```
 

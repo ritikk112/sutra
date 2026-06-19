@@ -1,6 +1,14 @@
 from pathlib import Path
 
-from frontend.api.jobs import _full_index_cmd
+from frontend.api.jobs import _full_index_cmd, _child_env
+
+
+def test_child_env_strips_pg_url(monkeypatch):
+    monkeypatch.setenv("SUTRA_PG_URL", "postgresql://x")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    env = _child_env()
+    assert "SUTRA_PG_URL" not in env
+    assert env.get("OPENAI_API_KEY") == "sk-test"   # unrelated vars preserved
 
 
 def test_index_cmd_has_lsp_and_no_pg_url():
