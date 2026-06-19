@@ -13,8 +13,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from sutra.core.extractor.moniker import repo_dir_slug, repo_name_from_url
+
 
 JOB_STATUSES_FINISHED = {"succeeded", "failed", "cancelled"}
+
+
+def _full_index_cmd(
+    python: str, root: Path, repo_url: str, output_dir: Path,
+    config: Path, replace: bool,
+) -> list[str]:
+    """Build the JSON-only full_index command (no --pg-url; LSP on)."""
+    cmd = [
+        python, "-m", "pipelines.full_index",
+        "--root", str(root),
+        "--repo-url", repo_url,
+        "--output-dir", str(output_dir),
+        "--config", str(config),
+        "--resolver", "lsp",
+    ]
+    if replace:
+        cmd.append("--replace")
+    return cmd
 
 
 @dataclass
@@ -26,10 +46,11 @@ class JobRuntime:
 
 
 class JobManager:
-    def __init__(self, repo_root: Path, pg_url: str, sutra_home: Path) -> None:
+    def __init__(self, repo_root: Path, sutra_home: Path, artifacts_root: Path) -> None:
         self.repo_root = repo_root
-        self.pg_url = pg_url
         self.sutra_home = sutra_home
+        self.artifacts_root = artifacts_root
+        self.artifacts_root.mkdir(parents=True, exist_ok=True)
         self.jobs_root = sutra_home / "jobs"
         self.db_path = sutra_home / "jobs.db"
 
@@ -58,7 +79,7 @@ class JobManager:
         job_id = f"{repo_slug}-{stamp}"
 
         clone_path = Path("/tmp") / "sutra-jobs" / job_id / "repo"
-        output_path = self.jobs_root / job_id / "out"
+        output_path = self.artifacts_root / repo_dir_slug(repo_name_from_url(repo_url))
         output_path.mkdir(parents=True, exist_ok=True)
 
         async with self._lock:
@@ -204,24 +225,14 @@ class JobManager:
             if clone_rc != 0:
                 raise RuntimeError(f"git clone failed with exit code {clone_rc}")
 
-            cmd = [
-                sys.executable,
-                "-m",
-                "pipelines.full_index",
-                "--root",
-                str(clone_path),
-                "--repo-url",
-                repo_url,
-                "--output-dir",
-                str(output_path),
-                "--config",
-                str(self.repo_root / "config" / "sutra.yaml"),
-                "--pg-url",
-                self.pg_url,
-            ]
-            if replace:
-                cmd.append("--replace")
-
+            cmd = _full_index_cmd(
+                python=sys.executable,
+                root=clone_path,
+                repo_url=repo_url,
+                output_dir=output_path,
+                config=self.repo_root / "config" / "sutra.yaml",
+                replace=replace,
+            )
             exit_code = await self._run_cmd(job_id, runtime, cmd)
             graph_path = output_path / "graph.json"
             if graph_path.exists():
