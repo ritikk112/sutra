@@ -17,5 +17,6 @@ from sutra.core.artifact.loader import (
     ArtifactLoader,
     ArtifactSnapshot,
 )
+from sutra.core.artifact.sink import ArtifactSink  # noqa: F401
 
-__all__ = ["ArtifactError", "ArtifactLoader", "ArtifactSnapshot"]
+__all__ = ["ArtifactError", "ArtifactLoader", "ArtifactSnapshot", "ArtifactSink"]
