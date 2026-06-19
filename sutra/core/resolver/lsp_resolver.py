@@ -20,8 +20,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import select
 import subprocess
 import sys
+import time
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Optional
@@ -37,6 +39,10 @@ from sutra.core.extractor.moniker import parse_moniker
 from sutra.core.resolver.base import ResolutionStats, Resolver
 
 _DEFINITION_TIMEOUT_S = 30.0
+
+
+class LspResolverError(RuntimeError):
+    """Fatal pyright failure mid-resolve — aborts the index (nothing published)."""
 
 
 class _LspClient:
@@ -64,12 +70,20 @@ class _LspClient:
 
     # ------------------------------------------------------------------
 
-    def request(self, method: str, params: dict) -> Any:
+    def request(self, method: str, params: dict, timeout: Optional[float] = None) -> Any:
         msg_id = self._next_id
         self._next_id += 1
         self._send({"jsonrpc": "2.0", "id": msg_id, "method": method,
                     "params": params})
+        deadline = None if timeout is None else time.monotonic() + timeout
         while True:
+            if deadline is not None:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError(f"LSP {method} timed out after {timeout}s")
+                ready, _, _ = select.select([self._proc.stdout], [], [], remaining)
+                if not ready:
+                    raise TimeoutError(f"LSP {method} timed out after {timeout}s")
             msg = self._recv()
             if msg is None:
                 raise RuntimeError(
@@ -79,21 +93,20 @@ class _LspClient:
                 if "error" in msg:
                     raise RuntimeError(f"LSP {method} error: {msg['error']}")
                 return msg["result"]
-            # Server-initiated requests need an answer or pyright stalls.
             if "id" in msg and "method" in msg:
                 self._send({"jsonrpc": "2.0", "id": msg["id"], "result": None})
-            # Notifications (diagnostics, logs) are drained silently.
 
     def notify(self, method: str, params: dict) -> None:
         self._send({"jsonrpc": "2.0", "method": method, "params": params})
 
     def close(self) -> None:
         try:
-            self.request("shutdown", {})
+            self.request("shutdown", {}, timeout=5)
             self.notify("exit", {})
             self._proc.wait(timeout=5)
         except Exception:   # noqa: BLE001 — best-effort teardown
             self._proc.kill()
+            self._proc.wait()
 
     # ------------------------------------------------------------------
 
@@ -135,8 +148,14 @@ class LspResolver(Resolver):
         running interpreter's environment.
     """
 
-    def __init__(self, root: Path | str, command: Optional[list[str]] = None) -> None:
+    def __init__(
+        self,
+        root: Path | str,
+        command: Optional[list[str]] = None,
+        definition_timeout: float = _DEFINITION_TIMEOUT_S,
+    ) -> None:
         self._root = Path(root).resolve()
+        self._definition_timeout = definition_timeout
         self._command = command or [
             str(Path(sys.executable).parent / "pyright-langserver"), "--stdio",
         ]
@@ -203,12 +222,20 @@ class LspResolver(Resolver):
                     if pos is None:
                         continue
                     try:
-                        result = client.request("textDocument/definition", {
-                            "textDocument": {"uri": uri},
-                            "position": {"line": pos[0], "character": pos[1]},
-                        })
-                    except RuntimeError:
-                        break   # server died — keep whatever resolved so far
+                        result = client.request(
+                            "textDocument/definition",
+                            {
+                                "textDocument": {"uri": uri},
+                                "position": {"line": pos[0], "character": pos[1]},
+                            },
+                            timeout=self._definition_timeout,
+                        )
+                    except TimeoutError:
+                        continue   # abandon this one edge; it stays heuristic-resolved
+                    except RuntimeError as exc:
+                        raise LspResolverError(
+                            f"pyright failed mid-resolve: {exc}"
+                        ) from exc
                     target = self._map_definition(result, by_file)
                     if target is None:
                         continue
