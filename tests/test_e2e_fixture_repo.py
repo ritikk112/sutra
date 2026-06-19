@@ -110,7 +110,9 @@ class TestOutputFiles:
     def test_no_extra_files(self, indexed) -> None:
         out = indexed["out"]
         created = {p.name for p in out.iterdir() if p.is_file()}
-        assert created == {"graph.json", "embeddings.npy", "embeddings_index.json"}
+        assert created == {
+            "graph.json", "embeddings.npy", "embeddings_index.json", ".ready",
+        }
 
 
 # ---------------------------------------------------------------------------
