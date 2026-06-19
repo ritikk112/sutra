@@ -66,6 +66,20 @@ def repo_name_from_url(url: str) -> str:
     return url
 
 
+def repo_dir_slug(repo_name: str) -> str:
+    """
+    Filesystem-safe directory name for a canonical `owner/repo` identity.
+
+    The artifact *directory* cannot contain '/', but the moniker `repo_name`
+    can.  Both derive from `repo_name_from_url`, so folder and in-graph
+    identity never drift.
+
+      team-a/api          -> team-a__api
+      group/subgroup/svc  -> group__subgroup__svc
+    """
+    return repo_name.replace("/", "__")
+
+
 # ---------------------------------------------------------------------------
 # MonikerBuilder
 # ---------------------------------------------------------------------------

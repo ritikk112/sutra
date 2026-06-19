@@ -322,3 +322,21 @@ class TestDescriptorKind:
         assert descriptor_kind(cls) == "class"
         assert descriptor_kind(var) == "variable"
         assert descriptor_kind(mod) == "module"
+
+
+# ---------------------------------------------------------------------------
+# repo_dir_slug
+# ---------------------------------------------------------------------------
+
+class TestRepoDirSlug:
+    def test_single_owner_repo(self):
+        from sutra.core.extractor.moniker import repo_dir_slug
+        assert repo_dir_slug("team-a/api") == "team-a__api"
+
+    def test_nested_group(self):
+        from sutra.core.extractor.moniker import repo_dir_slug
+        assert repo_dir_slug("group/subgroup/svc") == "group__subgroup__svc"
+
+    def test_no_slash_passthrough(self):
+        from sutra.core.extractor.moniker import repo_dir_slug
+        assert repo_dir_slug("standalone") == "standalone"
