@@ -201,14 +201,36 @@ atomically with a `.ready` sentinel written last.
 
 Point it at the artifacts directory and it serves every repo inside.
 
+> **Three things that trip people up — read before you run it:**
+> 1. **Run from the repo root, with the repo's venv.** `sutra` is *not*
+>    pip-installed, so `python -m sutra.mcp` only resolves when the repo root
+>    is importable — i.e. your shell's `cwd` is the repo root (or `PYTHONPATH`
+>    includes it). Use the repo's own `.venv` python, not a system or
+>    other-project interpreter (`ModuleNotFoundError: No module named 'sutra'`
+>    / `'mcp'` means you got this wrong).
+> 2. **OpenAI-embedded artifacts need `OPENAI_API_KEY` at *query* time too.**
+>    The server re-embeds your *query* with the same model the repo was indexed
+>    with. Without the key that repo is **skipped** (you'll see
+>    `skipping <repo>: … set OPENAI_API_KEY`, then `No loadable artifacts`).
+>    Export the key, or re-index that repo with `provider: local` / `fixture`
+>    in `config/sutra.yaml` for key-free querying.
+> 3. **For another machine to connect you need BOTH `--host 0.0.0.0` and
+>    `SUTRA_MCP_TOKEN`.** The default `--host` is `127.0.0.1` (this machine
+>    only). On a `0.0.0.0` bind the bearer token is the *only* thing guarding
+>    your code — **never expose `0.0.0.0` without a token.**
+
 ```bash
-# Local stdio — what an agent on this machine spawns:
+cd /path/to/sutra && source .venv/bin/activate      # cwd = repo root, repo venv
+export SUTRA_ARTIFACTS_DIR=~/.sutra/artifacts
+export OPENAI_API_KEY=sk-...                          # if any artifact is OpenAI-embedded
+
+# Local stdio — for an agent on THIS machine:
 python -m sutra.mcp --artifacts-dir "$SUTRA_ARTIFACTS_DIR"
 
-# Shared team server over HTTP + bearer token:
-export SUTRA_MCP_TOKEN=$(openssl rand -hex 32)
+# Shared team server over HTTP (for other machines) — token REQUIRED:
+export SUTRA_MCP_TOKEN=$(openssl rand -hex 32); echo "$SUTRA_MCP_TOKEN"
 python -m sutra.mcp --artifacts-dir "$SUTRA_ARTIFACTS_DIR" --http --host 0.0.0.0 --port 8765
-# endpoint: http://<host>:8765/mcp   (Authorization: Bearer $SUTRA_MCP_TOKEN)
+# endpoint: http://<your-LAN-IP>:8765/mcp   (find your IP with: hostname -I)
 ```
 
 | Flag / env | Meaning |
@@ -235,24 +257,59 @@ python scripts/verify_mcp.py --artifacts-dir "$SUTRA_ARTIFACTS_DIR" \
 
 ## Connecting an agent
 
-### Claude Code
+### Claude Code — same machine (stdio)
+
+A bare `claude mcp add sutra -- python -m sutra.mcp …` **will fail** — Claude
+spawns the server from *its* working directory (not the repo) with whatever
+`python` is on PATH, so it can't import `sutra`/`mcp`. Pin the **absolute venv
+python**, pass the repo on `PYTHONPATH`, and use an **absolute** artifacts path
+(`~` is not expanded when the command is exec'd):
 
 ```bash
-# local stdio:
-claude mcp add sutra -- python -m sutra.mcp --artifacts-dir ~/.sutra/artifacts
-# shared HTTP server:
-claude mcp add --transport http sutra http://host:8765/mcp \
-    --header "Authorization: Bearer $SUTRA_MCP_TOKEN"
+claude mcp add sutra -s user \
+  -e PYTHONPATH=/path/to/sutra \
+  -e OPENAI_API_KEY=sk-...                          # omit for local/fixture artifacts \
+  -- /path/to/sutra/.venv/bin/python -m sutra.mcp \
+     --artifacts-dir /home/you/.sutra/artifacts
 ```
 
+- `-s user` registers it for every project (default scope is per-directory `local`).
+- Already added a broken one? `claude mcp remove sutra` first (from the dir you added it in).
+- `/mcp` failing with `-32000` means the spawned server died — see [Troubleshooting](#troubleshooting).
+
+### Claude Code — another machine on your LAN (HTTP, recommended for sharing)
+
+Start the **HTTP** server on the host (see [§3](#3-mcp-server-the-product)) with
+`--host 0.0.0.0` **and** a `SUTRA_MCP_TOKEN`, then on the *other* machine
+register the host's **LAN IP** (run `hostname -I` on the host) with the same
+token:
+
+```bash
+# on the CLIENT machine:
+claude mcp add --transport http sutra -s user http://<HOST-LAN-IP>:8765/mcp \
+  --header "Authorization: Bearer <the SUTRA_MCP_TOKEN printed by the host>"
+```
+
+HTTP avoids every stdio pitfall (cwd, interpreter, env) — the server runs in a
+shell you control; clients just hit a URL. For the client to reach it: the host
+must bind `0.0.0.0`, the host firewall must allow the port
+(`sudo ufw allow 8765/tcp`), and the Wi-Fi must not isolate clients (common on
+guest/corporate networks — home Wi-Fi is usually fine).
+
 ### Claude Desktop / Cursor (`claude_desktop_config.json` / `.cursor/mcp.json`)
+
+Same rules as stdio above — absolute venv python, `PYTHONPATH`, absolute paths:
 
 ```json
 {
   "mcpServers": {
     "sutra": {
-      "command": "/abs/path/.venv/bin/python",
-      "args": ["-m", "sutra.mcp", "--artifacts-dir", "/home/you/.sutra/artifacts"]
+      "command": "/abs/path/sutra/.venv/bin/python",
+      "args": ["-m", "sutra.mcp", "--artifacts-dir", "/home/you/.sutra/artifacts"],
+      "env": {
+        "PYTHONPATH": "/abs/path/sutra",
+        "OPENAI_API_KEY": "sk-..."
+      }
     }
   }
 }
@@ -390,7 +447,13 @@ checked-in Python repo used for hermetic end-to-end runs.
 |---|---|
 | Frontend won't start: "pyright-langserver not found" | `pip install pyright` — LSP is the frontend's default resolver. |
 | Frontend won't start: "OPENAI_API_KEY is required" | Config uses `provider: openai`. Set the key, or switch to `local`/`fixture` in `config/sutra.yaml`. |
-| MCP server: "No loadable artifacts" | `--artifacts-dir` must contain *subdirectories* each holding `graph.json` (+ `.npy` + index). Index something first. |
+| MCP server: `ModuleNotFoundError: No module named 'sutra'` (or `'mcp'`) | Wrong cwd or interpreter. Run from the repo root with its `.venv` active, **or** use the absolute `…/sutra/.venv/bin/python` and set `PYTHONPATH=/path/to/sutra`. |
+| MCP server prints `skipping <repo>: … set OPENAI_API_KEY` then exits `No loadable artifacts` | The repo is **present but skipped**, not missing — it was OpenAI-embedded, so the server needs `OPENAI_API_KEY` to embed queries with the same model. Export the key used to index it, or re-index with a `local`/`fixture` embedder. |
+| MCP server: `No loadable artifacts` and the dir is empty/wrong | `--artifacts-dir` must hold *subdirectories*, one per repo, each with `graph.json` + `embeddings.npy` + `embeddings_index.json`. Index something first. |
+| Agent: `Failed to reconnect: -32000` | The stdio server died on launch. Reproduce the exact spawn from a neutral dir; usual causes: wrong cwd/venv (→ absolute python + `PYTHONPATH`), missing `OPENAI_API_KEY`, or a literal `~` in `--artifacts-dir` (use an absolute path). |
+| Remote client: connection refused / hangs | Server bound to `127.0.0.1`. Restart with `--host 0.0.0.0`. Then verify the IP (`hostname -I`), host firewall (`sudo ufw allow 8765/tcp`), and Wi-Fi client isolation. |
+| Remote client: `421 Misdirected Request` / "Invalid Host header" | Old build — update to a version where the HTTP team server relaxes the SDK's localhost-only Host allowlist (the bearer token is the auth boundary). |
+| Remote client: `401 unauthorized` | Missing/wrong `Authorization: Bearer <token>` — it must equal the server's `SUTRA_MCP_TOKEN`. |
 | MCP server: "Embedding model mismatch" | The artifact was embedded with a model the query side can't build. For OpenAI artifacts set `OPENAI_API_KEY`; for local artifacts install the ML extras. |
 | "Torn artifact: …" | A half-written/half-copied bundle. Re-index; when syncing remotely, copy data files first and the `.ready` sentinel **last**. |
 | First query is slow | sentence-transformers / reranker models load lazily on first use, then cache. |
