@@ -965,3 +965,53 @@ class TestRealisticSnippet:
         result = extract(adapter, self.SRC)
         # module + class + __init__ + validate + create + standalone + MAX_USERS = 7
         assert len(result.symbols) == 7
+
+
+class TestSameNamedMethodDedup:
+    """A class may legally define the same method name twice — a property
+    getter+setter, or @overload stubs + the implementation. Each must collapse
+    to ONE MethodSymbol so monikers stay unique.
+
+    Regression: indexing tradyon/athena aborted with
+    'Duplicate moniker … Users#api_key().' on a property getter+setter.
+    """
+
+    def test_property_getter_setter_collapse_to_getter(self, adapter):
+        src = (
+            "class Users:\n"
+            "    @property\n"
+            "    def api_key(self) -> str:\n"
+            "        return self._k\n"
+            "    @api_key.setter\n"
+            "    def api_key(self, value: str) -> None:\n"
+            "        self._k = value\n"
+        )
+        result = extract(adapter, src)
+        methods = [s for s in result.symbols
+                   if isinstance(s, MethodSymbol) and s.name == "api_key"]
+        assert len(methods) == 1
+        # the canonical accessor kept is the getter (@property), not the setter
+        assert any("property" in d for d in methods[0].decorators)
+        # no duplicate monikers anywhere in the extraction
+        ids = [s.id for s in result.symbols]
+        assert len(ids) == len(set(ids))
+
+    def test_overload_collapses_to_implementation(self, adapter):
+        src = (
+            "from typing import overload\n"
+            "class Client:\n"
+            "    @overload\n"
+            "    def send(self, x: int) -> int: ...\n"
+            "    @overload\n"
+            "    def send(self, x: str) -> str: ...\n"
+            "    def send(self, x):\n"
+            "        return x\n"
+        )
+        result = extract(adapter, src)
+        methods = [s for s in result.symbols
+                   if isinstance(s, MethodSymbol) and s.name == "send"]
+        assert len(methods) == 1
+        # the kept symbol is the real implementation, not an @overload stub
+        assert not any("overload" in d for d in methods[0].decorators)
+        ids = [s.id for s in result.symbols]
+        assert len(ids) == len(set(ids))
