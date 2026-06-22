@@ -313,11 +313,26 @@ class SutraServer:
         `Authorization: Bearer <token>`.  Unset = no auth (loopback dev).
         """
         import uvicorn
+
+        uvicorn.run(self._build_http_app(), host=host, port=port)
+
+    def _build_http_app(self):
+        """Build the streamable-HTTP ASGI app: the FastMCP app mounted under
+        /mcp behind bearer-token auth.
+
+        The outer Starlette app MUST run the mounted FastMCP app's lifespan.
+        A Starlette ``Mount`` does NOT propagate a sub-app's lifespan, and
+        FastMCP starts its session-manager task group there — without it every
+        request 500s with "Task group is not initialized. Make sure to use
+        run()." So we forward the mounted app's lifespan to the outer app.
+        """
         from starlette.applications import Starlette
         from starlette.middleware import Middleware
         from starlette.middleware.base import BaseHTTPMiddleware
         from starlette.responses import JSONResponse
         from starlette.routing import Mount
+
+        from mcp.server.transport_security import TransportSecuritySettings
 
         token = os.environ.get("SUTRA_MCP_TOKEN", "")
 
@@ -328,8 +343,17 @@ class SutraServer:
                 return await call_next(request)
 
         self.mcp.settings.streamable_http_path = "/"
-        app = Starlette(
-            routes=[Mount("/mcp", app=self.mcp.streamable_http_app())],
-            middleware=[Middleware(BearerAuth)],
+        # The SDK's DNS-rebinding protection defaults to a localhost-only Host
+        # allowlist, which 421s every LAN/remote client. This team server is
+        # reached over arbitrary host addresses and the bearer token above is
+        # the auth boundary, so relax the Host/Origin check here. ALWAYS set
+        # SUTRA_MCP_TOKEN when binding a non-localhost interface.
+        self.mcp.settings.transport_security = TransportSecuritySettings(
+            enable_dns_rebinding_protection=False
         )
-        uvicorn.run(app, host=host, port=port)
+        mcp_app = self.mcp.streamable_http_app()
+        return Starlette(
+            routes=[Mount("/mcp", app=mcp_app)],
+            middleware=[Middleware(BearerAuth)],
+            lifespan=lambda _outer: mcp_app.router.lifespan_context(_outer),
+        )

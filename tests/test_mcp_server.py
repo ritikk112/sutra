@@ -239,3 +239,42 @@ class TestBootAndReload:
             assert server.registry.get("test/sample_python_repo") is old_unit
         finally:
             server.watcher.stop()
+
+
+class TestHttpTransport:
+    """The streamable-HTTP team server must serve a REMOTE client, exercising
+    two fixes at once:
+      - the mounted FastMCP session-manager lifespan must run (else every
+        request 500s 'Task group is not initialized'); and
+      - the SDK's default Host allowlist is localhost-only, so a LAN client's
+        Host header (e.g. 192.168.x.x:8765) must not be 421'd.
+    An `initialize` POST carrying a non-localhost Host must therefore succeed.
+    """
+
+    def test_http_app_serves_remote_lan_host(self, server, monkeypatch):
+        monkeypatch.delenv("SUTRA_MCP_TOKEN", raising=False)  # auth off
+        from starlette.testclient import TestClient
+
+        app = server._build_http_app()
+        # Entering the TestClient context runs the app's lifespan (session
+        # manager). The Host header simulates a LAN client, not localhost.
+        with TestClient(app) as client:
+            r = client.post(
+                "/mcp/",
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json, text/event-stream",
+                    "host": "192.168.7.94:8765",
+                },
+                json={
+                    "jsonrpc": "2.0", "id": 1, "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-06-18",
+                        "capabilities": {},
+                        "clientInfo": {"name": "smoke", "version": "0"},
+                    },
+                },
+            )
+        # 500 = lifespan bug; 421 = Host-allowlist bug. Real remote init = 200.
+        assert r.status_code == 200, f"{r.status_code}: {r.text}"
+        assert "Task group is not initialized" not in r.text
