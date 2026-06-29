@@ -563,22 +563,17 @@ class PythonAdapter:
         # before we process methods.
         class_node_to_sym: dict[int, ClassSymbol] = {}
         for class_node in captures.get("class.def", []):
-            # Function-local classes are throwaway, non-importable locals (e.g.
-            # test stub classes) — skip them, mirroring the nested-function skip
-            # below. Their moniker encodes only the enclosing-CLASS chain (which
-            # breaks at the function), so two same-named locals in different
-            # functions would collide to one moniker and abort the whole index.
-            if _find_enclosing_function(class_node) is not None:
-                continue
-
             cls = self._build_class(class_node, file_path, source_bytes, builder, mod_qname)
             if cls is None:
                 continue
             symbols.append(cls)
             class_node_to_sym[class_node.id] = cls
 
+            # CONTAINS source: module for top-level, else the enclosing scope
+            # (a function, for a function-local class).
+            container_id = cls.enclosing_moniker or module_id
             relationships.append(Relationship(
-                source_id=module_id,
+                source_id=container_id,
                 kind=RelationKind.CONTAINS,
                 is_resolved=True,
                 target_id=cls.id,

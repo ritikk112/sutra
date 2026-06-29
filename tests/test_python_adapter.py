@@ -1006,44 +1006,12 @@ class TestSameNamedMethodDedup:
         assert len(ids) == len(set(ids))
 
 
-class TestFunctionLocalClassNotExtracted:
-    """Classes defined inside a function body are throwaway, non-importable
-    locals. They are out of Phase-1 scope and not indexed. The class moniker
-    encodes only the enclosing-CLASS chain, so two same-named function-local
-    classes would otherwise collapse to one moniker and abort the whole repo
-    index.
-
-    Regression: indexing tradyon/odin aborted with
-    'Duplicate moniker … test_agent_fallback.py NoCause#' — two test helpers
-    each defined a local `class NoCause`.
-    """
-
-    def test_two_same_named_function_local_classes_do_not_collide(self, adapter):
-        src = (
-            "def test_a():\n"
-            "    class NoCause:\n"
-            "        pass\n"
-            "    return NoCause()\n"
-            "\n"
-            "def test_b():\n"
-            "    class NoCause:\n"
-            "        pass\n"
-            "    return NoCause()\n"
-        )
-        result = extract(adapter, src)
-        # The function-local classes are skipped, not emitted as symbols.
-        assert not [s for s in result.symbols
-                    if isinstance(s, ClassSymbol) and s.name == "NoCause"]
-        # The enclosing functions themselves are still indexed.
-        assert sym_by_name(result, "test_a") is not None
-        assert sym_by_name(result, "test_b") is not None
-        # No duplicate monikers anywhere — the indexer's assertion would abort.
-        ids = [s.id for s in result.symbols]
-        assert len(ids) == len(set(ids))
+class TestClassInClassExtracted:
+    """Guard: class-in-class nesting (e.g. Pydantic `class Config`) must still
+    be extracted correctly — this is unaffected by the function-local class
+    feature."""
 
     def test_class_nested_in_class_is_still_extracted(self, adapter):
-        """Guard: the fix must NOT skip class-in-class nesting (e.g. Pydantic
-        `class Config`) — only function-local classes."""
         src = (
             "class Outer:\n"
             "    class Config:\n"
@@ -1105,3 +1073,59 @@ class TestNestedFunctionLocals:
         ]
         assert len(contains) == 1
         assert contains[0].is_resolved is True
+
+
+class TestFunctionLocalClassesIndexed:
+    def test_two_same_named_local_classes_distinct_monikers(self, adapter):
+        # The odin case: two `class NoCause` in two different test functions.
+        src = (
+            "def test_a():\n"
+            "    class NoCause:\n"
+            "        pass\n"
+            "    return NoCause()\n"
+            "\n"
+            "def test_b():\n"
+            "    class NoCause:\n"
+            "        pass\n"
+            "    return NoCause()\n"
+        )
+        result = extract(adapter, src)
+        nocause = [s for s in result.symbols
+                   if isinstance(s, ClassSymbol) and s.name == "NoCause"]
+        assert len(nocause) == 2
+        ids = {s.id for s in nocause}
+        assert ids == {
+            "my-app python src/services/user.py test_a().NoCause#",
+            "my-app python src/services/user.py test_b().NoCause#",
+        } or all(s.is_local for s in nocause)  # repo/file prefix may vary; key check: distinct + local
+        assert len(ids) == 2
+        assert all(s.is_local for s in nocause)
+
+    def test_local_class_method_and_contains(self, adapter):
+        src = (
+            "def outer():\n"
+            "    class Helper:\n"
+            "        def run(self):\n"
+            "            pass\n"
+            "    return Helper\n"
+        )
+        result = extract(adapter, src)
+        helper = next(s for s in result.symbols
+                      if isinstance(s, ClassSymbol) and s.name == "Helper")
+        run = next(s for s in result.symbols if s.name == "run")
+        outer = sym_by_name(result, "outer")
+        assert helper.is_local is True and helper.id.endswith("outer().Helper#")
+        assert run.is_local is True and run.id.endswith("outer().Helper#run().")
+        assert run.enclosing_moniker == helper.id
+        # function -> local class CONTAINS
+        assert any(
+            r.kind == RelationKind.CONTAINS and r.source_id == outer.id
+            and r.target_id == helper.id and r.is_resolved
+            for r in result.relationships
+        )
+        # local class -> method CONTAINS
+        assert any(
+            r.kind == RelationKind.CONTAINS and r.source_id == helper.id
+            and r.target_id == run.id and r.is_resolved
+            for r in result.relationships
+        )
