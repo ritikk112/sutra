@@ -338,3 +338,45 @@ class TestRepoDirSlug:
     def test_no_slash_passthrough(self):
         from sutra.core.extractor.moniker import repo_dir_slug
         assert repo_dir_slug("standalone") == "standalone"
+
+
+# ---------------------------------------------------------------------------
+# Task 2: Tier-2 local symbols — scope segments and descriptor generalization
+# ---------------------------------------------------------------------------
+
+def _b():
+    return MonikerBuilder(language="python", repo_name="r")
+
+
+def test_for_function_with_function_scope():
+    m = _b().for_function("f.py", "inner", enclosing=(("outer", "()."),))
+    assert m == "sutra python r f.py outer().inner()."
+
+
+def test_for_class_with_function_scope():
+    m = _b().for_class("f.py", "NoCause", enclosing=(("test_a", "()."),))
+    assert m == "sutra python r f.py test_a().NoCause#"
+
+
+def test_for_method_with_mixed_scope():
+    m = _b().for_method("f.py", "Helper", "run", enclosing=(("outer", "()."),))
+    assert m == "sutra python r f.py outer().Helper#run()."
+
+
+def test_for_class_class_scope_unchanged():
+    # Regression: existing nested-class form must be byte-identical.
+    m = _b().for_class("f.py", "Config", enclosing=(("Outer", "#"),))
+    assert m == "sutra python r f.py Outer#Config#"
+
+
+def test_build_rejects_descriptor_with_space():
+    with pytest.raises(AssertionError):
+        _b().for_function("f.py", "bad name")  # space in identifier
+
+
+def test_descriptor_kind_handles_disambiguator():
+    assert descriptor_kind("inner(1).") == "function"
+    assert descriptor_kind("Helper#run(1).") == "method"
+    assert descriptor_kind("NoCause(1)#") == "class"
+    assert descriptor_kind("x.") == "variable"   # plain variable still variable
+    assert descriptor_kind("outer().inner().") == "function"
