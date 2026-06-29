@@ -1015,3 +1015,51 @@ class TestSameNamedMethodDedup:
         assert not any("overload" in d for d in methods[0].decorators)
         ids = [s.id for s in result.symbols]
         assert len(ids) == len(set(ids))
+
+
+class TestFunctionLocalClassNotExtracted:
+    """Classes defined inside a function body are throwaway, non-importable
+    locals — like nested functions (see test_nested_function_not_extracted),
+    they are out of Phase-1 scope and not indexed. The class moniker encodes
+    only the enclosing-CLASS chain, so two same-named function-local classes
+    would otherwise collapse to one moniker and abort the whole repo index.
+
+    Regression: indexing tradyon/odin aborted with
+    'Duplicate moniker … test_agent_fallback.py NoCause#' — two test helpers
+    each defined a local `class NoCause`.
+    """
+
+    def test_two_same_named_function_local_classes_do_not_collide(self, adapter):
+        src = (
+            "def test_a():\n"
+            "    class NoCause:\n"
+            "        pass\n"
+            "    return NoCause()\n"
+            "\n"
+            "def test_b():\n"
+            "    class NoCause:\n"
+            "        pass\n"
+            "    return NoCause()\n"
+        )
+        result = extract(adapter, src)
+        # The function-local classes are skipped, not emitted as symbols.
+        assert not [s for s in result.symbols
+                    if isinstance(s, ClassSymbol) and s.name == "NoCause"]
+        # The enclosing functions themselves are still indexed.
+        assert sym_by_name(result, "test_a") is not None
+        assert sym_by_name(result, "test_b") is not None
+        # No duplicate monikers anywhere — the indexer's assertion would abort.
+        ids = [s.id for s in result.symbols]
+        assert len(ids) == len(set(ids))
+
+    def test_class_nested_in_class_is_still_extracted(self, adapter):
+        """Guard: the fix must NOT skip class-in-class nesting (e.g. Pydantic
+        `class Config`) — only function-local classes."""
+        src = (
+            "class Outer:\n"
+            "    class Config:\n"
+            "        pass\n"
+        )
+        result = extract(adapter, src)
+        names = {s.name for s in result.symbols if isinstance(s, ClassSymbol)}
+        assert names == {"Outer", "Config"}
