@@ -188,6 +188,8 @@ class HeuristicResolver(Resolver):
             hits = self._prefer_call_form(rel, local_by_scope.get((scope, name), []))
             if len(hits) == 1:
                 return hits[0]
+            if len(hits) > 1:
+                return None   # ambiguous at the nearest visible scope → leave unresolved
         return None
 
     # ------------------------------------------------------------------

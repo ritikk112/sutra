@@ -301,3 +301,27 @@ def test_local_never_resolved_cross_scope():
     rel = _calls_rel("sutra python r f.py other().", "inner")
     HeuristicResolver().resolve([other, local_inner], [rel])
     assert not rel.is_resolved
+
+
+def test_ambiguous_local_in_same_scope_stays_unresolved():
+    # The caller (inner_fn) is nested inside outer_fn.
+    # inner_fn's scope has TWO locals named "helper" (ambiguous — adapter would
+    # disambiguate, but resolver must be defensively correct for malformed input).
+    # outer_fn's scope has ONE local named "helper" (would be reached if the
+    # resolver incorrectly skips past the ambiguous innermost scope).
+    # Correct behaviour (precision over recall): stop at innermost ambiguous scope
+    # and leave the call UNRESOLVED — never fall through to the outer scope's single match.
+    outer_fn = _fn("sutra python r f.py outer().", "outer")
+    inner_fn = _fn("sutra python r f.py outer().inner_fn().", "inner_fn",
+                   is_local=True, enclosing="sutra python r f.py outer().")
+    # Two ambiguous locals inside inner_fn's scope (same enclosing + same name)
+    h1 = _fn("sutra python r f.py outer().inner_fn().helper().", "helper",
+             is_local=True, enclosing="sutra python r f.py outer().inner_fn().")
+    h2 = _fn("sutra python r f.py outer().inner_fn().helper(1).", "helper",
+             is_local=True, enclosing="sutra python r f.py outer().inner_fn().")
+    # One unambiguous local in outer_fn's scope — old code would fall back here (wrong)
+    h_outer = _fn("sutra python r f.py outer().helper().", "helper",
+                  is_local=True, enclosing="sutra python r f.py outer().")
+    rel = _calls_rel("sutra python r f.py outer().inner_fn().", "helper")
+    HeuristicResolver().resolve([outer_fn, inner_fn, h1, h2, h_outer], [rel])
+    assert not rel.is_resolved
