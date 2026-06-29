@@ -597,3 +597,44 @@ class TestEdgeCases:
         monikers = ["only_one_moniker"]
         with pytest.raises(AssertionError, match="moniker_order"):
             JsonGraphExporter().export(result, tmp_path, vectors, monikers)
+
+
+# ---------------------------------------------------------------------------
+# Tests: Tier-2 local symbol fields (is_local + enclosing_moniker)
+# ---------------------------------------------------------------------------
+
+class TestLocalSymbolFields:
+    """
+    Verify that graph.json carries both `is_local` and `enclosing_moniker`
+    for every symbol.  Uses a real index of a tiny repo that contains a
+    nested function so that at least one symbol has is_local=True and a
+    non-null enclosing_moniker.
+    """
+
+    def test_graph_json_serializes_local_fields(self, tmp_path: Path) -> None:
+        from sutra.core.embedder.fixture import FixtureEmbedder
+        from sutra.core.extractor.adapters.python import PythonAdapter
+        from sutra.core.indexer import Indexer
+
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "m.py").write_text("def outer():\n    def inner():\n        pass\n")
+        out = tmp_path / "art"
+        Indexer(
+            adapters={"python": PythonAdapter()},
+            exporter=JsonGraphExporter(),
+            embedder=FixtureEmbedder(),
+        ).index(root=repo, repo_url="https://github.com/t/r", output_dir=out)
+
+        graph = json.loads((out / "graph.json").read_text())
+
+        # Every symbol must carry both fields
+        for sym in graph["symbols"]:
+            assert "is_local" in sym, f"is_local missing on {sym['id']}"
+            assert "enclosing_moniker" in sym, f"enclosing_moniker missing on {sym['id']}"
+
+        # The inner function must be flagged as local with a proper enclosing reference
+        inner = next(s for s in graph["symbols"] if s["name"] == "inner")
+        assert inner["is_local"] is True
+        assert inner["enclosing_moniker"] is not None
+        assert inner["enclosing_moniker"].endswith("outer().")

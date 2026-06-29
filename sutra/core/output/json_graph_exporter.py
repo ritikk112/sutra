@@ -171,6 +171,7 @@ class JsonGraphExporter:
             "visibility": sym.visibility.value,
             "is_exported": sym.is_exported,
             "is_local": sym.is_local,
+            "enclosing_moniker": sym.enclosing_moniker,
             "embedding_id": embedding_id,
         }
 
