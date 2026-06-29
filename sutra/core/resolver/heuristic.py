@@ -93,11 +93,18 @@ class HeuristicResolver(Resolver):
     ) -> ResolutionStats:
         stats = ResolutionStats()
 
-        # name → candidate symbols (callables + classes)
+        # name -> NON-LOCAL candidate symbols (locals resolve via scope, below)
         by_name: dict[str, list[Symbol]] = defaultdict(list)
         for sym in symbols:
-            if isinstance(sym, _CALLABLE_TYPES):
+            if isinstance(sym, _CALLABLE_TYPES) and not sym.is_local:
                 by_name[sym.name].append(sym)
+
+        sym_by_id: dict[str, Symbol] = {s.id: s for s in symbols}
+        # (enclosing_moniker, name) -> local callable candidates
+        local_by_scope: dict[tuple[str, str], list[Symbol]] = defaultdict(list)
+        for sym in symbols:
+            if isinstance(sym, _CALLABLE_TYPES) and sym.is_local and sym.enclosing_moniker:
+                local_by_scope[(sym.enclosing_moniker, sym.name)].append(sym)
 
         # caller file → {local callee name → import_source}
         imports_of_file: dict[str, dict[str, str]] = defaultdict(dict)
@@ -122,6 +129,18 @@ class HeuristicResolver(Resolver):
             name = rel.target_name
             if not name:
                 continue
+
+            # Highest precedence: scope-gated local resolution (Python lexical scoping).
+            local_target = self._resolve_local(rel, name, sym_by_id, local_by_scope)
+            if local_target is not None:
+                stats.matchable += 1
+                rel.target_id = local_target.id
+                rel.is_resolved = True
+                rel.metadata["resolved_by"] = "local-scope"
+                stats.resolved += 1
+                stats.by_rule["local-scope"] = stats.by_rule.get("local-scope", 0) + 1
+                continue
+
             candidates = by_name.get(name)
             if not candidates:
                 continue
@@ -140,6 +159,36 @@ class HeuristicResolver(Resolver):
             stats.by_rule[rule] = stats.by_rule.get(rule, 0) + 1
 
         return stats
+
+    # ------------------------------------------------------------------
+    # Local-scope helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _scope_chain_of(caller_id: str, sym_by_id: dict[str, Symbol]) -> list[str]:
+        """Caller's own scope + enclosing scopes, innermost first."""
+        chain = [caller_id]
+        cur = sym_by_id.get(caller_id)
+        seen = {caller_id}
+        while cur is not None and cur.enclosing_moniker and cur.enclosing_moniker not in seen:
+            chain.append(cur.enclosing_moniker)
+            seen.add(cur.enclosing_moniker)
+            cur = sym_by_id.get(cur.enclosing_moniker)
+        return chain
+
+    def _resolve_local(
+        self,
+        rel: Relationship,
+        name: str,
+        sym_by_id: dict[str, Symbol],
+        local_by_scope: dict[tuple[str, str], list[Symbol]],
+    ) -> Symbol | None:
+        """Innermost visible local named `name`, walking the caller's scope chain."""
+        for scope in self._scope_chain_of(rel.source_id, sym_by_id):
+            hits = self._prefer_call_form(rel, local_by_scope.get((scope, name), []))
+            if len(hits) == 1:
+                return hits[0]
+        return None
 
     # ------------------------------------------------------------------
     # Rules

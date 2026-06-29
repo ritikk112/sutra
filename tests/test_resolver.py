@@ -245,3 +245,59 @@ class TestBoothAcceptance:
             f"P20-lite acceptance failed: {stats.resolution_rate:.0%} < 60% "
             f"(by_rule={stats.by_rule})"
         )
+
+
+# ---------------------------------------------------------------------------
+# Task 8 — Scope-gated local resolution (Tier-2 local symbols)
+# ---------------------------------------------------------------------------
+
+from sutra.core.extractor.base import FunctionSymbol, Location, Visibility, Relationship, RelationKind
+from sutra.core.resolver.heuristic import HeuristicResolver
+
+
+def _fn(id_, name, *, is_local=False, enclosing=None):
+    return FunctionSymbol(
+        id=id_, name=name, qualified_name=name, file_path="f.py",
+        location=Location(1, 2, 0, 5), body_hash="sha256:x", language="python",
+        visibility=Visibility.PUBLIC, is_exported=True, is_local=is_local,
+        enclosing_moniker=enclosing,
+    )
+
+
+def _calls_rel(src, name):
+    return Relationship(source_id=src, kind=RelationKind.CALLS, is_resolved=False,
+                        target_name=name, metadata={"call_form": "direct"})
+
+
+def test_local_scope_call_resolves_to_local_not_toplevel():
+    outer = _fn("sutra python r f.py outer().", "inner_caller")  # caller is outer
+    outer.name = "outer"; outer.id = "sutra python r f.py outer()."
+    top_inner = _fn("sutra python r f.py inner().", "inner")
+    local_inner = _fn("sutra python r f.py outer().inner().", "inner",
+                      is_local=True, enclosing="sutra python r f.py outer().")
+    # outer calls inner -> must resolve to the LOCAL inner, not the top-level one
+    rel = _calls_rel("sutra python r f.py outer().", "inner")
+    HeuristicResolver().resolve([outer, top_inner, local_inner], [rel])
+    assert rel.is_resolved and rel.target_id == local_inner.id
+
+
+def test_toplevel_call_not_broken_by_sibling_local():
+    # A top-level caller calling top-level inner must still resolve, even though
+    # a same-named local exists in the same file (regression guard).
+    top_caller = _fn("sutra python r f.py main().", "main")
+    top_inner = _fn("sutra python r f.py inner().", "inner")
+    local_inner = _fn("sutra python r f.py outer().inner().", "inner",
+                      is_local=True, enclosing="sutra python r f.py outer().")
+    rel = _calls_rel("sutra python r f.py main().", "inner")
+    HeuristicResolver().resolve([top_caller, top_inner, local_inner], [rel])
+    assert rel.is_resolved and rel.target_id == top_inner.id
+
+
+def test_local_never_resolved_cross_scope():
+    # A caller outside the local's scope must NOT resolve to it (no top-level inner here).
+    other = _fn("sutra python r f.py other().", "other")
+    local_inner = _fn("sutra python r f.py outer().inner().", "inner",
+                      is_local=True, enclosing="sutra python r f.py outer().")
+    rel = _calls_rel("sutra python r f.py other().", "inner")
+    HeuristicResolver().resolve([other, local_inner], [rel])
+    assert not rel.is_resolved
