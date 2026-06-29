@@ -226,6 +226,7 @@ class SutraServer:
             def run():
                 unit = server._unit_for_moniker(moniker)
                 payload = server._symbol_payload(unit, moniker)
+                payload["is_local"] = payload.get("is_local", False)
                 payload["callers"] = [
                     n.moniker for n in unit.traversal.get_callers(moniker)
                 ]
