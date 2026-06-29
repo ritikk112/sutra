@@ -213,17 +213,6 @@ class TestFunctionSymbol:
         assert len(fn.decorators) == 1
         assert "@app.route" in fn.decorators[0]
 
-    def test_nested_function_not_extracted(self, adapter):
-        src = (
-            "def outer():\n"
-            "    def inner():\n"
-            "        pass\n"
-            "    return inner\n"
-        )
-        result = extract(adapter, src)
-        assert sym_by_name(result, "outer") is not None
-        assert sym_by_name(result, "inner") is None
-
     def test_complexity_simple(self, adapter):
         src = "def fn():\n    return 1\n"
         result = extract(adapter, src)
@@ -1019,10 +1008,10 @@ class TestSameNamedMethodDedup:
 
 class TestFunctionLocalClassNotExtracted:
     """Classes defined inside a function body are throwaway, non-importable
-    locals — like nested functions (see test_nested_function_not_extracted),
-    they are out of Phase-1 scope and not indexed. The class moniker encodes
-    only the enclosing-CLASS chain, so two same-named function-local classes
-    would otherwise collapse to one moniker and abort the whole repo index.
+    locals. They are out of Phase-1 scope and not indexed. The class moniker
+    encodes only the enclosing-CLASS chain, so two same-named function-local
+    classes would otherwise collapse to one moniker and abort the whole repo
+    index.
 
     Regression: indexing tradyon/odin aborted with
     'Duplicate moniker … test_agent_fallback.py NoCause#' — two test helpers
@@ -1091,3 +1080,28 @@ class TestScopeChain:
         f = sym_by_name(result, "f")
         assert f.is_local is False
         assert f.enclosing_moniker is None
+
+
+class TestNestedFunctionLocals:
+    def test_nested_function_emitted_as_local(self, adapter):
+        src = "def outer():\n    def inner():\n        pass\n    return inner\n"
+        result = extract(adapter, src)
+        inner = sym_by_name(result, "inner")
+        outer = sym_by_name(result, "outer")
+        assert inner is not None
+        assert inner.is_local is True
+        assert inner.id.endswith("outer().inner().")
+        assert inner.enclosing_moniker == outer.id
+
+    def test_function_contains_its_nested_function(self, adapter):
+        src = "def outer():\n    def inner():\n        pass\n    return inner\n"
+        result = extract(adapter, src)
+        outer = sym_by_name(result, "outer")
+        inner = sym_by_name(result, "inner")
+        contains = [
+            r for r in result.relationships
+            if r.kind == RelationKind.CONTAINS
+            and r.source_id == outer.id and r.target_id == inner.id
+        ]
+        assert len(contains) == 1
+        assert contains[0].is_resolved is True

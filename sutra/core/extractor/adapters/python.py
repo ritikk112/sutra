@@ -660,19 +660,22 @@ class PythonAdapter:
                             metadata=meta,
                         ))
             else:
-                # Not inside a class — but may be nested inside another function
-                if _find_enclosing_function(func_node) is not None:
-                    continue  # nested function — skip (Phase 1)
-
+                # Not inside a class. Either a top-level function or a function
+                # nested in another function (Tier-2 local). Emit either way.
                 fn = self._build_function(
                     func_node, file_path, source_bytes, builder, mod_qname
                 )
                 if fn is None:
                     continue
+                # Collapse identical-moniker duplicates (Task 6 handles the rare
+                # same-scope same-name case via the disambiguator).
                 symbols.append(fn)
 
+                # CONTAINS source: the module for top-level, else the enclosing
+                # scope (a function for a function-local function).
+                container_id = fn.enclosing_moniker or module_id
                 relationships.append(Relationship(
-                    source_id=module_id,
+                    source_id=container_id,
                     kind=RelationKind.CONTAINS,
                     is_resolved=True,
                     target_id=fn.id,
