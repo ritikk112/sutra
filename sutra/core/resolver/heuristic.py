@@ -3,6 +3,11 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 
+# Sentinel returned by _resolve_local when the innermost visible scope that has
+# the requested name is AMBIGUOUS (>1 hit).  Distinct from None ("not found"),
+# so the caller can avoid falling through to the cross-file by_name pool.
+_AMBIGUOUS_LOCAL: object = object()
+
 from sutra.core.extractor.base import (
     ClassSymbol,
     FunctionSymbol,
@@ -132,6 +137,11 @@ class HeuristicResolver(Resolver):
 
             # Highest precedence: scope-gated local resolution (Python lexical scoping).
             local_target = self._resolve_local(rel, name, sym_by_id, local_by_scope)
+            if local_target is _AMBIGUOUS_LOCAL:
+                # A visible scope has >1 match — the name is bound (ambiguously) in that
+                # scope, so it shadows outer/global names.  Leave the call unresolved
+                # rather than wrongly falling through to the cross-file by_name pool.
+                continue
             if local_target is not None:
                 stats.matchable += 1
                 rel.target_id = local_target.id
@@ -182,14 +192,24 @@ class HeuristicResolver(Resolver):
         name: str,
         sym_by_id: dict[str, Symbol],
         local_by_scope: dict[tuple[str, str], list[Symbol]],
-    ) -> Symbol | None:
-        """Innermost visible local named `name`, walking the caller's scope chain."""
+    ) -> "Symbol | object | None":
+        """Innermost visible local named `name`, walking the caller's scope chain.
+
+        Returns:
+            Symbol         — unambiguous match found in the nearest scope that has the name.
+            _AMBIGUOUS_LOCAL — the nearest scope with the name has >1 match; Python lexical
+                               scoping means the name is bound here (even ambiguously), so it
+                               SHADOWS outer/global — never fall through to by_name.
+            None           — no scope on the chain has the name at all.
+        """
         for scope in self._scope_chain_of(rel.source_id, sym_by_id):
             hits = self._prefer_call_form(rel, local_by_scope.get((scope, name), []))
             if len(hits) == 1:
                 return hits[0]
             if len(hits) > 1:
-                return None   # ambiguous at the nearest visible scope → leave unresolved
+                # Ambiguous at the innermost visible scope that has the name.
+                # Stop the walk — the name is shadowed here; do NOT fall through.
+                return _AMBIGUOUS_LOCAL
         return None
 
     # ------------------------------------------------------------------

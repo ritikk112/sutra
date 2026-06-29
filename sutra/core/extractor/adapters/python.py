@@ -123,36 +123,6 @@ def _find_enclosing_class(node: Node) -> Optional[Node]:
     return None
 
 
-def _enclosing_class_names(node: Node) -> tuple[str, ...]:
-    """
-    Names of the classes enclosing `node`, outermost first, EXCLUDING `node`
-    itself.
-
-    Used to build stacked descriptors for nested classes/methods so that
-    same-named nested classes (e.g. Pydantic's `class Config`) get distinct
-    monikers.  Examples (walking up from the inner node):
-      - class Outer: class Config: ...   _enclosing_class_names(Config) → ("Outer",)
-      - class Outer: class Inner: def m  _enclosing_class_names(m)      → ("Outer", "Inner")
-      - top-level class / method          → ()
-
-    A function_definition encountered while walking up breaks the chain: a
-    class defined inside a function is not a true nested type for moniker
-    purposes (and Phase 1 does not track function-local symbols), mirroring
-    _find_enclosing_class which stops at the first enclosing function.
-    """
-    names: list[str] = []
-    current = node.parent
-    while current is not None:
-        if current.type == "class_definition":
-            name_node = current.child_by_field_name("name")
-            if name_node is not None:
-                names.append(_txt(name_node))
-        elif current.type == "function_definition":
-            break
-        current = current.parent
-    names.reverse()
-    return tuple(names)
-
 
 def _find_enclosing_function(node: Node) -> Optional[Node]:
     """
@@ -173,8 +143,8 @@ def _scope_chain(node: Node) -> tuple[tuple[str, str], ...]:
     """
     Enclosing scopes of `node`, outermost first, EXCLUDING `node` itself.
     class_definition → (name, "#"); function_definition → (name, "().").
-    Unlike _enclosing_class_names, this does NOT stop at a function — it is
-    what gives function-local symbols a self-describing, unique descriptor.
+    Does NOT stop at a function boundary — this is what gives function-local
+    symbols a self-describing, unique descriptor in their moniker.
     """
     segments: list[tuple[str, str]] = []
     current = node.parent
@@ -865,9 +835,14 @@ class PythonAdapter:
 
         chain = _scope_chain(node)              # includes the method's own class as last segment
         method_enclosing = chain[:-1]           # everything above the method's class
-        qual_path = ".".join((*(n for n, _ in chain), name)) if chain \
-            else f"{cls_sym.name}.{name}"
+        # chain is always non-empty for a method (its class is at minimum present),
+        # so the else branch below would be unreachable — removed.
+        qual_path = ".".join((*(n for n, _ in chain), name))
         is_local = any(suffix == "()." for _, suffix in method_enclosing)
+        # NOTE: same-scope same-name class methods (property getter/setter, @overload)
+        # intentionally share a moniker and are collapsed via the method_by_id / keep-first
+        # net in extract().  Do NOT add a disambiguator suffix to method monikers — that
+        # would break the getter/setter/@overload collapse (the athena fix).
         # enclosing scope is the method's own class:
         enclosing_moniker = cls_sym.id
 

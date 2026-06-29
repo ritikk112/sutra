@@ -309,8 +309,10 @@ def test_ambiguous_local_in_same_scope_stays_unresolved():
     # disambiguate, but resolver must be defensively correct for malformed input).
     # outer_fn's scope has ONE local named "helper" (would be reached if the
     # resolver incorrectly skips past the ambiguous innermost scope).
+    # A top-level NON-local "helper" exists so that, if the resolver wrongly falls
+    # through to by_name, it would find and resolve to the non-local — exposing the bug.
     # Correct behaviour (precision over recall): stop at innermost ambiguous scope
-    # and leave the call UNRESOLVED — never fall through to the outer scope's single match.
+    # and leave the call UNRESOLVED — never fall through to the cross-file pool.
     outer_fn = _fn("sutra python r f.py outer().", "outer")
     inner_fn = _fn("sutra python r f.py outer().inner_fn().", "inner_fn",
                    is_local=True, enclosing="sutra python r f.py outer().")
@@ -319,9 +321,12 @@ def test_ambiguous_local_in_same_scope_stays_unresolved():
              is_local=True, enclosing="sutra python r f.py outer().inner_fn().")
     h2 = _fn("sutra python r f.py outer().inner_fn().helper(1).", "helper",
              is_local=True, enclosing="sutra python r f.py outer().inner_fn().")
-    # One unambiguous local in outer_fn's scope — old code would fall back here (wrong)
+    # One unambiguous local in outer_fn's scope — resolver must NOT fall back here
     h_outer = _fn("sutra python r f.py outer().helper().", "helper",
                   is_local=True, enclosing="sutra python r f.py outer().")
+    # Top-level NON-local: if resolver wrongly falls through to by_name it would
+    # resolve to this symbol — the assertion below catches that regression.
+    top_helper = _fn("sutra python r f.py helper().", "helper")
     rel = _calls_rel("sutra python r f.py outer().inner_fn().", "helper")
-    HeuristicResolver().resolve([outer_fn, inner_fn, h1, h2, h_outer], [rel])
+    HeuristicResolver().resolve([outer_fn, inner_fn, h1, h2, h_outer, top_helper], [rel])
     assert not rel.is_resolved
