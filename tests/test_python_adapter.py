@@ -1063,3 +1063,31 @@ class TestFunctionLocalClassNotExtracted:
         result = extract(adapter, src)
         names = {s.name for s in result.symbols if isinstance(s, ClassSymbol)}
         assert names == {"Outer", "Config"}
+
+
+# ---------------------------------------------------------------------------
+# Scope-chain helpers (Task 3)
+# ---------------------------------------------------------------------------
+
+from sutra.core.extractor.adapters.python import _scope_chain  # noqa: E402
+import tree_sitter_python as _tsp_unused  # noqa: F401,E402  (adapter loads its own parser)
+
+
+class TestScopeChain:
+    def test_top_level_class_scope_empty(self, adapter):
+        # Regression: nested Pydantic-style class still Outer#Config#.
+        src = "class Outer:\n    class Config:\n        pass\n"
+        result = extract(adapter, src)
+        cfg = next(s for s in result.symbols if s.name == "Config")
+        assert cfg.id.endswith("Outer#Config#")
+        assert cfg.is_local is False
+        assert cfg.enclosing_moniker is not None  # the Outer class moniker
+        outer = next(s for s in result.symbols if s.name == "Outer")
+        assert cfg.enclosing_moniker == outer.id
+
+    def test_top_level_function_enclosing_is_none(self, adapter):
+        src = "def f():\n    pass\n"
+        result = extract(adapter, src)
+        f = sym_by_name(result, "f")
+        assert f.is_local is False
+        assert f.enclosing_moniker is None

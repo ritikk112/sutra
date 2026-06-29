@@ -169,6 +169,58 @@ def _find_enclosing_function(node: Node) -> Optional[Node]:
     return None
 
 
+def _scope_chain(node: Node) -> tuple[tuple[str, str], ...]:
+    """
+    Enclosing scopes of `node`, outermost first, EXCLUDING `node` itself.
+    class_definition → (name, "#"); function_definition → (name, "().").
+    Unlike _enclosing_class_names, this does NOT stop at a function — it is
+    what gives function-local symbols a self-describing, unique descriptor.
+    """
+    segments: list[tuple[str, str]] = []
+    current = node.parent
+    while current is not None:
+        if current.type == "class_definition":
+            name_node = current.child_by_field_name("name")
+            if name_node is not None:
+                segments.append((_txt(name_node), "#"))
+        elif current.type == "function_definition":
+            name_node = current.child_by_field_name("name")
+            if name_node is not None:
+                segments.append((_txt(name_node), "()."))
+        current = current.parent
+    segments.reverse()
+    return tuple(segments)
+
+
+def _nearest_scope(node: Node) -> Optional[Node]:
+    """Nearest enclosing class_definition or function_definition, or None (module)."""
+    current = node.parent
+    while current is not None:
+        if current.type in ("class_definition", "function_definition"):
+            return current
+        if current.type == "module":
+            return None
+        current = current.parent
+    return None
+
+
+def _node_moniker(node: Node, file_path: str, builder: MonikerBuilder) -> str:
+    """Base (un-disambiguated) moniker for a class/function node, from its scope
+    chain. Order-independent — used for a node's own id AND for its children's
+    enclosing_moniker, so emission order never matters."""
+    name = _txt(node.child_by_field_name("name"))
+    enclosing = _scope_chain(node)
+    if node.type == "class_definition":
+        return builder.for_class(file_path, name, enclosing=enclosing)
+    # function_definition: method if its nearest scope is a class, else function.
+    if _find_enclosing_class(node) is not None:
+        class_name = enclosing[-1][0]  # immediate enclosing class is the last segment
+        return builder.for_method(
+            file_path, class_name, name, enclosing=enclosing[:-1]
+        )
+    return builder.for_function(file_path, name, enclosing=enclosing)
+
+
 # ---------------------------------------------------------------------------
 # Extraction helpers
 # ---------------------------------------------------------------------------
@@ -703,11 +755,13 @@ class PythonAdapter:
         body = node.child_by_field_name("body")
         body_bytes = source[body.start_byte:body.end_byte] if body else b""
 
-        # Nested-class chain (outermost first), e.g. ("MeetingResponse",) for an
-        # inner `class Config`.  Empty for top-level classes — keeps the moniker
-        # and qualified_name unchanged in the common case.
-        enclosing = _enclosing_class_names(node)
-        qual_path = ".".join((*enclosing, name))
+        enclosing = _scope_chain(node)
+        is_local = _find_enclosing_function(node) is not None
+        scope_node = _nearest_scope(node)
+        enclosing_moniker = (
+            _node_moniker(scope_node, file_path, builder) if scope_node else None
+        )
+        qual_path = ".".join((*(n for n, _ in enclosing), name))
 
         return ClassSymbol(
             id=builder.for_class(file_path, name, enclosing=enclosing),
@@ -723,6 +777,8 @@ class PythonAdapter:
             docstring=_extract_docstring(body, source) if body else None,
             decorators=decorators,
             is_abstract=_is_abstract(base_classes, decorators),
+            is_local=is_local,
+            enclosing_moniker=enclosing_moniker,
         )
 
     def _build_function(
@@ -742,10 +798,18 @@ class PythonAdapter:
         sig = _extract_signature(node, source)
         is_async = bool(node.children) and node.children[0].type == "async"
 
+        enclosing = _scope_chain(node)
+        is_local = _find_enclosing_function(node) is not None
+        scope_node = _nearest_scope(node)
+        enclosing_moniker = (
+            _node_moniker(scope_node, file_path, builder) if scope_node else None
+        )
+
         return FunctionSymbol(
-            id=builder.for_function(file_path, name),
+            id=builder.for_function(file_path, name, enclosing=enclosing),
             name=name,
-            qualified_name=f"{mod_qname}.{name}",
+            qualified_name=f"{mod_qname}.{name}" if not enclosing
+                else f"{mod_qname}." + ".".join((*(n for n, _ in enclosing), name)),
             file_path=file_path,
             location=_location(node),
             body_hash=_sha256(body_bytes),
@@ -759,6 +823,8 @@ class PythonAdapter:
             decorators=_extract_decorators(node, source),
             is_async=is_async,
             complexity=_compute_complexity(body) if body else 1,
+            is_local=is_local,
+            enclosing_moniker=enclosing_moniker,
         )
 
     def _build_method(
@@ -782,13 +848,13 @@ class PythonAdapter:
         is_static = any("staticmethod" in d for d in decorators)
         is_classmethod = any("classmethod" in d for d in decorators)
 
-        # Full enclosing-class chain of the method (outermost first), including
-        # the method's own class as the last element.  For a method in a nested
-        # class this is ("Outer", "Inner"); the prefix before the method's own
-        # class ("Outer") is what makes nested-class methods uniquely named.
-        chain = _enclosing_class_names(node)
-        method_enclosing = chain[:-1] if chain else ()
-        qual_path = ".".join((*chain, name)) if chain else f"{cls_sym.name}.{name}"
+        chain = _scope_chain(node)              # includes the method's own class as last segment
+        method_enclosing = chain[:-1]           # everything above the method's class
+        qual_path = ".".join((*(n for n, _ in chain), name)) if chain \
+            else f"{cls_sym.name}.{name}"
+        is_local = any(suffix == "()." for _, suffix in method_enclosing)
+        # enclosing scope is the method's own class:
+        enclosing_moniker = cls_sym.id
 
         return MethodSymbol(
             id=builder.for_method(
@@ -812,6 +878,8 @@ class PythonAdapter:
             enclosing_class_id=cls_sym.id,
             is_static=is_static,
             is_constructor=name == "__init__",
+            is_local=is_local,
+            enclosing_moniker=enclosing_moniker,
         )
 
     def _build_variable(
