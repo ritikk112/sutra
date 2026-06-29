@@ -1138,3 +1138,23 @@ class TestFunctionLocalClassesIndexed:
             and r.target_id == run.id and r.is_resolved
             for r in result.relationships
         )
+
+
+class TestResidualDisambiguator:
+    def test_same_scope_same_name_classes_disambiguated(self, adapter):
+        # Legal but degenerate: class A redefined twice in one function.
+        src = (
+            "def f():\n"
+            "    class A:\n"
+            "        pass\n"
+            "    class A:\n"
+            "        pass\n"
+            "    return A\n"
+        )
+        result = extract(adapter, src)
+        a = [s for s in result.symbols if isinstance(s, ClassSymbol) and s.name == "A"]
+        ids = [s.id for s in a]
+        assert len(ids) == len(set(ids)) == 2
+        # one base, one disambiguated; tree order → first keeps base form
+        assert any(i.endswith("f().A#") for i in ids)
+        assert any(i.endswith("f().A(1)#") for i in ids)

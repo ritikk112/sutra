@@ -498,6 +498,20 @@ def _is_abstract(base_classes: list[str], decorators: list[str]) -> bool:
     )
 
 
+def _disambiguate(base_id: str, seen: dict[str, int]) -> str:
+    """Deterministic tie-break for same-scope same-name symbols (rare).
+    First occurrence keeps the base moniker; the Nth (N>=1) gets `(N)` inserted
+    before the trailing suffix, preserving the descriptor's terminating sentinel."""
+    n = seen.get(base_id, 0)
+    seen[base_id] = n + 1
+    if n == 0:
+        return base_id
+    for suffix in ("().", "#", "/", "."):
+        if base_id.endswith(suffix):
+            return f"{base_id[: -len(suffix)]}({n}){suffix}"
+    return base_id  # unreachable for valid monikers
+
+
 # ---------------------------------------------------------------------------
 # PythonAdapter
 # ---------------------------------------------------------------------------
@@ -558,6 +572,7 @@ class PythonAdapter:
 
         symbols: list[Symbol] = [module_sym]
         relationships: list[Relationship] = []
+        seen: dict[str, int] = {}  # disambiguator state — one per extraction
 
         # Process classes first so class_node.id → ClassSymbol is populated
         # before we process methods.
@@ -566,6 +581,7 @@ class PythonAdapter:
             cls = self._build_class(class_node, file_path, source_bytes, builder, mod_qname)
             if cls is None:
                 continue
+            cls.id = _disambiguate(cls.id, seen)
             symbols.append(cls)
             class_node_to_sym[class_node.id] = cls
 
@@ -662,8 +678,7 @@ class PythonAdapter:
                 )
                 if fn is None:
                     continue
-                # Collapse identical-moniker duplicates (Task 6 handles the rare
-                # same-scope same-name case via the disambiguator).
+                fn.id = _disambiguate(fn.id, seen)
                 symbols.append(fn)
 
                 # CONTAINS source: the module for top-level, else the enclosing
