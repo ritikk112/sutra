@@ -506,7 +506,9 @@ def _disambiguate(base_id: str, seen: dict[str, int]) -> str:
     seen[base_id] = n + 1
     if n == 0:
         return base_id
-    for suffix in ("().", "#", "/", "."):
+    if base_id.endswith("()."):
+        return f"{base_id[:-3]}({n})."   # (N) replaces the empty (); . stays terminal
+    for suffix in ("#", "/", "."):
         if base_id.endswith(suffix):
             return f"{base_id[: -len(suffix)]}({n}){suffix}"
     return base_id  # unreachable for valid monikers

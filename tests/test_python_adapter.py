@@ -1158,3 +1158,20 @@ class TestResidualDisambiguator:
         # one base, one disambiguated; tree order → first keeps base form
         assert any(i.endswith("f().A#") for i in ids)
         assert any(i.endswith("f().A(1)#") for i in ids)
+
+    def test_same_scope_same_name_functions_disambiguated(self, adapter):
+        src = (
+            "def f():\n"
+            "    def inner():\n"
+            "        pass\n"
+            "    def inner():\n"
+            "        pass\n"
+            "    return inner\n"
+        )
+        result = extract(adapter, src)
+        inners = [s for s in result.symbols
+                  if isinstance(s, FunctionSymbol) and s.name == "inner"]
+        ids = [s.id for s in inners]
+        assert len(ids) == len(set(ids)) == 2
+        assert any(i.endswith("f().inner().") for i in ids)
+        assert any(i.endswith("f().inner(1).") for i in ids)
