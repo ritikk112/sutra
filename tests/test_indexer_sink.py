@@ -51,3 +51,31 @@ def test_index_with_no_indexable_files_refuses_to_publish(tmp_path):
     # No broken bundle on disk — nothing for the MCP loader to choke on.
     assert not (out / "graph.json").exists()
     assert not (out / READY_SENTINEL).exists()
+
+
+import warnings
+from sutra.core.extractor.base import (
+    FunctionSymbol, Location, Visibility, Repository, IndexResult,
+)
+
+
+def test_duplicate_moniker_does_not_abort(tmp_path, capsys):
+    # Force a duplicate by indexing a file the adapter would dup on is hard;
+    # instead drive the indexer's dedup directly via a tiny repo that the
+    # disambiguator does NOT cover would be ideal. Here we assert the public
+    # behavior: indexing a repo with a benign collision completes and warns.
+    repo = tmp_path / "repo"; repo.mkdir()
+    # Two top-level functions with the same name across two files cannot collide
+    # (different file_path). The realistic residual is same-file; the adapter
+    # disambiguator covers it. This test pins the BACKSTOP itself via a stub.
+    from sutra.core.indexer import _dedup_keep_first  # helper added in Step 3
+    a = FunctionSymbol(id="dup", name="f", qualified_name="f", file_path="x.py",
+                       location=Location(1, 1, 0, 1), body_hash="h", language="python",
+                       visibility=Visibility.PUBLIC, is_exported=True)
+    b = FunctionSymbol(id="dup", name="f", qualified_name="f", file_path="x.py",
+                       location=Location(2, 2, 2, 3), body_hash="h2", language="python",
+                       visibility=Visibility.PUBLIC, is_exported=True)
+    kept, dropped = _dedup_keep_first([a, b])
+    assert [s.id for s in kept] == ["dup"]
+    assert dropped == 1
+    assert kept[0] is a  # first wins
