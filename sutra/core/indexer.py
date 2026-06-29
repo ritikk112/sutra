@@ -61,6 +61,15 @@ _EXTENSION_MAP: dict[str, str] = {
 _EXCLUDED_SUFFIXES = frozenset({"_test.go"})
 
 
+class EmptyIndexError(RuntimeError):
+    """
+    Raised when a repository yields zero indexable symbols — nothing to embed
+    or serve. We refuse to publish in this case: an empty bundle records a
+    fallback dims tag that contradicts the embedder's model_id and later
+    crashes the MCP loader with 'Embedding dims mismatch'.
+    """
+
+
 class Indexer:
     """
     Orchestrates a full repository indexing run.
@@ -189,6 +198,18 @@ class Indexer:
             symbols.extend(extraction.symbols)
             relationships.extend(extraction.relationships)
             language_counts[lang] = language_counts.get(lang, 0) + 1
+
+        # Nothing indexable (e.g. a non-Python repo such as an APISIX/Lua
+        # gateway): refuse to publish. An empty bundle records a fallback
+        # dims tag that contradicts the embedder's model_id and crashes the
+        # MCP loader on hot reload ('Embedding dims mismatch').
+        if not symbols:
+            raise EmptyIndexError(
+                f"No indexable symbols found in {repo_name!r}. Sutra currently "
+                f"indexes: {', '.join(sorted(self.adapters))}. Walked "
+                f"{len(all_files)} file(s), {len(failed_files)} failed to parse; "
+                f"none produced symbols. No artifact written."
+            )
 
         # Cross-file Go method → struct linking (O(n) in-memory dict lookup).
         # Must run after all files are processed so all ClassSymbols are known.
