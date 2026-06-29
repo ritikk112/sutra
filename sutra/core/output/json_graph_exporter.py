@@ -170,6 +170,7 @@ class JsonGraphExporter:
             "language": sym.language,
             "visibility": sym.visibility.value,
             "is_exported": sym.is_exported,
+            "is_local": sym.is_local,
             "embedding_id": embedding_id,
         }
 

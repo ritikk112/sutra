@@ -208,6 +208,7 @@
       "id": "sutra python test/sample_python_repo src/services/user.py Base#",
       "is_abstract": false,
       "is_exported": true,
+      "is_local": false,
       "kind": "class",
       "language": "python",
       "location": {
@@ -229,6 +230,7 @@
       "id": "sutra python test/sample_python_repo src/services/user.py MAX_RETRIES.",
       "is_constant": true,
       "is_exported": true,
+      "is_local": false,
       "kind": "variable",
       "language": "python",
       "location": {
@@ -256,6 +258,7 @@
       "id": "sutra python test/sample_python_repo src/services/user.py UserService#",
       "is_abstract": false,
       "is_exported": true,
+      "is_local": false,
       "kind": "class",
       "language": "python",
       "location": {
@@ -282,6 +285,7 @@
       "is_async": false,
       "is_constructor": true,
       "is_exported": true,
+      "is_local": false,
       "is_static": false,
       "kind": "method",
       "language": "python",
@@ -327,6 +331,7 @@
       "is_async": false,
       "is_constructor": false,
       "is_exported": true,
+      "is_local": false,
       "is_static": false,
       "kind": "method",
       "language": "python",
@@ -370,6 +375,7 @@
       "id": "sutra python test/sample_python_repo src/services/user.py _generate_id().",
       "is_async": false,
       "is_exported": false,
+      "is_local": false,
       "kind": "function",
       "language": "python",
       "location": {
@@ -405,6 +411,7 @@
       "id": "sutra python test/sample_python_repo src/services/user.py bootstrap().",
       "is_async": false,
       "is_exported": true,
+      "is_local": false,
       "kind": "function",
       "language": "python",
       "location": {
@@ -437,6 +444,7 @@
       "file_path": "src/services/user.py",
       "id": "sutra python test/sample_python_repo src/services/user.py src/services/user/",
       "is_exported": true,
+      "is_local": false,
       "kind": "module",
       "language": "python",
       "location": {
