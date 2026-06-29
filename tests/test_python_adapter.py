@@ -1021,6 +1021,15 @@ class TestClassInClassExtracted:
         names = {s.name for s in result.symbols if isinstance(s, ClassSymbol)}
         assert names == {"Outer", "Config"}
 
+        # Verify the Outer→Config CONTAINS edge is resolved
+        outer = next(s for s in result.symbols if s.name == "Outer")
+        cfg = next(s for s in result.symbols if s.name == "Config")
+        assert any(
+            r.kind == RelationKind.CONTAINS and r.source_id == outer.id
+            and r.target_id == cfg.id and r.is_resolved
+            for r in result.relationships
+        )
+
 
 # ---------------------------------------------------------------------------
 # Scope-chain helpers (Task 3)
