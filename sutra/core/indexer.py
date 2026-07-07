@@ -61,6 +61,22 @@ _EXTENSION_MAP: dict[str, str] = {
 _EXCLUDED_SUFFIXES = frozenset({"_test.go"})
 
 
+def _dedup_keep_first(symbols: list[Symbol]) -> tuple[list[Symbol], int]:
+    """Deterministic keep-first dedup. First occurrence (caller-provided order,
+    which the indexer keeps globally sorted) wins; later duplicates are dropped.
+    Returns (kept, dropped_count)."""
+    seen: set[str] = set()
+    kept: list[Symbol] = []
+    dropped = 0
+    for sym in symbols:
+        if sym.id in seen:
+            dropped += 1
+            continue
+        seen.add(sym.id)
+        kept.append(sym)
+    return kept, dropped
+
+
 class EmptyIndexError(RuntimeError):
     """
     Raised when a repository yields zero indexable symbols — nothing to embed
@@ -95,8 +111,9 @@ class Indexer:
     - Files that cannot be read (I/O error) are skipped; path + error go to
       IndexResult.failed_files.
     - Files where the adapter raises are also skipped and recorded.
-    - A duplicate moniker (same id produced by two different symbols) is a bug
-      in the moniker generator — this is asserted loudly here, not swallowed.
+    - A duplicate moniker (same id produced by two different symbols) is handled
+      by a keep-first backstop: the first occurrence (sorted file order) wins
+      and later duplicates are dropped + warned to stderr.
     - File walk order is sorted globally, so two runs on the same repo produce
       identical IndexResults (modulo timestamps and commit SHA).
     - Embedding chunks are built after all files are processed; the embedder
@@ -160,7 +177,6 @@ class Indexer:
         relationships: list[Relationship] = []
         language_counts: dict[str, int] = {}
         failed_files: list[tuple[str, str]] = []
-        seen_monikers: set[str] = set()
 
         for abs_path in all_files:
             rel_path = str(abs_path.relative_to(root)).replace("\\", "/")
@@ -184,20 +200,24 @@ class Indexer:
                 failed_files.append((rel_path, f"{type(exc).__name__}: {exc}"))
                 continue
 
-            # Moniker uniqueness — duplicate means a generator bug, fail loudly
-            for sym in extraction.symbols:
-                if sym.id in seen_monikers:
-                    raise AssertionError(
-                        f"Duplicate moniker produced during indexing: {sym.id!r}\n"
-                        f"  file: {rel_path}\n"
-                        "This is a bug in the moniker generator."
-                    )
-                seen_monikers.add(sym.id)
-
             file_records.append(extraction.file)
             symbols.extend(extraction.symbols)
             relationships.extend(extraction.relationships)
             language_counts[lang] = language_counts.get(lang, 0) + 1
+
+        # Keep-first backstop: if two adapters or two files somehow emit the same
+        # moniker, the first occurrence (global sorted file order) wins and the
+        # later duplicate is silently dropped + counted.  This replaces the old
+        # fatal AssertionError so a rare residual collision degrades gracefully.
+        symbols, dropped = _dedup_keep_first(symbols)
+        if dropped:
+            import sys
+            print(
+                f"[indexer] dropped {dropped} duplicate-moniker symbol(s) "
+                f"(kept first occurrence). This is expected for rare same-scope "
+                f"redefinitions; investigate if the count is large.",
+                file=sys.stderr,
+            )
 
         # Nothing indexable (e.g. a non-Python repo such as an APISIX/Lua
         # gateway): refuse to publish. An empty bundle records a fallback

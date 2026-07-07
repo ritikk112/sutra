@@ -43,7 +43,7 @@ def build_chunks(
     # Sort embeddable symbols by id — matches exporter's stable ordering so
     # embedding_id integers in graph.json are deterministic across runs.
     embeddable = sorted(
-        [s for s in symbols if isinstance(s, _EMBEDDABLE)],
+        [s for s in symbols if isinstance(s, _EMBEDDABLE) and not s.is_local],
         key=lambda s: s.id,
     )
 

@@ -98,48 +98,42 @@ class MonikerBuilder:
     repo_name: str
 
     def _build(self, file_path: str, descriptor: str) -> str:
+        # Moniker is space-delimited (parse_moniker splits on spaces); a space
+        # in the descriptor would silently corrupt round-tripping.
+        assert " " not in descriptor, (
+            f"Descriptor must not contain spaces: {descriptor!r}"
+        )
         return f"{SCHEME} {self.language} {self.repo_name} {file_path} {descriptor}"
 
-    def for_function(self, file_path: str, func_name: str) -> str:
-        """Top-level function: name()."""
-        return self._build(file_path, f"{func_name}().")
+    @staticmethod
+    def _prefix(enclosing: tuple[tuple[str, str], ...]) -> str:
+        """Render a scope chain of (name, suffix) pairs, outermost first."""
+        return "".join(f"{name}{suffix}" for name, suffix in enclosing)
+
+    def for_function(
+        self, file_path: str, func_name: str,
+        *, enclosing: tuple[tuple[str, str], ...] = (),
+    ) -> str:
+        """Function: name().  `enclosing` stacks outer scopes (function → name().,
+        class → name#) for function-local (nested) functions."""
+        return self._build(file_path, f"{self._prefix(enclosing)}{func_name}().")
 
     def for_method(
-        self,
-        file_path: str,
-        class_name: str,
-        method_name: str,
-        *,
-        enclosing: tuple[str, ...] = (),
+        self, file_path: str, class_name: str, method_name: str,
+        *, enclosing: tuple[tuple[str, str], ...] = (),
     ) -> str:
-        """Instance/class/static method: ClassName#method_name().
-
-        `enclosing` is the chain of outer class names (outermost first) when
-        the method's class is nested, e.g. enclosing=("Outer",) class_name="Inner"
-        → "Outer#Inner#method_name()."  Defaults to () for the common
-        top-level-class case, keeping the descriptor "ClassName#method_name()."
-        """
-        prefix = "".join(f"{c}#" for c in enclosing)
-        return self._build(file_path, f"{prefix}{class_name}#{method_name}().")
+        """Method: ClassName#method_name().  `enclosing` is the scope chain ABOVE
+        the method's own class (class and/or function segments)."""
+        return self._build(
+            file_path, f"{self._prefix(enclosing)}{class_name}#{method_name}()."
+        )
 
     def for_class(
-        self,
-        file_path: str,
-        class_name: str,
-        *,
-        enclosing: tuple[str, ...] = (),
+        self, file_path: str, class_name: str,
+        *, enclosing: tuple[tuple[str, str], ...] = (),
     ) -> str:
-        """Class or interface: ClassName#
-
-        `enclosing` is the chain of outer class names (outermost first) when
-        the class is nested, e.g. enclosing=("Outer",) class_name="Config"
-        → "Outer#Config#".  Defaults to () for top-level classes, keeping the
-        descriptor "ClassName#".  Descriptor stacking mirrors for_method and
-        SCIP descriptor semantics, and is what makes same-named nested classes
-        (e.g. Pydantic's `class Config`) produce distinct monikers.
-        """
-        prefix = "".join(f"{c}#" for c in enclosing)
-        return self._build(file_path, f"{prefix}{class_name}#")
+        """Class: ClassName#.  `enclosing` stacks outer scopes."""
+        return self._build(file_path, f"{self._prefix(enclosing)}{class_name}#")
 
     def for_variable(self, file_path: str, var_name: str) -> str:
         """Module-level or class-level variable/constant: name."""
@@ -222,11 +216,10 @@ def descriptor_kind(descriptor: str) -> str:
 
     Raises ValueError for an unrecognised suffix.
     """
-    if descriptor.endswith("()."):
-        # callable — method if '#' is present, function otherwise
-        if "#" in descriptor:
-            return "method"
-        return "function"
+    # callable — method if '#' present, function otherwise. Accept a disambiguator
+    # inside the parens (e.g. inner(1).), so the test is ").", not literal "()."
+    if descriptor.endswith(")."):
+        return "method" if "#" in descriptor else "function"
     if descriptor.endswith("#"):
         return "class"
     if descriptor.endswith("/"):

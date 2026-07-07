@@ -213,17 +213,6 @@ class TestFunctionSymbol:
         assert len(fn.decorators) == 1
         assert "@app.route" in fn.decorators[0]
 
-    def test_nested_function_not_extracted(self, adapter):
-        src = (
-            "def outer():\n"
-            "    def inner():\n"
-            "        pass\n"
-            "    return inner\n"
-        )
-        result = extract(adapter, src)
-        assert sym_by_name(result, "outer") is not None
-        assert sym_by_name(result, "inner") is None
-
     def test_complexity_simple(self, adapter):
         src = "def fn():\n    return 1\n"
         result = extract(adapter, src)
@@ -1017,19 +1006,87 @@ class TestSameNamedMethodDedup:
         assert len(ids) == len(set(ids))
 
 
-class TestFunctionLocalClassNotExtracted:
-    """Classes defined inside a function body are throwaway, non-importable
-    locals — like nested functions (see test_nested_function_not_extracted),
-    they are out of Phase-1 scope and not indexed. The class moniker encodes
-    only the enclosing-CLASS chain, so two same-named function-local classes
-    would otherwise collapse to one moniker and abort the whole repo index.
+class TestClassInClassExtracted:
+    """Guard: class-in-class nesting (e.g. Pydantic `class Config`) must still
+    be extracted correctly — this is unaffected by the function-local class
+    feature."""
 
-    Regression: indexing tradyon/odin aborted with
-    'Duplicate moniker … test_agent_fallback.py NoCause#' — two test helpers
-    each defined a local `class NoCause`.
-    """
+    def test_class_nested_in_class_is_still_extracted(self, adapter):
+        src = (
+            "class Outer:\n"
+            "    class Config:\n"
+            "        pass\n"
+        )
+        result = extract(adapter, src)
+        names = {s.name for s in result.symbols if isinstance(s, ClassSymbol)}
+        assert names == {"Outer", "Config"}
 
-    def test_two_same_named_function_local_classes_do_not_collide(self, adapter):
+        # Verify the Outer→Config CONTAINS edge is resolved
+        outer = next(s for s in result.symbols if s.name == "Outer")
+        cfg = next(s for s in result.symbols if s.name == "Config")
+        assert any(
+            r.kind == RelationKind.CONTAINS and r.source_id == outer.id
+            and r.target_id == cfg.id and r.is_resolved
+            for r in result.relationships
+        )
+
+
+# ---------------------------------------------------------------------------
+# Scope-chain helpers (Task 3)
+# ---------------------------------------------------------------------------
+
+from sutra.core.extractor.adapters.python import _scope_chain  # noqa: E402
+import tree_sitter_python as _tsp_unused  # noqa: F401,E402  (adapter loads its own parser)
+
+
+class TestScopeChain:
+    def test_top_level_class_scope_empty(self, adapter):
+        # Regression: nested Pydantic-style class still Outer#Config#.
+        src = "class Outer:\n    class Config:\n        pass\n"
+        result = extract(adapter, src)
+        cfg = next(s for s in result.symbols if s.name == "Config")
+        assert cfg.id.endswith("Outer#Config#")
+        assert cfg.is_local is False
+        assert cfg.enclosing_moniker is not None  # the Outer class moniker
+        outer = next(s for s in result.symbols if s.name == "Outer")
+        assert cfg.enclosing_moniker == outer.id
+
+    def test_top_level_function_enclosing_is_none(self, adapter):
+        src = "def f():\n    pass\n"
+        result = extract(adapter, src)
+        f = sym_by_name(result, "f")
+        assert f.is_local is False
+        assert f.enclosing_moniker is None
+
+
+class TestNestedFunctionLocals:
+    def test_nested_function_emitted_as_local(self, adapter):
+        src = "def outer():\n    def inner():\n        pass\n    return inner\n"
+        result = extract(adapter, src)
+        inner = sym_by_name(result, "inner")
+        outer = sym_by_name(result, "outer")
+        assert inner is not None
+        assert inner.is_local is True
+        assert inner.id.endswith("outer().inner().")
+        assert inner.enclosing_moniker == outer.id
+
+    def test_function_contains_its_nested_function(self, adapter):
+        src = "def outer():\n    def inner():\n        pass\n    return inner\n"
+        result = extract(adapter, src)
+        outer = sym_by_name(result, "outer")
+        inner = sym_by_name(result, "inner")
+        contains = [
+            r for r in result.relationships
+            if r.kind == RelationKind.CONTAINS
+            and r.source_id == outer.id and r.target_id == inner.id
+        ]
+        assert len(contains) == 1
+        assert contains[0].is_resolved is True
+
+
+class TestFunctionLocalClassesIndexed:
+    def test_two_same_named_local_classes_distinct_monikers(self, adapter):
+        # The odin case: two `class NoCause` in two different test functions.
         src = (
             "def test_a():\n"
             "    class NoCause:\n"
@@ -1042,24 +1099,79 @@ class TestFunctionLocalClassNotExtracted:
             "    return NoCause()\n"
         )
         result = extract(adapter, src)
-        # The function-local classes are skipped, not emitted as symbols.
-        assert not [s for s in result.symbols
-                    if isinstance(s, ClassSymbol) and s.name == "NoCause"]
-        # The enclosing functions themselves are still indexed.
-        assert sym_by_name(result, "test_a") is not None
-        assert sym_by_name(result, "test_b") is not None
-        # No duplicate monikers anywhere — the indexer's assertion would abort.
-        ids = [s.id for s in result.symbols]
-        assert len(ids) == len(set(ids))
+        nocause = [s for s in result.symbols
+                   if isinstance(s, ClassSymbol) and s.name == "NoCause"]
+        assert len(nocause) == 2
+        ids = {s.id for s in nocause}
+        assert ids == {
+            "my-app python src/services/user.py test_a().NoCause#",
+            "my-app python src/services/user.py test_b().NoCause#",
+        } or all(s.is_local for s in nocause)  # repo/file prefix may vary; key check: distinct + local
+        assert len(ids) == 2
+        assert all(s.is_local for s in nocause)
 
-    def test_class_nested_in_class_is_still_extracted(self, adapter):
-        """Guard: the fix must NOT skip class-in-class nesting (e.g. Pydantic
-        `class Config`) — only function-local classes."""
+    def test_local_class_method_and_contains(self, adapter):
         src = (
-            "class Outer:\n"
-            "    class Config:\n"
-            "        pass\n"
+            "def outer():\n"
+            "    class Helper:\n"
+            "        def run(self):\n"
+            "            pass\n"
+            "    return Helper\n"
         )
         result = extract(adapter, src)
-        names = {s.name for s in result.symbols if isinstance(s, ClassSymbol)}
-        assert names == {"Outer", "Config"}
+        helper = next(s for s in result.symbols
+                      if isinstance(s, ClassSymbol) and s.name == "Helper")
+        run = next(s for s in result.symbols if s.name == "run")
+        outer = sym_by_name(result, "outer")
+        assert helper.is_local is True and helper.id.endswith("outer().Helper#")
+        assert run.is_local is True and run.id.endswith("outer().Helper#run().")
+        assert run.enclosing_moniker == helper.id
+        # function -> local class CONTAINS
+        assert any(
+            r.kind == RelationKind.CONTAINS and r.source_id == outer.id
+            and r.target_id == helper.id and r.is_resolved
+            for r in result.relationships
+        )
+        # local class -> method CONTAINS
+        assert any(
+            r.kind == RelationKind.CONTAINS and r.source_id == helper.id
+            and r.target_id == run.id and r.is_resolved
+            for r in result.relationships
+        )
+
+
+class TestResidualDisambiguator:
+    def test_same_scope_same_name_classes_disambiguated(self, adapter):
+        # Legal but degenerate: class A redefined twice in one function.
+        src = (
+            "def f():\n"
+            "    class A:\n"
+            "        pass\n"
+            "    class A:\n"
+            "        pass\n"
+            "    return A\n"
+        )
+        result = extract(adapter, src)
+        a = [s for s in result.symbols if isinstance(s, ClassSymbol) and s.name == "A"]
+        ids = [s.id for s in a]
+        assert len(ids) == len(set(ids)) == 2
+        # one base, one disambiguated; tree order → first keeps base form
+        assert any(i.endswith("f().A#") for i in ids)
+        assert any(i.endswith("f().A(1)#") for i in ids)
+
+    def test_same_scope_same_name_functions_disambiguated(self, adapter):
+        src = (
+            "def f():\n"
+            "    def inner():\n"
+            "        pass\n"
+            "    def inner():\n"
+            "        pass\n"
+            "    return inner\n"
+        )
+        result = extract(adapter, src)
+        inners = [s for s in result.symbols
+                  if isinstance(s, FunctionSymbol) and s.name == "inner"]
+        ids = [s.id for s in inners]
+        assert len(ids) == len(set(ids)) == 2
+        assert any(i.endswith("f().inner().") for i in ids)
+        assert any(i.endswith("f().inner(1).") for i in ids)

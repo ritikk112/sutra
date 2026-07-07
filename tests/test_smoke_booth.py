@@ -153,7 +153,7 @@ class TestSmokeEmbeddings:
 
     def test_embeddable_have_integer_embedding_id(self, booth_indexed) -> None:
         for sym in booth_indexed["graph"]["symbols"]:
-            if sym["kind"] in ("function", "method", "class"):
+            if sym["kind"] in ("function", "method", "class") and not sym.get("is_local", False):
                 assert isinstance(sym["embedding_id"], int), (
                     f"{sym['id']} missing embedding_id"
                 )

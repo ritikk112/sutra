@@ -68,6 +68,10 @@ class SymbolBase:
     language: str                # "python" | "typescript" | "go"
     visibility: Visibility
     is_exported: bool
+    # Tier-2 local symbols: graph-only nodes nested inside a function scope.
+    is_local: bool = False
+    # Immediate enclosing scope's moniker (containing function/class); None = module scope.
+    enclosing_moniker: Optional[str] = None
 
 
 @dataclass

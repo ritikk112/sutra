@@ -226,6 +226,9 @@ class SutraServer:
             def run():
                 unit = server._unit_for_moniker(moniker)
                 payload = server._symbol_payload(unit, moniker)
+                # is_local is already present in payload when the symbol is found
+                # ({**sym} in _symbol_payload includes it). Do not add it on the
+                # not-found path ({"moniker": ..., "indexed": False}) — misleading.
                 payload["callers"] = [
                     n.moniker for n in unit.traversal.get_callers(moniker)
                 ]
