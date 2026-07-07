@@ -33,37 +33,53 @@ class MonikerComponents:
 
 def repo_name_from_url(url: str) -> str:
     """
-    Derive a clean repo name from any common Git URL format.
+    Canonical repository identity: the full owner/repo path, lowercased.
 
-    Supports:
-      https://github.com/org/my-app.git  →  my-app
-      https://github.com/org/my-app      →  my-app
-      git@github.com:org/my-app.git      →  my-app
-      ssh://git@github.com/org/my-app    →  my-app
+      https://github.com/org/my-app.git         -> org/my-app
+      git@github.com:org/my-app.git              -> org/my-app
+      ssh://git@github.com/org/my-app            -> org/my-app
+      https://gitlab.com/group/subgroup/app.git  -> group/subgroup/app
+
+    Scheme, host, trailing slash and `.git` are stripped; the result is
+    lowercased so SSH/HTTPS spellings and case variants of the same repo
+    dedupe.  The host is NOT part of the identity (documented limitation:
+    the same owner/repo on two hosts would collide).
     """
     url = url.strip().rstrip("/")
 
-    # SSH shorthand: git@github.com:org/repo.git
+    host_stripped = False
+    # SSH shorthand: git@github.com:org/repo.git -> "org/repo.git"
     if ":" in url and not url.startswith(("http://", "https://", "ssh://")):
         url = url.split(":", 1)[1]
+        host_stripped = True
+    else:
+        for prefix in ("ssh://", "https://", "http://"):
+            if url.startswith(prefix):
+                url = url[len(prefix):]
+                break
 
-    # Strip scheme for everything else
-    for prefix in ("ssh://", "https://", "http://"):
-        if url.startswith(prefix):
-            url = url[len(prefix):]
-            break
+    # Strip the leading host segment only when a host is still present.
+    if not host_stripped and "/" in url:
+        url = url.split("/", 1)[1]
 
-    # Strip leading host (everything up to the first /)
-    if "/" in url:
-        url = url.split("/", 1)[1]   # org/repo[.git]
-    if "/" in url:
-        url = url.rsplit("/", 1)[1]  # repo[.git]
-
-    # Strip .git suffix
     if url.endswith(".git"):
         url = url[:-4]
 
-    return url
+    return url.strip("/").lower()
+
+
+def repo_dir_slug(repo_name: str) -> str:
+    """
+    Filesystem-safe directory name for a canonical `owner/repo` identity.
+
+    The artifact *directory* cannot contain '/', but the moniker `repo_name`
+    can.  Both derive from `repo_name_from_url`, so folder and in-graph
+    identity never drift.
+
+      team-a/api          -> team-a__api
+      group/subgroup/svc  -> group__subgroup__svc
+    """
+    return repo_name.replace("/", "__")
 
 
 # ---------------------------------------------------------------------------

@@ -4,10 +4,10 @@ import asyncio
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 from typing import Any
 
-import psycopg2
 import yaml
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -30,16 +30,30 @@ class CreateJobRequest(BaseModel):
     replace: bool = True
 
 
+def _artifacts_dir() -> Path:
+    raw = os.environ.get("SUTRA_ARTIFACTS_DIR", "").strip()
+    return Path(raw) if raw else Path.home() / ".sutra" / "artifacts"
+
+
+def _pyright_available() -> bool:
+    candidate = Path(sys.executable).parent / "pyright-langserver"
+    return candidate.exists() or shutil.which("pyright-langserver") is not None
+
+
 @app.on_event("startup")
 async def startup() -> None:
-    pg_url = os.environ.get("SUTRA_PG_URL", "").strip()
-    if not pg_url:
-        raise RuntimeError("SUTRA_PG_URL is required at startup.")
-
     SUTRA_HOME.mkdir(parents=True, exist_ok=True)
+    artifacts_root = _artifacts_dir()
+    artifacts_root.mkdir(parents=True, exist_ok=True)
 
-    _check_postgres(pg_url)
     _check_pipeline_importable()
+
+    pyright_ok = _pyright_available()
+    if not pyright_ok:
+        raise RuntimeError(
+            "pyright-langserver not found, but the indexer runs --resolver lsp. "
+            "Install it: pip install pyright"
+        )
 
     needs_openai = _config_requires_openai(REPO_ROOT / "config" / "sutra.yaml")
     openai_key_set = bool(os.environ.get("OPENAI_API_KEY", "").strip())
@@ -47,13 +61,15 @@ async def startup() -> None:
         raise RuntimeError("OPENAI_API_KEY is required by config/sutra.yaml (embedder.provider=openai).")
 
     print(
-        "[sutra-ui] startup config: "
-        f"repo_root={REPO_ROOT} sutra_home={SUTRA_HOME} "
-        f"pg_url_set={bool(pg_url)} openai_required={needs_openai} openai_key_set={openai_key_set}"
+        "[sutra-ui] startup: "
+        f"repo_root={REPO_ROOT} artifacts_root={artifacts_root} "
+        f"pyright_ok={pyright_ok} openai_required={needs_openai} openai_key_set={openai_key_set}"
     )
 
     global manager
-    manager = JobManager(repo_root=REPO_ROOT, pg_url=pg_url, sutra_home=SUTRA_HOME)
+    manager = JobManager(
+        repo_root=REPO_ROOT, sutra_home=SUTRA_HOME, artifacts_root=artifacts_root
+    )
     await manager.start()
 
 
@@ -66,15 +82,13 @@ async def shutdown() -> None:
 
 @app.get("/api/health")
 async def health() -> dict[str, Any]:
-    pg_url = os.environ.get("SUTRA_PG_URL", "").strip()
-    pg_ok = _check_postgres(pg_url, raise_on_error=False) if pg_url else False
-    openai_key_set = bool(os.environ.get("OPENAI_API_KEY", "").strip())
-    disk = shutil.disk_usage(SUTRA_HOME)
-    disk_free_gb = round(disk.free / (1024 ** 3), 2)
+    artifacts_root = _artifacts_dir()
+    disk = shutil.disk_usage(artifacts_root if artifacts_root.exists() else SUTRA_HOME)
     return {
-        "pg_ok": pg_ok,
-        "openai_key_set": openai_key_set,
-        "disk_free_gb": disk_free_gb,
+        "pyright_ok": _pyright_available(),
+        "artifacts_dir": str(artifacts_root),
+        "openai_key_set": bool(os.environ.get("OPENAI_API_KEY", "").strip()),
+        "disk_free_gb": round(disk.free / (1024 ** 3), 2),
     }
 
 
@@ -214,19 +228,6 @@ def _config_requires_openai(config_path: Path) -> bool:
         cfg = yaml.safe_load(f) or {}
     embedder = cfg.get("embedder") or {}
     return str(embedder.get("provider", "fixture")).lower() == "openai"
-
-
-def _check_postgres(pg_url: str, raise_on_error: bool = True) -> bool:
-    try:
-        with psycopg2.connect(pg_url) as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT 1")
-                cur.fetchone()
-        return True
-    except Exception:
-        if raise_on_error:
-            raise
-        return False
 
 
 def _write_missing_index() -> Path:

@@ -21,6 +21,7 @@ Environment variables:
 Exit codes:
     0 — success
     1 — error (printed to stderr)
+    2 — nothing to index (no supported source files; no artifact written)
 """
 from __future__ import annotations
 
@@ -31,7 +32,7 @@ from pathlib import Path
 
 from pipelines._common import build_dependencies
 from sutra.core.gitignore_filter import GitignoreFilter
-from sutra.core.indexer import Indexer
+from sutra.core.indexer import EmptyIndexError, Indexer
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -139,6 +140,9 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  {path}: {err}", file=sys.stderr)
 
         return 0
+    except EmptyIndexError as exc:
+        print(f"Nothing to index — {exc}", file=sys.stderr)
+        return 2
     finally:
         deps.close()
 

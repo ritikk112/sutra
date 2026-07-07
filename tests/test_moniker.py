@@ -21,39 +21,37 @@ from sutra.core.extractor.moniker import (
 # ---------------------------------------------------------------------------
 
 class TestRepoNameFromUrl:
-    def test_https_with_dot_git(self):
-        assert repo_name_from_url("https://github.com/org/my-app.git") == "my-app"
+    def test_https_owner_repo(self):
+        assert repo_name_from_url("https://github.com/org/my-app.git") == "org/my-app"
 
-    def test_https_without_dot_git(self):
-        assert repo_name_from_url("https://github.com/org/my-app") == "my-app"
+    def test_https_no_git_suffix(self):
+        assert repo_name_from_url("https://github.com/org/my-app") == "org/my-app"
 
     def test_ssh_shorthand(self):
-        assert repo_name_from_url("git@github.com:org/my-app.git") == "my-app"
-
-    def test_ssh_shorthand_no_dot_git(self):
-        assert repo_name_from_url("git@github.com:org/my-app") == "my-app"
+        assert repo_name_from_url("git@github.com:org/my-app.git") == "org/my-app"
 
     def test_ssh_scheme(self):
-        assert repo_name_from_url("ssh://git@github.com/org/my-app.git") == "my-app"
+        assert repo_name_from_url("ssh://git@github.com/org/my-app") == "org/my-app"
 
-    def test_http(self):
-        assert repo_name_from_url("http://github.com/org/my-app") == "my-app"
+    def test_trailing_slash(self):
+        assert repo_name_from_url("https://github.com/org/my-app/") == "org/my-app"
 
-    def test_trailing_slash_stripped(self):
-        assert repo_name_from_url("https://github.com/org/my-app/") == "my-app"
+    def test_lowercased(self):
+        assert repo_name_from_url("https://github.com/Org/My-App") == "org/my-app"
+
+    def test_nested_gitlab_group(self):
+        assert repo_name_from_url(
+            "https://gitlab.com/group/subgroup/my-app.git"
+        ) == "group/subgroup/my-app"
+
+    def test_internal_host_keeps_owner(self):
+        assert repo_name_from_url("https://git.internal.io/team/sutra.git") == "team/sutra"
+
+    def test_http_scheme(self):
+        assert repo_name_from_url("http://github.com/org/app") == "org/app"
 
     def test_repo_name_with_dots(self):
-        # repo names can legitimately contain dots
-        assert repo_name_from_url("https://github.com/org/my.app") == "my.app"
-
-    def test_repo_name_with_underscores(self):
-        assert repo_name_from_url("https://github.com/org/my_app.git") == "my_app"
-
-    def test_gitlab_url(self):
-        assert repo_name_from_url("https://gitlab.com/group/subgroup/my-app.git") == "my-app"
-
-    def test_self_hosted(self):
-        assert repo_name_from_url("https://git.internal.io/team/sutra.git") == "sutra"
+        assert repo_name_from_url("https://github.com/org/my.app") == "org/my.app"
 
 
 # ---------------------------------------------------------------------------
@@ -322,3 +320,21 @@ class TestDescriptorKind:
         assert descriptor_kind(cls) == "class"
         assert descriptor_kind(var) == "variable"
         assert descriptor_kind(mod) == "module"
+
+
+# ---------------------------------------------------------------------------
+# repo_dir_slug
+# ---------------------------------------------------------------------------
+
+class TestRepoDirSlug:
+    def test_single_owner_repo(self):
+        from sutra.core.extractor.moniker import repo_dir_slug
+        assert repo_dir_slug("team-a/api") == "team-a__api"
+
+    def test_nested_group(self):
+        from sutra.core.extractor.moniker import repo_dir_slug
+        assert repo_dir_slug("group/subgroup/svc") == "group__subgroup__svc"
+
+    def test_no_slash_passthrough(self):
+        from sutra.core.extractor.moniker import repo_dir_slug
+        assert repo_dir_slug("standalone") == "standalone"

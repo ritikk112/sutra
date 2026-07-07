@@ -965,3 +965,101 @@ class TestRealisticSnippet:
         result = extract(adapter, self.SRC)
         # module + class + __init__ + validate + create + standalone + MAX_USERS = 7
         assert len(result.symbols) == 7
+
+
+class TestSameNamedMethodDedup:
+    """A class may legally define the same method name twice — a property
+    getter+setter, or @overload stubs + the implementation. Each must collapse
+    to ONE MethodSymbol so monikers stay unique.
+
+    Regression: indexing tradyon/athena aborted with
+    'Duplicate moniker … Users#api_key().' on a property getter+setter.
+    """
+
+    def test_property_getter_setter_collapse_to_getter(self, adapter):
+        src = (
+            "class Users:\n"
+            "    @property\n"
+            "    def api_key(self) -> str:\n"
+            "        return self._k\n"
+            "    @api_key.setter\n"
+            "    def api_key(self, value: str) -> None:\n"
+            "        self._k = value\n"
+        )
+        result = extract(adapter, src)
+        methods = [s for s in result.symbols
+                   if isinstance(s, MethodSymbol) and s.name == "api_key"]
+        assert len(methods) == 1
+        # the canonical accessor kept is the getter (@property), not the setter
+        assert any("property" in d for d in methods[0].decorators)
+        # no duplicate monikers anywhere in the extraction
+        ids = [s.id for s in result.symbols]
+        assert len(ids) == len(set(ids))
+
+    def test_overload_collapses_to_implementation(self, adapter):
+        src = (
+            "from typing import overload\n"
+            "class Client:\n"
+            "    @overload\n"
+            "    def send(self, x: int) -> int: ...\n"
+            "    @overload\n"
+            "    def send(self, x: str) -> str: ...\n"
+            "    def send(self, x):\n"
+            "        return x\n"
+        )
+        result = extract(adapter, src)
+        methods = [s for s in result.symbols
+                   if isinstance(s, MethodSymbol) and s.name == "send"]
+        assert len(methods) == 1
+        # the kept symbol is the real implementation, not an @overload stub
+        assert not any("overload" in d for d in methods[0].decorators)
+        ids = [s.id for s in result.symbols]
+        assert len(ids) == len(set(ids))
+
+
+class TestFunctionLocalClassNotExtracted:
+    """Classes defined inside a function body are throwaway, non-importable
+    locals — like nested functions (see test_nested_function_not_extracted),
+    they are out of Phase-1 scope and not indexed. The class moniker encodes
+    only the enclosing-CLASS chain, so two same-named function-local classes
+    would otherwise collapse to one moniker and abort the whole repo index.
+
+    Regression: indexing tradyon/odin aborted with
+    'Duplicate moniker … test_agent_fallback.py NoCause#' — two test helpers
+    each defined a local `class NoCause`.
+    """
+
+    def test_two_same_named_function_local_classes_do_not_collide(self, adapter):
+        src = (
+            "def test_a():\n"
+            "    class NoCause:\n"
+            "        pass\n"
+            "    return NoCause()\n"
+            "\n"
+            "def test_b():\n"
+            "    class NoCause:\n"
+            "        pass\n"
+            "    return NoCause()\n"
+        )
+        result = extract(adapter, src)
+        # The function-local classes are skipped, not emitted as symbols.
+        assert not [s for s in result.symbols
+                    if isinstance(s, ClassSymbol) and s.name == "NoCause"]
+        # The enclosing functions themselves are still indexed.
+        assert sym_by_name(result, "test_a") is not None
+        assert sym_by_name(result, "test_b") is not None
+        # No duplicate monikers anywhere — the indexer's assertion would abort.
+        ids = [s.id for s in result.symbols]
+        assert len(ids) == len(set(ids))
+
+    def test_class_nested_in_class_is_still_extracted(self, adapter):
+        """Guard: the fix must NOT skip class-in-class nesting (e.g. Pydantic
+        `class Config`) — only function-local classes."""
+        src = (
+            "class Outer:\n"
+            "    class Config:\n"
+            "        pass\n"
+        )
+        result = extract(adapter, src)
+        names = {s.name for s in result.symbols if isinstance(s, ClassSymbol)}
+        assert names == {"Outer", "Config"}

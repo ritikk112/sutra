@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator, Optional
 
+from sutra.core.artifact.atomic_writer import AtomicArtifactWriter
+from sutra.core.artifact.sink import ArtifactSink
 from sutra.core.embedder.base import Embedder
 from sutra.core.embedder.chunk_builder import build_chunks
 from sutra.core.extractor.base import (
@@ -59,6 +61,15 @@ _EXTENSION_MAP: dict[str, str] = {
 _EXCLUDED_SUFFIXES = frozenset({"_test.go"})
 
 
+class EmptyIndexError(RuntimeError):
+    """
+    Raised when a repository yields zero indexable symbols — nothing to embed
+    or serve. We refuse to publish in this case: an empty bundle records a
+    fallback dims tag that contradicts the embedder's model_id and later
+    crashes the MCP loader with 'Embedding dims mismatch'.
+    """
+
+
 class Indexer:
     """
     Orchestrates a full repository indexing run.
@@ -103,6 +114,7 @@ class Indexer:
         pgvector_store: Optional["PGVectorStore"] = None,
         gitignore_filter: Optional[GitignoreFilter] = None,
         resolver: Optional["Resolver"] = None,
+        artifact_sink: Optional[ArtifactSink] = None,
     ) -> None:
         self.adapters = adapters
         self.exporter = exporter
@@ -111,6 +123,7 @@ class Indexer:
         self.pgvector_store = pgvector_store
         self.gitignore_filter = gitignore_filter
         self.resolver = resolver
+        self.artifact_sink = artifact_sink or AtomicArtifactWriter()
 
     # ------------------------------------------------------------------
     # Public API
@@ -186,6 +199,18 @@ class Indexer:
             relationships.extend(extraction.relationships)
             language_counts[lang] = language_counts.get(lang, 0) + 1
 
+        # Nothing indexable (e.g. a non-Python repo such as an APISIX/Lua
+        # gateway): refuse to publish. An empty bundle records a fallback
+        # dims tag that contradicts the embedder's model_id and crashes the
+        # MCP loader on hot reload ('Embedding dims mismatch').
+        if not symbols:
+            raise EmptyIndexError(
+                f"No indexable symbols found in {repo_name!r}. Sutra currently "
+                f"indexes: {', '.join(sorted(self.adapters))}. Walked "
+                f"{len(all_files)} file(s), {len(failed_files)} failed to parse; "
+                f"none produced symbols. No artifact written."
+            )
+
         # Cross-file Go method → struct linking (O(n) in-memory dict lookup).
         # Must run after all files are processed so all ClassSymbols are known.
         if "go" in language_counts:
@@ -229,23 +254,29 @@ class Indexer:
             f"vectors.shape[0]={vectors.shape[0]}"
         )
 
-        self.exporter.export(
-            result,
-            output_dir,
-            vectors,
-            monikers,
-            embedding_usage=embedding_usage,
-            embedding_model_id=self.embedder.model_id,
-        )
-
-        # Optional sinks — write to graph DB if configured.
-        # pgvector is written BEFORE the graph: if the graph write fails,
-        # orphaned vector rows are harmless (keyed by moniker); the reverse
-        # leaves graph rows pointing at missing vectors.
+        # Postgres first (if configured) — the transactional store commits
+        # before we publish, so the .ready stamp never advertises a snapshot
+        # Postgres did not record.  None-guarded: JSON-only MVP skips these.
         if self.pgvector_store is not None:
             self.pgvector_store.write(monikers, vectors)
         if self.graph_writer is not None:
             self.graph_writer.write_repository(result, replace=replace)
+
+        # Artifact publish is the single commit point: stage the three files,
+        # promote atomically, stamp .ready last.
+        def _write_bundle(staging: Path) -> None:
+            self.exporter.export(
+                result,
+                staging,
+                vectors,
+                monikers,
+                embedding_usage=embedding_usage,
+                embedding_model_id=self.embedder.model_id,
+            )
+
+        self.artifact_sink.commit(
+            output_dir, _write_bundle, generation=result.commit_hash
+        )
 
         return result
 

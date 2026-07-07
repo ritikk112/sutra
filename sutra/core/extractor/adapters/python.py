@@ -190,6 +190,22 @@ def _extract_decorators(node: Node, source: bytes) -> list[str]:
     ]
 
 
+def _is_canonical_method(decorators: list[str]) -> bool:
+    """Whether a method def is the *canonical* one among same-named methods.
+
+    A class may legally define one name several times: a ``@property`` getter
+    plus its ``.setter`` / ``.deleter``, or ``@overload`` stubs plus the real
+    implementation. They all build the same moniker, so we keep exactly one —
+    the canonical def (the getter / the real implementation), dropping
+    setters, deleters, and ``@overload`` stubs. Decorators are stored with
+    their leading ``@``.
+    """
+    for d in decorators:
+        if "overload" in d or d.endswith(".setter") or d.endswith(".deleter"):
+            return False
+    return True
+
+
 def _extract_signature(node: Node, source: bytes) -> str:
     """
     Raw source text from function start through parameter list and return
@@ -495,6 +511,14 @@ class PythonAdapter:
         # before we process methods.
         class_node_to_sym: dict[int, ClassSymbol] = {}
         for class_node in captures.get("class.def", []):
+            # Function-local classes are throwaway, non-importable locals (e.g.
+            # test stub classes) — skip them, mirroring the nested-function skip
+            # below. Their moniker encodes only the enclosing-CLASS chain (which
+            # breaks at the function), so two same-named locals in different
+            # functions would collide to one moniker and abort the whole index.
+            if _find_enclosing_function(class_node) is not None:
+                continue
+
             cls = self._build_class(class_node, file_path, source_bytes, builder, mod_qname)
             if cls is None:
                 continue
@@ -519,6 +543,11 @@ class PythonAdapter:
                     },
                 ))
 
+        # Same-named methods (property getter/setter, @overload stubs + impl)
+        # legally share a moniker; this tracks which id is already emitted so we
+        # collapse each to one canonical symbol. moniker id -> index in symbols.
+        method_by_id: dict[str, int] = {}
+
         # Process all function_definition nodes — distinguish methods, functions, nested
         for func_node in captures.get("func.def", []):
             enclosing_class = _find_enclosing_class(func_node)
@@ -534,6 +563,31 @@ class PythonAdapter:
                 )
                 if method is None:
                     continue
+
+                # Collapse same-named methods to the canonical def so symbol ids
+                # stay unique. If the canonical def (getter / real impl) appears
+                # after a non-canonical one already kept (a setter/deleter or an
+                # @overload stub), replace it in place; otherwise drop the
+                # duplicate. CONTAINS is emitted once per id (on first insert).
+                prev_idx = method_by_id.get(method.id)
+                if prev_idx is not None:
+                    if (_is_canonical_method(method.decorators)
+                            and not _is_canonical_method(symbols[prev_idx].decorators)):
+                        symbols[prev_idx] = method
+                        body = func_node.child_by_field_name("body")
+                        if body:
+                            for target, meta, loc in _extract_calls(body, source_bytes):
+                                relationships.append(Relationship(
+                                    source_id=method.id,
+                                    kind=RelationKind.CALLS,
+                                    is_resolved=False,
+                                    target_name=target,
+                                    location=loc,
+                                    metadata=meta,
+                                ))
+                    continue  # never emit a duplicate symbol / CONTAINS edge
+
+                method_by_id[method.id] = len(symbols)
                 symbols.append(method)
 
                 relationships.append(Relationship(
