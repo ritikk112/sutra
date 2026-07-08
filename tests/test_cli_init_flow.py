@@ -40,6 +40,9 @@ def _build_local_script() -> str:
     keys += "\r"                       # Step2: model text -> accept default
     if not st_installed:
         keys += "n"                    # Step2: install sentence-transformers? -> no
+    else:
+        keys += "n"                    # Step2: auto-detect dimensions? -> no
+    keys += "\r"                       # Step2: Vector dimensions -> accept default (384)
     keys += "n"                        # Step2: validate now? -> no (skip)
     keys += "\r"                       # Step3: artifacts dir -> accept default
     keys += "n"                        # Step4: configure Postgres? -> no
@@ -92,7 +95,10 @@ def test_init_decline_write_leaves_no_config(tmp_path: Path, monkeypatch) -> Non
     claude_present = detect.claude_cli_present().ok
     keys = "\r" "\r"
     if not st_installed:
-        keys += "n"
+        keys += "n"      # install? no
+    else:
+        keys += "n"      # auto-detect dimensions? no
+    keys += "\r"         # Vector dimensions -> default
     keys += "n"          # skip validation
     keys += "\r"         # artifacts default
     keys += "n"          # postgres no

@@ -223,16 +223,17 @@ def _setup_local(io: PromptIO, defaults: dict, say: Any) -> EmbedderSetupResult:
         "Local model name:",
         default=str(defaults.get("model") or "all-MiniLM-L6-v2"),
     )
-    dims = int(defaults.get("dimensions") or 384)
-    batch_size = int(defaults.get("batch_size") or 32)
-    cfg = {
-        "provider": "local",
-        "model": model,
-        "dimensions": dims,
-        "batch_size": batch_size,
-    }
+    # Only reuse a prior batch_size if it came from a local config — never carry
+    # an OpenAI batch (100) into a CPU-bound local model.
+    batch_size = (
+        int(defaults["batch_size"])
+        if defaults.get("provider") == "local" and defaults.get("batch_size")
+        else 32
+    )
 
-    if not detect.sentence_transformers_importable().ok:
+    # sentence-transformers is needed for both auto-detect and validation.
+    st_ok = detect.sentence_transformers_importable().ok
+    if not st_ok:
         say("sentence-transformers is not installed.")
         if ask_confirm(
             io,
@@ -244,7 +245,38 @@ def _setup_local(io: PromptIO, defaults: dict, say: Any) -> EmbedderSetupResult:
             res = provision.install_cpu_torch(on_output=say)
             if not res.ok:
                 say(f"Install failed: {res.message}. Continuing; validation will be skipped.")
+            st_ok = detect.sentence_transformers_importable().ok
 
+    # A local model's dimension MUST equal its native output width — LocalEmbedder
+    # rejects a mismatch. Auto-detect it when we can; always let the user override.
+    dims: int | None = None
+    if st_ok and ask_confirm(
+        io, "Auto-detect dimensions by loading the model? (recommended)", default=True
+    ):
+        from sutra.core.embedder.local import LocalEmbedder
+
+        try:
+            dims = LocalEmbedder.native_dimensions(model)
+            say(f"Detected {dims} dimensions for {model!r}.")
+        except Exception as exc:  # noqa: BLE001 — fall back to manual entry
+            say(f"Auto-detect failed ({type(exc).__name__}: {exc}); enter dimensions manually.")
+
+    if dims is None:
+        # Never inherit a dimension across providers — a prior OpenAI 1536 must
+        # not leak into a local model. Only reuse a prior *local* dims value.
+        prior = (
+            int(defaults["dimensions"])
+            if defaults.get("provider") == "local" and defaults.get("dimensions")
+            else 384
+        )
+        dims = int(ask_text(io, "Vector dimensions:", default=str(prior)))
+
+    cfg = {
+        "provider": "local",
+        "model": model,
+        "dimensions": dims,
+        "batch_size": batch_size,
+    }
     return _validate_or_skip(io, cfg, say)
 
 

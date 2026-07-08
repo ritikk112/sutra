@@ -14,8 +14,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import numpy as np
 import pytest
+from prompt_toolkit.input.defaults import create_pipe_input
+from prompt_toolkit.output import DummyOutput
 
-from sutra.cli import embed_setup
+from sutra.cli import detect, embed_setup
+from sutra.cli.embed_setup import PromptIO
 
 # Native width our dummy endpoint "returns" — the value discovery must find.
 SERVER_DIMS = 16
@@ -137,3 +140,58 @@ class TestCompatibleEndpoint:
         vectors = embedder.embed(["alpha", "beta", "gamma"])
         assert vectors.shape == (3, SERVER_DIMS)
         assert vectors.dtype == np.float32
+
+
+# ---------------------------------------------------------------------------
+# Local flow — dimensions are configurable / not inherited across providers
+# ---------------------------------------------------------------------------
+
+class TestLocalDimensions:
+    def _drive_local(self, keys: str, *, defaults: dict | None = None):
+        with create_pipe_input() as inp:
+            inp.send_text(keys)
+            return embed_setup.choose_embedder(
+                PromptIO(input=inp, output=DummyOutput()), defaults=defaults
+            )
+
+    def test_local_dimensions_are_configurable(self) -> None:
+        """The local flow must let the user set the vector dimension (declining
+        auto-detect), instead of silently using a hardcoded/inherited value."""
+        st_ok = detect.sentence_transformers_importable().ok
+        keys = "\r"          # embedder select -> Local (default)
+        keys += "\r"         # model -> accept default
+        if not st_ok:
+            keys += "n"      # install sentence-transformers? -> no
+        else:
+            keys += "n"      # auto-detect dimensions? -> no (enter manually)
+        # Vector dimensions: clear the pre-filled default (Ctrl-U) then type 1024.
+        keys += "\x15" + "1024" + "\r"
+        keys += "n"          # validate now? -> no (skip; no model load)
+
+        result = self._drive_local(keys)
+        assert result.embedder_cfg["provider"] == "local"
+        assert result.embedder_cfg["dimensions"] == 1024
+        assert result.validated is False
+
+    def test_local_does_not_inherit_dimensions_from_openai_default(self) -> None:
+        """Switching to Local from a prior OpenAI config (dimensions=1536) must
+        NOT carry 1536 into the local config — that caused the harrier clash."""
+        st_ok = detect.sentence_transformers_importable().ok
+        # defaults={openai} makes the menu default to OpenAI; arrow Up to Local.
+        keys = "\x1b[A\r"    # embedder select: Up -> Local, Enter
+        keys += "\r"         # model default
+        if not st_ok:
+            keys += "n"      # install? no
+        else:
+            keys += "n"      # auto-detect? no
+        keys += "\r"         # Vector dimensions -> accept default (must NOT be 1536)
+        keys += "n"          # validate? no
+
+        result = self._drive_local(
+            keys,
+            defaults={"provider": "openai", "dimensions": 1536, "batch_size": 100},
+        )
+        assert result.embedder_cfg["provider"] == "local"
+        # Neither dimensions nor batch_size may leak from the prior OpenAI config.
+        assert result.embedder_cfg["dimensions"] != 1536
+        assert result.embedder_cfg["batch_size"] == 32
