@@ -10,8 +10,8 @@ Split cleanly into:
 * **prompting** — :func:`choose_embedder`, the questionary arrow-key menu that
   gathers fields and drives the probe with a "skip validation" escape hatch.
 
-``PromptIO`` (input/output for questionary) and the questionary/prompt_toolkit
-compatibility shim also live here and are reused by ``init.py``.
+``PromptIO`` (input/output for questionary) also lives here and is reused by
+``init.py``.
 """
 from __future__ import annotations
 
@@ -23,39 +23,6 @@ from sutra.core.embedder.factory import from_dict
 
 class WizardAborted(Exception):
     """Raised when the user cancels a prompt (Ctrl-C / ESC) mid-wizard."""
-
-
-# ---------------------------------------------------------------------------
-# questionary <-> prompt_toolkit compatibility shim
-# ---------------------------------------------------------------------------
-# questionary 2.1.0's cosmetic `_fix_unecessary_blank_lines` assumes a
-# prompt_toolkit layout structure that changed in prompt_toolkit 3.0.52, so every
-# `select` prompt raises AttributeError('VSplit' ...).  The function only tweaks
-# window sizing, so wrapping it defensively is safe and keeps arrow-key menus
-# working.  Applied once, idempotently, on import.
-_QUESTIONARY_PATCHED = False
-
-
-def _apply_questionary_patch() -> None:
-    global _QUESTIONARY_PATCHED
-    if _QUESTIONARY_PATCHED:
-        return
-    try:
-        import questionary.prompts.common as _qc
-
-        _orig = _qc._fix_unecessary_blank_lines
-
-        def _safe(ps: Any) -> None:
-            try:
-                _orig(ps)
-            except Exception:
-                # Purely cosmetic (window height); ignore layout drift.
-                pass
-
-        _qc._fix_unecessary_blank_lines = _safe
-    except Exception:
-        pass
-    _QUESTIONARY_PATCHED = True
 
 
 @dataclass
@@ -90,28 +57,24 @@ def _ask(question: Any) -> Any:
 def ask_text(io: PromptIO, message: str, *, default: str = "") -> str:
     import questionary
 
-    _apply_questionary_patch()
     return _ask(questionary.text(message, default=default, **io.kwargs()))
 
 
 def ask_password(io: PromptIO, message: str) -> str:
     import questionary
 
-    _apply_questionary_patch()
     return _ask(questionary.password(message, **io.kwargs()))
 
 
 def ask_confirm(io: PromptIO, message: str, *, default: bool = True) -> bool:
     import questionary
 
-    _apply_questionary_patch()
     return bool(_ask(questionary.confirm(message, default=default, **io.kwargs())))
 
 
 def ask_select(io: PromptIO, message: str, choices: list[Any], *, default: Any = None) -> str:
     import questionary
 
-    _apply_questionary_patch()
     kwargs = io.kwargs()
     if default is not None:
         kwargs["default"] = default
