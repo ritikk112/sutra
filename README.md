@@ -35,25 +35,49 @@ understands the repo without anything being pre-summarized.
 
 ## Mental model: two sides
 
-Sutra is **two programs that meet through files on disk**, not one app:
+Sutra is **two programs that meet through files on disk**, not one app. The
+shape is a **bowtie**: many sources *fan in* through the indexer to one central
+artifacts directory (the knot), which *fans out* to every consumer agent. That
+directory is the entire contract between the two sides.
 
+```mermaid
+flowchart LR
+    src1["Local repo path"]:::in
+    src2["Public git URL"]:::in
+
+    src1 --> IDX
+    src2 --> IDX
+
+    subgraph IDX["Indexer side — writes  (sutra index / web frontend :8000)"]
+        direction TB
+        parse["tree-sitter parse<br/>symbols · relationships · monikers"]
+        resolve["resolve CALLS<br/>heuristic → optional LSP (pyright)"]
+        embed["embed symbols<br/>openai · local · compatible endpoint"]
+        parse --> resolve --> embed
+    end
+
+    embed --> KNOT
+
+    KNOT["📦 $SUTRA_ARTIFACTS_DIR<br/>one bundle per repo:<br/>graph.json · embeddings.npy<br/>embeddings_index.json · .ready"]:::knot
+
+    KNOT --> MCP
+
+    subgraph OUT["Consumer side — the product"]
+        direction TB
+        MCP["MCP server :8765  (sutra serve)<br/>loads every repo in-memory · no DB<br/>hot-reloads the instant .ready changes"]:::out
+        MCP --> a1["Claude Code"]:::leaf
+        MCP --> a2["Claude Desktop"]:::leaf
+        MCP --> a3["Cursor / any MCP client"]:::leaf
+    end
+
+    classDef in fill:#e8f0fe,stroke:#4285f4,color:#0b1324;
+    classDef out fill:#e6f4ea,stroke:#34a853,color:#0b1324;
+    classDef knot fill:#fef7e0,stroke:#f9ab00,color:#0b1324,font-weight:bold;
+    classDef leaf fill:#f1f3f4,stroke:#9aa0a6,color:#0b1324;
 ```
-  ┌─────────────────────────── single machine ───────────────────────────┐
-  │  INDEXER side (writes)                    CONSUMER side (the product)  │
-  │  ┌─────────────────────────┐             ┌──────────────────────────┐ │
-  │  │ Web frontend  (:8000)   │             │  MCP server   (:8765)    │ │
-  │  │  └ runs ─┐               │   artifacts │   loads every repo into  │ │
-  │  │ CLI: pipelines.full_index│  ─────────▶ │   memory; NO database    │ │
-  │  │  • git clone             │  graph.json │   at query time          │ │
-  │  │  • tree-sitter parse     │  embeds.npy │   hot-reloads on .ready  │◀┐│
-  │  │  • resolve calls (LSP)   │  index.json │   exposes sutra_* tools  │ ││
-  │  │  • embed                 │  .ready     │                          │ ││
-  │  └──────────────┬──────────┘             └──────────────────────────┘ ││
-  │                 ▼                                       ▲              ││
-  │     $SUTRA_ARTIFACTS_DIR/<owner__repo>/ ───────────────┴──────────────┘│
-  └───────────────────────────────────────────────────────────────────────┘
-        teammates' MCP clients ──HTTP+token──▶ :8765   (browsers ▶ :8000)
-```
+
+> Remote teammates connect their MCP clients over **HTTP + bearer token** to
+> `:8765`; browsers hit the indexing UI at `:8000`.
 
 - **Indexer** (`pipelines.full_index`, wrapped by the web frontend): clones a
   repo, parses it, resolves calls, embeds, and writes a **per-repo artifact
@@ -432,9 +456,32 @@ venv and absolute paths:
 
 **Agent workflow:** `sutra_search` to find an entry point → `sutra_get_symbol`
 / `sutra_get_callers` / `sutra_expand_neighbors` to walk the call/type graph
-outward. `sutra_search` runs the full pipeline per query: vector ∥ BM25 ∥
-moniker channels → kind filter → RRF fusion. Pass `repo="owner/repo"` to scope
-to one repo, or omit it to search across all indexed repos.
+outward. Pass `repo="owner/repo"` to scope to one repo, or omit it to search
+across all indexed repos.
+
+Each `sutra_search` is itself a **butterfly**: the query fans out across three
+independent retrieval channels, then fans back in through Reciprocal Rank Fusion
+into one ranked list — all in memory:
+
+```mermaid
+flowchart LR
+    Q["Natural-language query"]:::q
+    Q --> V["Vector channel<br/>embedding similarity"]:::ch
+    Q --> B["BM25 channel<br/>lexical (also reaches<br/>non-embedded modules)"]:::ch
+    Q --> M["Moniker channel<br/>exact identifier match"]:::ch
+    V --> F["Reciprocal Rank Fusion<br/>+ kind filter"]:::knot
+    B --> F
+    M --> F
+    F --> RR{"rerank?"}
+    RR -->|"no (default)"| OUT["Ranked symbols<br/>file · line · signature · docstring"]:::out
+    RR -->|"yes"| CE["cross-encoder rerank<br/>bge-reranker-v2-m3"]:::ch
+    CE --> OUT
+
+    classDef q fill:#e8f0fe,stroke:#4285f4,color:#0b1324,font-weight:bold;
+    classDef ch fill:#f1f3f4,stroke:#9aa0a6,color:#0b1324;
+    classDef knot fill:#fef7e0,stroke:#f9ab00,color:#0b1324,font-weight:bold;
+    classDef out fill:#e6f4ea,stroke:#34a853,color:#0b1324;
+```
 
 `rerank=True` adds a cross-encoder pass (`BAAI/bge-reranker-v2-m3`) — **~60s+
 per query on CPU**; leave it off unless you're on GPU.
