@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sutra"
+version = "0.1.0"
+description = "Code-aware retrieval engine with a guided CLI for indexing, serving, and querying repositories."
+requires-python = ">=3.11"
+dependencies = [
+    # --- Core runtime (kept in sync with requirements.txt) ---
+    "fastapi==0.136.3",
+    "uvicorn==0.35.0",
+    "mcp==1.27.2",
+    "openai==2.30.0",
+    "psycopg2==2.9.11",
+    "pydantic==2.12.5",
+    "PyYAML==6.0.3",
+    "numpy==2.4.4",
+    "GitPython==3.1.46",
+    "pygit2==1.19.2",
+    "rustworkx==0.17.1",
+    "rank-bm25==0.2.2",
+    "tree-sitter==0.25.2",
+    "tree-sitter-go==0.25.0",
+    "tree-sitter-python==0.25.0",
+    "tree-sitter-typescript==0.23.2",
+    # --- CLI (sutra init wizard) ---
+    "typer>=0.20,<0.26",
+    "rich==13.9.4",
+    "questionary==2.1.0",
+    # Pin below 3.0.52: questionary 2.1.0's cosmetic layout hack crashes on 3.0.52+.
+    "prompt_toolkit>=3.0,<3.0.52",
+]
+
+[project.optional-dependencies]
+local = ["sentence-transformers==5.5.1"]
+
+[project.scripts]
+sutra = "sutra.cli.main:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["sutra*", "pipelines*", "frontend*"]

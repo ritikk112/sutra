@@ -6,6 +6,7 @@ import numpy as np
 from openai import OpenAI
 
 from sutra.core.embedder.base import Embedder
+from sutra.core.embedder.factory import ConfigError
 
 
 class OpenAIEmbedder(Embedder):
@@ -28,24 +29,46 @@ class OpenAIEmbedder(Embedder):
     The `dimensions` param flows directly to the API as the `dimensions` field,
     which OpenAI supports for truncated embeddings (e.g., 768 instead of 1536
     for text-embedding-3-small).  Config is authoritative for this value.
+
+    `base_url` points the client at any OpenAI-compatible endpoint (Ollama,
+    LM Studio, vLLM, Together, Azure, …).  When it is set, `dimensions` MUST be
+    provided explicitly — those endpoints do not share OpenAI's 1536 default and
+    the vector width cannot be assumed.  A missing dimensions raises ConfigError.
+    When `base_url` is None the behavior is unchanged: dimensions defaults to
+    1536 (native for text-embedding-3-small).
     """
 
     def __init__(
         self,
         api_key: str,
         model: str = "text-embedding-3-small",
-        dimensions: int = 1536,
+        dimensions: int | None = None,
         batch_size: int = 100,
+        base_url: str | None = None,
     ) -> None:
+        if base_url is not None and dimensions is None:
+            raise ConfigError(
+                "OpenAI-compatible endpoint requires an explicit 'dimensions' "
+                f"value when base_url is set (base_url={base_url!r}).  "
+                "Compatible endpoints do not share OpenAI's 1536 default; "
+                "set embedder.dimensions in config (the setup wizard discovers "
+                "it automatically via a probe embed)."
+            )
+        # Preserve legacy default only for the real OpenAI path (base_url None).
+        if dimensions is None:
+            dimensions = 1536
+
         self._model = model
         self._dimensions = dimensions
         self._batch_size = batch_size
+        self._base_url = base_url
         self._usage_prompt_tokens = 0
         self._usage_total_tokens = 0
         self._usage_request_count = 0
         self._last_estimated_cost_usd = 0.0
         # max_retries=3: SDK handles exponential back-off for rate limits / 5xx.
-        self._client = OpenAI(api_key=api_key, max_retries=3)
+        # base_url=None keeps the SDK's default (api.openai.com).
+        self._client = OpenAI(api_key=api_key, max_retries=3, base_url=base_url)
 
     @property
     def dimensions(self) -> int:

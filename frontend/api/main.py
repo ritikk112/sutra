@@ -55,15 +55,20 @@ async def startup() -> None:
             "Install it: pip install pyright"
         )
 
-    needs_openai = _config_requires_openai(REPO_ROOT / "config" / "sutra.yaml")
-    openai_key_set = bool(os.environ.get("OPENAI_API_KEY", "").strip())
-    if needs_openai and not openai_key_set:
-        raise RuntimeError("OPENAI_API_KEY is required by config/sutra.yaml (embedder.provider=openai).")
+    required_key_env = _required_openai_key_env(REPO_ROOT / "config" / "sutra.yaml")
+    openai_key_set = (
+        bool(os.environ.get(required_key_env, "").strip()) if required_key_env else True
+    )
+    if required_key_env and not openai_key_set:
+        raise RuntimeError(
+            f"{required_key_env} is required by config/sutra.yaml (embedder.provider=openai)."
+        )
 
     print(
         "[sutra-ui] startup: "
         f"repo_root={REPO_ROOT} artifacts_root={artifacts_root} "
-        f"pyright_ok={pyright_ok} openai_required={needs_openai} openai_key_set={openai_key_set}"
+        f"pyright_ok={pyright_ok} openai_key_env={required_key_env or 'none'} "
+        f"openai_key_set={openai_key_set}"
     )
 
     global manager
@@ -220,14 +225,31 @@ def _check_pipeline_importable() -> None:
     import pipelines.full_index  # noqa: F401
 
 
-def _config_requires_openai(config_path: Path) -> bool:
+def _required_openai_key_env(config_path: Path) -> str | None:
+    """
+    Return the env var name that must hold an API key for the configured
+    embedder, or None if no key is required.
+
+    None is returned for provider != openai (fixture/local), and for an
+    OpenAI-compatible endpoint that needs no key: provider openai with a
+    ``base_url`` set and a blank/empty ``api_key_env`` (e.g. Ollama).  Real
+    OpenAI (or a compatible endpoint that declares an api_key_env) returns the
+    env var name so startup can hard-fail when it is unset.
+    """
     if not config_path.exists():
-        return False
+        return None
 
     with config_path.open("r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f) or {}
     embedder = cfg.get("embedder") or {}
-    return str(embedder.get("provider", "fixture")).lower() == "openai"
+    if str(embedder.get("provider", "fixture")).lower() != "openai":
+        return None
+
+    base_url = str(embedder.get("base_url") or "").strip()
+    api_key_env = str(embedder.get("api_key_env", "OPENAI_API_KEY") or "").strip()
+    if base_url and not api_key_env:
+        return None
+    return api_key_env or "OPENAI_API_KEY"
 
 
 def _write_missing_index() -> Path:

@@ -58,9 +58,9 @@ Sutra is **two programs that meet through files on disk**, not one app:
 - **Indexer** (`pipelines.full_index`, wrapped by the web frontend): clones a
   repo, parses it, resolves calls, embeds, and writes a **per-repo artifact
   bundle** to `$SUTRA_ARTIFACTS_DIR/<owner__repo>/`.
-- **Consumer** (`python -m sutra.mcp`): loads that directory **entirely into
-  memory** and serves it. **No database at query time** — `pip install` + a
-  folder of artifacts is the whole deployment. It **hot-reloads** a repo the
+- **Consumer** (`sutra serve`, a.k.a. `python -m sutra.mcp`): loads that
+  directory **entirely into memory** and serves it. **No database at query
+  time** — `pip install` + a folder of artifacts is the whole deployment. It **hot-reloads** a repo the
   moment its `.ready` sentinel changes, so re-indexing is picked up live.
 
 The two share one local directory, `$SUTRA_ARTIFACTS_DIR` (default
@@ -69,6 +69,9 @@ The two share one local directory, `$SUTRA_ARTIFACTS_DIR` (default
 ---
 
 ## Prerequisites
+
+> `sutra init` (see [Install](#install)) detects and provisions all of these
+> for you — this list is what it configures.
 
 - **Python 3.11** (3.11.14 is the tested version) and a virtualenv.
 - **Node.js + npm** — only to build the web frontend.
@@ -85,9 +88,57 @@ The two share one local directory, `$SUTRA_ARTIFACTS_DIR` (default
 
 ## Install
 
+Sutra is a pip-installable package with a `sutra` console command. Create a
+Python 3.11 venv, install it, then run the guided setup wizard:
+
 ```bash
 git clone <your sutra remote> && cd sutra
 python3.11 -m venv .venv && source .venv/bin/activate
+
+pip install -e .        # editable install from a clone (use `pip install .` for a plain install)
+
+sutra init              # guided setup wizard — configures everything below
+```
+
+`sutra init` is interactive and idempotent (re-run it any time; it offers your
+current values as defaults). Each step is skippable, shows the exact command
+before running anything, and writes config only at the end. It guides you
+through:
+
+- **Embedder choice** — local sentence-transformers (`all-MiniLM-L6-v2`, free /
+  offline), OpenAI (`text-embedding-3-small`, needs `OPENAI_API_KEY`), or any
+  **OpenAI-compatible endpoint** (Ollama, LM Studio, vLLM, Together, Azure, …)
+  via a `base_url`. For local it does the correct **CPU-only torch** two-step
+  install so pip doesn't pull the ~5GB CUDA build.
+- **Artifacts directory** — where indexed repos land (`SUTRA_ARTIFACTS_DIR`,
+  default `~/.sutra/artifacts`).
+- **Postgres (optional)** — only enables incremental re-indexing bookkeeping;
+  Sutra runs fully JSON-only without it.
+- **Resolver / pyright** — installs `pyright` for LSP-grade call resolution (the
+  frontend/UI default).
+- **MCP registration (optional)** — registers the server with Claude Code, or
+  prints a JSON snippet for other MCP clients.
+
+Then re-validate your environment any time with:
+
+```bash
+sutra doctor            # non-interactive ✓/✗ checks + fix hints
+```
+
+Build the web frontend (only if you'll use the UI):
+
+```bash
+make ui-install   # cd frontend/web && npm install
+make ui-build     # cd frontend/web && npm run build
+```
+
+<details>
+<summary><b>Advanced / still-supported:</b> manual install without the wizard</summary>
+
+The pre-wizard flow keeps working — install dependencies and hand-edit
+`config/sutra.yaml` yourself:
+
+```bash
 pip install -r requirements.txt
 
 # Required for --resolver lsp (the frontend default):
@@ -99,12 +150,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements-ml.txt
 ```
 
-Build the web frontend (only if you'll use the UI):
-
-```bash
-make ui-install   # cd frontend/web && npm install
-make ui-build     # cd frontend/web && npm run build
-```
+</details>
 
 ---
 
@@ -141,6 +187,22 @@ embedder:
 
 ## Quick start (the 3 surfaces)
 
+Once `sutra init` has configured your environment, these are the everyday
+commands:
+
+```bash
+sutra index <path-or-url>   # index a repo (local path or a git URL)
+sutra serve                 # run the MCP server (the product)
+sutra ui                    # launch the web frontend on :8000
+sutra doctor                # re-validate the environment (✓/✗ + fix hints)
+```
+
+Each wraps an existing entrypoint (`sutra index` → `pipelines.full_index`,
+`sutra serve` → `python -m sutra.mcp`, `sutra ui` → uvicorn on
+`frontend.api.main:app`). The three surfaces below show each in full, with the
+underlying `python -m …` invocation documented as the still-supported advanced
+path.
+
 ### 1. Web frontend (easiest)
 
 A single-port local app: FastAPI API + a job queue + live SSE logs, with the
@@ -150,9 +212,13 @@ React UI served as static files.
 source .venv/bin/activate
 export SUTRA_ARTIFACTS_DIR=~/.sutra/artifacts     # where indexed repos land
 export OPENAI_API_KEY=sk-...                       # if config uses openai
-make ui-run                                         # uvicorn :8000
+
+sutra ui                                            # serves on :8000
 # open http://127.0.0.1:8000
 ```
+
+> Advanced / still-supported: `make ui-run` (or
+> `uvicorn frontend.api.main:app --host 127.0.0.1 --port 8000`) does the same thing.
 
 In the UI: paste a **public** Git URL, choose "Replace existing index", click
 **Start Indexing**, and watch the logs stream. When it finishes you'll see
@@ -170,8 +236,20 @@ runs **JSON-only** (no Postgres) and one job at a time.
 
 ### 2. CLI indexer
 
-The same indexing the frontend wraps, run directly. Point `--root` at a repo
-already on disk:
+The same indexing the frontend wraps, run directly. The simplest form takes a
+local path or a git URL:
+
+```bash
+source .venv/bin/activate
+sutra index /path/to/your-repo                        # a repo already on disk
+sutra index https://github.com/org/your-repo          # or clone + index a URL
+```
+
+<details>
+<summary><b>Advanced / still-supported:</b> the underlying <code>python -m pipelines.full_index</code></summary>
+
+`sutra index` wraps `pipelines.full_index`. To drive it directly with full
+control over resolver, output dir, and re-index mode:
 
 ```bash
 source .venv/bin/activate
@@ -194,44 +272,48 @@ python -m pipelines.full_index \
 | `--replace` | Re-index: overwrite this repo's artifact in place (the normal mode). |
 | `--pg-url` | Optional Postgres URL for incremental bookkeeping; **omit for JSON-only** (the supported MVP path). |
 
+</details>
+
 Output: `graph.json` + `embeddings.npy` + `embeddings_index.json`, committed
 atomically with a `.ready` sentinel written last.
 
 ### 3. MCP server (the product)
 
-Point it at the artifacts directory and it serves every repo inside.
+Point it at the artifacts directory and it serves every repo inside. With the
+package installed, `sutra serve` runs it from anywhere — it wraps
+`python -m sutra.mcp` and takes the same flags.
 
-> **Three things that trip people up — read before you run it:**
-> 1. **Run from the repo root, with the repo's venv.** `sutra` is *not*
->    pip-installed, so `python -m sutra.mcp` only resolves when the repo root
->    is importable — i.e. your shell's `cwd` is the repo root (or `PYTHONPATH`
->    includes it). Use the repo's own `.venv` python, not a system or
->    other-project interpreter (`ModuleNotFoundError: No module named 'sutra'`
->    / `'mcp'` means you got this wrong).
-> 2. **OpenAI-embedded artifacts need `OPENAI_API_KEY` at *query* time too.**
+> **Two things that trip people up — read before you run it:**
+> 1. **OpenAI-embedded artifacts need `OPENAI_API_KEY` at *query* time too.**
 >    The server re-embeds your *query* with the same model the repo was indexed
 >    with. Without the key that repo is **skipped** (you'll see
 >    `skipping <repo>: … set OPENAI_API_KEY`, then `No loadable artifacts`).
 >    Export the key, or re-index that repo with `provider: local` / `fixture`
 >    in `config/sutra.yaml` for key-free querying.
-> 3. **For another machine to connect you need BOTH `--host 0.0.0.0` and
+> 2. **For another machine to connect you need BOTH `--host 0.0.0.0` and
 >    `SUTRA_MCP_TOKEN`.** The default `--host` is `127.0.0.1` (this machine
 >    only). On a `0.0.0.0` bind the bearer token is the *only* thing guarding
 >    your code — **never expose `0.0.0.0` without a token.**
 
 ```bash
-cd /path/to/sutra && source .venv/bin/activate      # cwd = repo root, repo venv
+source .venv/bin/activate
 export SUTRA_ARTIFACTS_DIR=~/.sutra/artifacts
 export OPENAI_API_KEY=sk-...                          # if any artifact is OpenAI-embedded
 
 # Local stdio — for an agent on THIS machine:
-python -m sutra.mcp --artifacts-dir "$SUTRA_ARTIFACTS_DIR"
+sutra serve --artifacts-dir "$SUTRA_ARTIFACTS_DIR"
 
 # Shared team server over HTTP (for other machines) — token REQUIRED:
 export SUTRA_MCP_TOKEN=$(openssl rand -hex 32); echo "$SUTRA_MCP_TOKEN"
-python -m sutra.mcp --artifacts-dir "$SUTRA_ARTIFACTS_DIR" --http --host 0.0.0.0 --port 8765
+sutra serve --artifacts-dir "$SUTRA_ARTIFACTS_DIR" --http --host 0.0.0.0 --port 8765
 # endpoint: http://<your-LAN-IP>:8765/mcp   (find your IP with: hostname -I)
 ```
+
+> Advanced / still-supported: `python -m sutra.mcp …` (same flags) works too.
+> When invoking it directly rather than via the `sutra` command, run it from the
+> repo root with the repo's `.venv` active (or set `PYTHONPATH=/path/to/sutra`)
+> so `sutra`/`mcp` are importable — `ModuleNotFoundError: No module named
+> 'sutra'` / `'mcp'` means you got that wrong.
 
 | Flag / env | Meaning |
 |---|---|
@@ -259,11 +341,28 @@ python scripts/verify_mcp.py --artifacts-dir "$SUTRA_ARTIFACTS_DIR" \
 
 ### Claude Code — same machine (stdio)
 
+`sutra init` offers to register the server for you (wizard step 6). To do it by
+hand, point Claude at the **absolute `sutra` console script** in your venv and an
+**absolute** artifacts path (`~` is not expanded when the command is exec'd):
+
+```bash
+claude mcp add sutra -s user \
+  -e OPENAI_API_KEY=sk-...                          # omit for local/fixture artifacts \
+  -- /path/to/sutra/.venv/bin/sutra serve \
+     --artifacts-dir /home/you/.sutra/artifacts
+```
+
+- `-s user` registers it for every project (default scope is per-directory `local`).
+- Already added a broken one? `claude mcp remove sutra` first (from the dir you added it in).
+- `/mcp` failing with `-32000` means the spawned server died — see [Troubleshooting](#troubleshooting).
+
+<details>
+<summary><b>Advanced / still-supported:</b> registering the raw <code>python -m sutra.mcp</code></summary>
+
 A bare `claude mcp add sutra -- python -m sutra.mcp …` **will fail** — Claude
 spawns the server from *its* working directory (not the repo) with whatever
-`python` is on PATH, so it can't import `sutra`/`mcp`. Pin the **absolute venv
-python**, pass the repo on `PYTHONPATH`, and use an **absolute** artifacts path
-(`~` is not expanded when the command is exec'd):
+`python` is on PATH, so it can't import `sutra`/`mcp`. If you skip the console
+script, pin the **absolute venv python** and pass the repo on `PYTHONPATH`:
 
 ```bash
 claude mcp add sutra -s user \
@@ -273,9 +372,7 @@ claude mcp add sutra -s user \
      --artifacts-dir /home/you/.sutra/artifacts
 ```
 
-- `-s user` registers it for every project (default scope is per-directory `local`).
-- Already added a broken one? `claude mcp remove sutra` first (from the dir you added it in).
-- `/mcp` failing with `-32000` means the spawned server died — see [Troubleshooting](#troubleshooting).
+</details>
 
 ### Claude Code — another machine on your LAN (HTTP, recommended for sharing)
 
@@ -298,22 +395,27 @@ guest/corporate networks — home Wi-Fi is usually fine).
 
 ### Claude Desktop / Cursor (`claude_desktop_config.json` / `.cursor/mcp.json`)
 
-Same rules as stdio above — absolute venv python, `PYTHONPATH`, absolute paths:
+Same rule as stdio above — use the **absolute `sutra` console script** in your
+venv and absolute paths:
 
 ```json
 {
   "mcpServers": {
     "sutra": {
-      "command": "/abs/path/sutra/.venv/bin/python",
-      "args": ["-m", "sutra.mcp", "--artifacts-dir", "/home/you/.sutra/artifacts"],
+      "command": "/abs/path/sutra/.venv/bin/sutra",
+      "args": ["serve", "--artifacts-dir", "/home/you/.sutra/artifacts"],
       "env": {
-        "PYTHONPATH": "/abs/path/sutra",
         "OPENAI_API_KEY": "sk-..."
       }
     }
   }
 }
 ```
+
+> Advanced / still-supported: the raw form is
+> `"command": "/abs/path/sutra/.venv/bin/python"`,
+> `"args": ["-m", "sutra.mcp", "--artifacts-dir", "…"]` with
+> `"PYTHONPATH": "/abs/path/sutra"` added to `env`.
 
 ---
 
