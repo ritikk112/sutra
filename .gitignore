@@ -11,5 +11,8 @@ frontend/api/static/*
 !frontend/api/static/.gitkeep
 tests/eval/artifacts/
 
+# Local benchmark output — not part of the repo
+sutra-benchmark/
+
 # Python packaging build artifacts
 *.egg-info/

@@ -452,12 +452,32 @@ venv and absolute paths:
 | `sutra_get_symbol` | `moniker` | full metadata for one symbol + its callers/callees |
 | `sutra_get_callers` | `moniker` | symbols with a resolved CALLS edge into it |
 | `sutra_get_callees` | `moniker` | symbols it calls |
-| `sutra_expand_neighbors` | `moniker`, `depth=1`, `kinds?` | BFS over the relationship graph (calls/extends/implements/references/contains/imports) |
+| `sutra_expand_neighbors` | `moniker`, `depth=1`, `kinds?` | BFS over the relationship graph (calls/extends/implements/references/contains/imports/returns_type/parameter_type) |
 
 **Agent workflow:** `sutra_search` to find an entry point → `sutra_get_symbol`
 / `sutra_get_callers` / `sutra_expand_neighbors` to walk the call/type graph
 outward. Pass `repo="owner/repo"` to scope to one repo, or omit it to search
 across all indexed repos.
+
+**When to reach for Sutra — recommended agent guidance.** Sutra does two things
+a per-repo file search cannot: one call that searches every indexed repo, and a
+resolved call/type graph. Drop this into your agent's `CLAUDE.md` / system
+prompt (adjust the repo list):
+
+> You have a Sutra MCP server indexing our repositories. Reach for it — over a
+> plain file search — when:
+> - **The question spans multiple repos** ("where is this implemented anywhere
+>   across our services", "which service defines the payments client") — call
+>   `sutra_search` with no `repo` to search every indexed repo in one call; a
+>   local grep only sees the repo you are in.
+> - **You need the call graph** — use `sutra_get_callers` / `sutra_get_callees` /
+>   `sutra_expand_neighbors` to get callers, callees, or a call chain as resolved
+>   edges in one call, instead of repeated grep-and-read. The graph holds only
+>   resolved edges, so treat it as a lower bound, not a complete impact set.
+>
+> `sutra_search` also locates code by concept — ranked symbols with exact
+> file:line, useful when you can't guess the keyword. On a single repo it and a
+> plain grep are comparable today; use whichever is faster.
 
 Each `sutra_search` is itself a **butterfly**: the query fans out across three
 independent retrieval channels, then fans back in through Reciprocal Rank Fusion

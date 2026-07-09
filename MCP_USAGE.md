@@ -132,13 +132,34 @@ claude mcp add --transport http sutra http://host:8765/mcp \
 | `sutra_get_symbol` | `moniker` | full metadata for one symbol + its callers/callees |
 | `sutra_get_callers` | `moniker` | symbols with resolved CALLS edges into it |
 | `sutra_get_callees` | `moniker` | symbols it calls |
-| `sutra_expand_neighbors` | `moniker`, `depth=1`, `kinds?` | BFS over the relationship graph (calls/extends/implements/references/contains/imports) |
+| `sutra_expand_neighbors` | `moniker`, `depth=1`, `kinds?` | BFS over the relationship graph (calls/extends/implements/references/contains/imports/returns_type/parameter_type) |
 
 `sutra_search` runs the full Phase 2 pipeline per query: vector ∥ BM25 ∥
 moniker channels → kind filter → RRF fusion → one-hop graph expansion.
 The agent workflow is: `sutra_search` to find an entry point, then
 `sutra_get_symbol` / `sutra_get_callers` / `sutra_expand_neighbors` to walk
 outward from it.
+
+### Recommended agent guidance
+
+Sutra does two things a per-repo file search cannot: one call that searches
+every indexed repo, and a resolved call/type graph. Drop this into your agent's
+`CLAUDE.md` / system prompt (adjust the repo list):
+
+> You have a Sutra MCP server indexing our repositories. Reach for it — over a
+> plain file search — when:
+> - **The question spans multiple repos** ("where is this implemented anywhere
+>   across our services", "which service defines the payments client") — call
+>   `sutra_search` with no `repo` to search every indexed repo in one call; a
+>   local grep only sees the repo you are in.
+> - **You need the call graph** — use `sutra_get_callers` / `sutra_get_callees` /
+>   `sutra_expand_neighbors` to get callers, callees, or a call chain as resolved
+>   edges in one call, instead of repeated grep-and-read. The graph holds only
+>   resolved edges, so treat it as a lower bound, not a complete impact set.
+>
+> `sutra_search` also locates code by concept — ranked symbols with exact
+> file:line, useful when you can't guess the keyword. On a single repo it and a
+> plain grep are comparable today; use whichever is faster.
 
 `rerank=True` adds a cross-encoder pass (`BAAI/bge-reranker-v2-m3`).
 **On CPU this costs ~60s+ per query** — leave it off unless you're on GPU

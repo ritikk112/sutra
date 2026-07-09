@@ -21,11 +21,26 @@ from sutra.mcp.watcher import ArtifactWatcher
 INSTRUCTIONS = """\
 Sutra serves a team's indexed repositories for code-aware retrieval.
 
-Start with sutra_list_repos to see what is indexed.  sutra_search answers
-natural-language questions ("which function saves the meeting in db") with
-ranked symbols; sutra_get_symbol returns full metadata for one moniker;
-sutra_get_callers / sutra_get_callees / sutra_expand_neighbors walk the
-call/type graph from a symbol you already found.
+Start with sutra_list_repos to see what is indexed and to get the exact repo
+names the other tools expect.
+
+Two things an index does that a per-repo file search cannot — reach for Sutra
+when:
+  - The answer may span MULTIPLE repositories.  Call sutra_search with no
+    `repo` argument to search every indexed repo in one call; results are
+    merged and ordered by score as a pragmatic cut (per-repo scores are not
+    directly comparable, so treat cross-repo rank as approximate).
+  - You need the call/type graph.  sutra_get_callers / sutra_get_callees return
+    a symbol's resolved callers / callees in one call, and
+    sutra_expand_neighbors walks resolved callers, callees, type hierarchy and
+    references out to `depth` hops — a call chain / partial blast radius (only
+    resolved edges are in the graph, so treat it as a lower bound).
+
+sutra_search answers natural-language questions ("which function saves the
+meeting in db") with symbols ranked by relevance, each carrying file/line,
+signature and docstring.  sutra_get_symbol returns full metadata for one
+moniker (the id sutra_search returns), including its resolved callers and
+callees.
 """
 
 
@@ -163,7 +178,9 @@ class SutraServer:
         @self.mcp.tool(
             name="sutra_list_repos",
             description="List the indexed repositories this server is serving, "
-                        "with symbol counts and the commit each was indexed at.",
+                        "with symbol counts and the commit each was indexed at. "
+                        "Call this first to learn which repos are available and "
+                        "the exact repo names the other tools expect.",
         )
         def sutra_list_repos() -> list[dict[str, Any]]:
             def run():
@@ -186,11 +203,15 @@ class SutraServer:
 
         @self.mcp.tool(
             name="sutra_search",
-            description="Natural-language search over an indexed repo.  Returns "
-                        "ranked symbols (functions, classes, methods …) with "
-                        "file/line locations, signatures and per-channel "
-                        "provenance.  Set rerank=true for a cross-encoder pass "
-                        "(slower, higher precision).",
+            description="Natural-language search over indexed code.  Returns "
+                        "symbols (functions, classes, methods …) ranked by "
+                        "relevance, each with file/line location, signature, "
+                        "docstring and per-channel provenance.  Omit `repo` to "
+                        "search every indexed repo in one call — results are "
+                        "merged and ordered by score as a pragmatic cut (per-repo "
+                        "scores aren't directly comparable); pass `repo` to scope "
+                        "to one.  Set rerank=true for a slower, higher-precision "
+                        "cross-encoder pass.",
         )
         def sutra_search(
             query: str,
@@ -218,9 +239,10 @@ class SutraServer:
 
         @self.mcp.tool(
             name="sutra_get_symbol",
-            description="Full metadata for one symbol by its moniker (id "
+            description="Full metadata for one symbol by its moniker (the id "
                         "returned by sutra_search): signature, docstring, "
-                        "location, parameters, complexity, relationships.",
+                        "location, parameters, complexity, relationships, plus "
+                        "its resolved callers and callees.",
         )
         def sutra_get_symbol(moniker: str) -> dict[str, Any]:
             def run():
@@ -242,8 +264,8 @@ class SutraServer:
 
         @self.mcp.tool(
             name="sutra_get_callers",
-            description="Symbols that call the given symbol (resolved CALLS "
-                        "edges into it).",
+            description="Symbols that call the given symbol: its resolved "
+                        "incoming CALLS edges, returned in one call.",
         )
         def sutra_get_callers(moniker: str) -> list[dict[str, Any]]:
             def run():
@@ -258,8 +280,8 @@ class SutraServer:
 
         @self.mcp.tool(
             name="sutra_get_callees",
-            description="Symbols the given symbol calls (resolved CALLS edges "
-                        "out of it).",
+            description="Symbols the given symbol calls: its resolved outgoing "
+                        "CALLS edges, returned in one call.",
         )
         def sutra_get_callees(moniker: str) -> list[dict[str, Any]]:
             def run():
@@ -274,10 +296,13 @@ class SutraServer:
 
         @self.mcp.tool(
             name="sutra_expand_neighbors",
-            description="Walk the relationship graph around a symbol: callers, "
-                        "callees, type hierarchy, references — up to `depth` "
-                        "hops.  `kinds` restricts edge kinds (calls, extends, "
-                        "implements, references, contains, imports).",
+            description="Walk the relationship graph around a symbol out to "
+                        "`depth` hops over resolved edges: callers, callees, "
+                        "type hierarchy and references — a call chain / partial "
+                        "blast radius (only resolved edges are in the graph). "
+                        "`kinds` restricts edge kinds (calls, extends, "
+                        "implements, references, contains, imports, "
+                        "returns_type, parameter_type).",
         )
         def sutra_expand_neighbors(
             moniker: str,
