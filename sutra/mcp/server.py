@@ -43,6 +43,28 @@ moniker (the id sutra_search returns), including its resolved callers and
 callees.
 """
 
+_DOCSTRING_SUMMARY_MAX = 200
+
+
+def _docstring_summary(doc: Optional[str]) -> Optional[str]:
+    """First non-empty line of a docstring, length-capped.
+
+    A search hit only needs the one-line "what does this do" to be picked out
+    of a ranked list; the full docstring (and parameters, complexity,
+    relationships) stays available via sutra_get_symbol.  Summarising here keeps
+    every sutra_search result light without dropping the information — it moves
+    the bulk from pushed-on-every-hit to pulled-on-demand.
+    """
+    if not doc:
+        return doc
+    for line in doc.strip().splitlines():
+        line = line.strip()
+        if line:
+            if len(line) > _DOCSTRING_SUMMARY_MAX:
+                return line[: _DOCSTRING_SUMMARY_MAX - 1] + "…"
+            return line
+    return ""
+
 
 class SutraServer:
     """
@@ -135,13 +157,14 @@ class SutraServer:
             return {"moniker": moniker, "indexed": False}
         return {**sym, "moniker": moniker, "repo": unit.repo_name, "indexed": True}
 
-    def _result_payload(self, unit: ServingUnit, r: SearchResult) -> dict[str, Any]:
+    def _result_payload(
+        self, unit: ServingUnit, r: SearchResult, *, include_provenance: bool = False
+    ) -> dict[str, Any]:
         sym = unit.snapshot.symbols.get(r.moniker, {})
         loc = sym.get("location") or {}
-        return {
+        payload = {
             "moniker": r.moniker,
             "score": round(r.score, 6),
-            "provenance": {k: round(v, 6) for k, v in r.provenance.items()},
             "kind": sym.get("kind"),
             "name": sym.get("name"),
             "qualified_name": sym.get("qualified_name"),
@@ -149,8 +172,11 @@ class SutraServer:
             "line_start": loc.get("line_start"),
             "line_end": loc.get("line_end"),
             "signature": sym.get("signature"),
-            "docstring": sym.get("docstring"),
+            "docstring": _docstring_summary(sym.get("docstring")),
         }
+        if include_provenance:
+            payload["provenance"] = {k: round(v, 6) for k, v in r.provenance.items()}
+        return payload
 
     def _audited(self, tool: str, args: dict[str, Any], repo: Optional[str], fn):
         t0 = time.time()
@@ -205,21 +231,25 @@ class SutraServer:
             name="sutra_search",
             description="Natural-language search over indexed code.  Returns "
                         "symbols (functions, classes, methods …) ranked by "
-                        "relevance, each with file/line location, signature, "
-                        "docstring and per-channel provenance.  Omit `repo` to "
+                        "relevance, each with file/line location, signature and "
+                        "a one-line docstring summary (call sutra_get_symbol for "
+                        "the full docstring + relationships).  Omit `repo` to "
                         "search every indexed repo in one call — results are "
                         "merged and ordered by score as a pragmatic cut (per-repo "
                         "scores aren't directly comparable); pass `repo` to scope "
-                        "to one.  Set rerank=true for a slower, higher-precision "
-                        "cross-encoder pass.",
+                        "to one.  Set include_provenance=true for per-channel "
+                        "retrieval scores, rerank=true for a slower, "
+                        "higher-precision cross-encoder pass.",
         )
         def sutra_search(
             query: str,
             repo: Optional[str] = None,
             top_k: int = 10,
             rerank: bool = False,
+            include_provenance: bool = False,
         ) -> list[dict[str, Any]]:
-            args = {"query": query, "repo": repo, "top_k": top_k, "rerank": rerank}
+            args = {"query": query, "repo": repo, "top_k": top_k,
+                    "rerank": rerank, "include_provenance": include_provenance}
 
             def run():
                 repos = [repo] if repo else server.registry.repos()
@@ -227,7 +257,9 @@ class SutraServer:
                 for name in repos:
                     unit = server._unit(name)
                     for r in unit.pipeline.search(query, top_k=top_k, rerank=rerank):
-                        payload = server._result_payload(unit, r)
+                        payload = server._result_payload(
+                            unit, r, include_provenance=include_provenance
+                        )
                         payload["repo"] = name
                         out.append(payload)
                 # Multi-repo: order by score within equal provenance shapes is

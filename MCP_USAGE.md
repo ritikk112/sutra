@@ -128,7 +128,7 @@ claude mcp add --transport http sutra http://host:8765/mcp \
 | Tool | Arguments | Returns |
 |---|---|---|
 | `sutra_list_repos` | — | indexed repos + symbol counts + commit SHAs |
-| `sutra_search` | `query`, `repo?`, `top_k=10`, `rerank=False` | ranked symbols with file/line, signature, docstring, per-channel provenance |
+| `sutra_search` | `query`, `repo?`, `top_k=10`, `rerank=False`, `include_provenance=False` | ranked symbols with file/line, signature, one-line docstring summary (full docstring via `sutra_get_symbol`; per-channel provenance when `include_provenance=True`) |
 | `sutra_get_symbol` | `moniker` | full metadata for one symbol + its callers/callees |
 | `sutra_get_callers` | `moniker` | symbols with resolved CALLS edges into it |
 | `sutra_get_callees` | `moniker` | symbols it calls |
