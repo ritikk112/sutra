@@ -107,6 +107,28 @@ def index(
 
 
 # ---------------------------------------------------------------------------
+# remove
+# ---------------------------------------------------------------------------
+
+@app.command()
+def remove(
+    target: str = typer.Argument(
+        None,
+        help="Git URL, local path, or repo name to remove. Omit to remove ALL indexed repos.",
+    ),
+    artifacts_dir: Path = typer.Option(
+        None, "--artifacts-dir", help="Artifacts root (default: $SUTRA_ARTIFACTS_DIR or ~/.sutra/artifacts)."
+    ),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip the confirmation prompt."),
+) -> None:
+    """Remove indexed repos: delete their artifact directory (a running `sutra serve` hot-unloads them)."""
+    from sutra.cli import remove as remove_module
+
+    root = Path(artifacts_dir).expanduser() if artifacts_dir else config_io.default_artifacts_dir()
+    raise typer.Exit(remove_module.run(target, root, assume_yes=yes))
+
+
+# ---------------------------------------------------------------------------
 # serve
 # ---------------------------------------------------------------------------
 

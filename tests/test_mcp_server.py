@@ -261,6 +261,24 @@ class TestBootAndReload:
         finally:
             server.watcher.stop()
 
+    def test_removed_artifact_dir_is_unloaded_live(self, tmp_path) -> None:
+        """`sutra remove` deletes an artifact dir; a running server's watcher
+        must hot-unload that repo from the registry within one poll."""
+        import shutil
+        root = tmp_path / "artifacts"
+        served = root / "sample_python_repo"
+        _index_fixture(served)
+        server = SutraServer(artifacts_root=root, watch=True,
+                             audit_db=tmp_path / "a.db")
+        try:
+            assert "test/sample_python_repo" in server.registry.repos()
+
+            shutil.rmtree(served)                 # what `sutra remove` does
+            server.watcher.check_once()           # the running server's poll
+            assert "test/sample_python_repo" not in server.registry.repos()
+        finally:
+            server.watcher.stop()
+
 
 class TestHttpTransport:
     """The streamable-HTTP team server must serve a REMOTE client, exercising

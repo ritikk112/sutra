@@ -108,7 +108,8 @@ class SutraServer:
         self.watcher: Optional[ArtifactWatcher] = None
         if watch:
             self.watcher = ArtifactWatcher(
-                self.artifacts_root, self._reload_artifact
+                self.artifacts_root, self._reload_artifact,
+                on_removed=self._remove_artifact,
             )
             self.watcher.start()
 
@@ -125,6 +126,23 @@ class SutraServer:
         snapshot keeps serving."""
         unit = build_serving_unit(artifact_dir, self.embedders, self._analyzers)
         self.registry.swap(unit)
+
+    def _remove_artifact(self, artifact_dir: Path) -> None:
+        """Watcher callback: an artifact directory disappeared (e.g. `sutra
+        remove`) — hot-unload the repo it served so a running server stops
+        answering for it."""
+        # Match on the artifact directory's basename (the repo slug), which is
+        # unique per artifacts root — robust to path-normalization differences
+        # (symlinked/relative root) between the watcher and the loader.
+        for repo in self.registry.repos():
+            unit = self.registry.get(repo)
+            if (
+                unit is not None
+                and unit.artifact_dir is not None
+                and unit.artifact_dir.name == artifact_dir.name
+            ):
+                self.registry.remove(repo)
+                return
 
     # ------------------------------------------------------------------
     # Helpers
