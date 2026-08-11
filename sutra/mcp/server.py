@@ -21,12 +21,49 @@ from sutra.mcp.watcher import ArtifactWatcher
 INSTRUCTIONS = """\
 Sutra serves a team's indexed repositories for code-aware retrieval.
 
-Start with sutra_list_repos to see what is indexed.  sutra_search answers
-natural-language questions ("which function saves the meeting in db") with
-ranked symbols; sutra_get_symbol returns full metadata for one moniker;
-sutra_get_callers / sutra_get_callees / sutra_expand_neighbors walk the
-call/type graph from a symbol you already found.
+Start with sutra_list_repos to see what is indexed and to get the exact repo
+names the other tools expect.
+
+Two things an index does that a per-repo file search cannot — reach for Sutra
+when:
+  - The answer may span MULTIPLE repositories.  Call sutra_search with no
+    `repo` argument to search every indexed repo in one call; results are
+    merged and ordered by score as a pragmatic cut (per-repo scores are not
+    directly comparable, so treat cross-repo rank as approximate).
+  - You need the call/type graph.  sutra_get_callers / sutra_get_callees return
+    a symbol's resolved callers / callees in one call, and
+    sutra_expand_neighbors walks resolved callers, callees, type hierarchy and
+    references out to `depth` hops — a call chain / partial blast radius (only
+    resolved edges are in the graph, so treat it as a lower bound).
+
+sutra_search answers natural-language questions ("which function saves the
+meeting in db") with symbols ranked by relevance, each carrying file/line,
+signature and docstring.  sutra_get_symbol returns full metadata for one
+moniker (the id sutra_search returns), including its resolved callers and
+callees.
 """
+
+_DOCSTRING_SUMMARY_MAX = 200
+
+
+def _docstring_summary(doc: Optional[str]) -> Optional[str]:
+    """First non-empty line of a docstring, length-capped.
+
+    A search hit only needs the one-line "what does this do" to be picked out
+    of a ranked list; the full docstring (and parameters, complexity,
+    relationships) stays available via sutra_get_symbol.  Summarising here keeps
+    every sutra_search result light without dropping the information — it moves
+    the bulk from pushed-on-every-hit to pulled-on-demand.
+    """
+    if not doc:
+        return doc
+    for line in doc.strip().splitlines():
+        line = line.strip()
+        if line:
+            if len(line) > _DOCSTRING_SUMMARY_MAX:
+                return line[: _DOCSTRING_SUMMARY_MAX - 1] + "…"
+            return line
+    return ""
 
 
 class SutraServer:
@@ -71,7 +108,8 @@ class SutraServer:
         self.watcher: Optional[ArtifactWatcher] = None
         if watch:
             self.watcher = ArtifactWatcher(
-                self.artifacts_root, self._reload_artifact
+                self.artifacts_root, self._reload_artifact,
+                on_removed=self._remove_artifact,
             )
             self.watcher.start()
 
@@ -88,6 +126,23 @@ class SutraServer:
         snapshot keeps serving."""
         unit = build_serving_unit(artifact_dir, self.embedders, self._analyzers)
         self.registry.swap(unit)
+
+    def _remove_artifact(self, artifact_dir: Path) -> None:
+        """Watcher callback: an artifact directory disappeared (e.g. `sutra
+        remove`) — hot-unload the repo it served so a running server stops
+        answering for it."""
+        # Match on the artifact directory's basename (the repo slug), which is
+        # unique per artifacts root — robust to path-normalization differences
+        # (symlinked/relative root) between the watcher and the loader.
+        for repo in self.registry.repos():
+            unit = self.registry.get(repo)
+            if (
+                unit is not None
+                and unit.artifact_dir is not None
+                and unit.artifact_dir.name == artifact_dir.name
+            ):
+                self.registry.remove(repo)
+                return
 
     # ------------------------------------------------------------------
     # Helpers
@@ -120,13 +175,14 @@ class SutraServer:
             return {"moniker": moniker, "indexed": False}
         return {**sym, "moniker": moniker, "repo": unit.repo_name, "indexed": True}
 
-    def _result_payload(self, unit: ServingUnit, r: SearchResult) -> dict[str, Any]:
+    def _result_payload(
+        self, unit: ServingUnit, r: SearchResult, *, include_provenance: bool = False
+    ) -> dict[str, Any]:
         sym = unit.snapshot.symbols.get(r.moniker, {})
         loc = sym.get("location") or {}
-        return {
+        payload = {
             "moniker": r.moniker,
             "score": round(r.score, 6),
-            "provenance": {k: round(v, 6) for k, v in r.provenance.items()},
             "kind": sym.get("kind"),
             "name": sym.get("name"),
             "qualified_name": sym.get("qualified_name"),
@@ -134,8 +190,11 @@ class SutraServer:
             "line_start": loc.get("line_start"),
             "line_end": loc.get("line_end"),
             "signature": sym.get("signature"),
-            "docstring": sym.get("docstring"),
+            "docstring": _docstring_summary(sym.get("docstring")),
         }
+        if include_provenance:
+            payload["provenance"] = {k: round(v, 6) for k, v in r.provenance.items()}
+        return payload
 
     def _audited(self, tool: str, args: dict[str, Any], repo: Optional[str], fn):
         t0 = time.time()
@@ -163,7 +222,9 @@ class SutraServer:
         @self.mcp.tool(
             name="sutra_list_repos",
             description="List the indexed repositories this server is serving, "
-                        "with symbol counts and the commit each was indexed at.",
+                        "with symbol counts and the commit each was indexed at. "
+                        "Call this first to learn which repos are available and "
+                        "the exact repo names the other tools expect.",
         )
         def sutra_list_repos() -> list[dict[str, Any]]:
             def run():
@@ -186,19 +247,27 @@ class SutraServer:
 
         @self.mcp.tool(
             name="sutra_search",
-            description="Natural-language search over an indexed repo.  Returns "
-                        "ranked symbols (functions, classes, methods …) with "
-                        "file/line locations, signatures and per-channel "
-                        "provenance.  Set rerank=true for a cross-encoder pass "
-                        "(slower, higher precision).",
+            description="Natural-language search over indexed code.  Returns "
+                        "symbols (functions, classes, methods …) ranked by "
+                        "relevance, each with file/line location, signature and "
+                        "a one-line docstring summary (call sutra_get_symbol for "
+                        "the full docstring + relationships).  Omit `repo` to "
+                        "search every indexed repo in one call — results are "
+                        "merged and ordered by score as a pragmatic cut (per-repo "
+                        "scores aren't directly comparable); pass `repo` to scope "
+                        "to one.  Set include_provenance=true for per-channel "
+                        "retrieval scores, rerank=true for a slower, "
+                        "higher-precision cross-encoder pass.",
         )
         def sutra_search(
             query: str,
             repo: Optional[str] = None,
             top_k: int = 10,
             rerank: bool = False,
+            include_provenance: bool = False,
         ) -> list[dict[str, Any]]:
-            args = {"query": query, "repo": repo, "top_k": top_k, "rerank": rerank}
+            args = {"query": query, "repo": repo, "top_k": top_k,
+                    "rerank": rerank, "include_provenance": include_provenance}
 
             def run():
                 repos = [repo] if repo else server.registry.repos()
@@ -206,7 +275,9 @@ class SutraServer:
                 for name in repos:
                     unit = server._unit(name)
                     for r in unit.pipeline.search(query, top_k=top_k, rerank=rerank):
-                        payload = server._result_payload(unit, r)
+                        payload = server._result_payload(
+                            unit, r, include_provenance=include_provenance
+                        )
                         payload["repo"] = name
                         out.append(payload)
                 # Multi-repo: order by score within equal provenance shapes is
@@ -218,9 +289,10 @@ class SutraServer:
 
         @self.mcp.tool(
             name="sutra_get_symbol",
-            description="Full metadata for one symbol by its moniker (id "
+            description="Full metadata for one symbol by its moniker (the id "
                         "returned by sutra_search): signature, docstring, "
-                        "location, parameters, complexity, relationships.",
+                        "location, parameters, complexity, relationships, plus "
+                        "its resolved callers and callees.",
         )
         def sutra_get_symbol(moniker: str) -> dict[str, Any]:
             def run():
@@ -242,8 +314,8 @@ class SutraServer:
 
         @self.mcp.tool(
             name="sutra_get_callers",
-            description="Symbols that call the given symbol (resolved CALLS "
-                        "edges into it).",
+            description="Symbols that call the given symbol: its resolved "
+                        "incoming CALLS edges, returned in one call.",
         )
         def sutra_get_callers(moniker: str) -> list[dict[str, Any]]:
             def run():
@@ -258,8 +330,8 @@ class SutraServer:
 
         @self.mcp.tool(
             name="sutra_get_callees",
-            description="Symbols the given symbol calls (resolved CALLS edges "
-                        "out of it).",
+            description="Symbols the given symbol calls: its resolved outgoing "
+                        "CALLS edges, returned in one call.",
         )
         def sutra_get_callees(moniker: str) -> list[dict[str, Any]]:
             def run():
@@ -274,10 +346,13 @@ class SutraServer:
 
         @self.mcp.tool(
             name="sutra_expand_neighbors",
-            description="Walk the relationship graph around a symbol: callers, "
-                        "callees, type hierarchy, references — up to `depth` "
-                        "hops.  `kinds` restricts edge kinds (calls, extends, "
-                        "implements, references, contains, imports).",
+            description="Walk the relationship graph around a symbol out to "
+                        "`depth` hops over resolved edges: callers, callees, "
+                        "type hierarchy and references — a call chain / partial "
+                        "blast radius (only resolved edges are in the graph). "
+                        "`kinds` restricts edge kinds (calls, extends, "
+                        "implements, references, contains, imports, "
+                        "returns_type, parameter_type).",
         )
         def sutra_expand_neighbors(
             moniker: str,

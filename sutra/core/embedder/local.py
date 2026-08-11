@@ -58,6 +58,36 @@ class LocalEmbedder(Embedder):
     def model_id(self) -> str:
         return f"sentence-transformers/{self._model_name}"
 
+    @staticmethod
+    def native_dimensions(model_name: str) -> int:
+        """Load `model_name` and return its native embedding width.
+
+        Uses the same encode-probe LocalEmbedder validates against, so the value
+        this returns is guaranteed to satisfy the constructor's dims check. Lets
+        the setup wizard auto-detect the correct dimension instead of guessing.
+        """
+        try:
+            from sentence_transformers import SentenceTransformer  # noqa: PLC0415
+        except ImportError as exc:
+            raise ImportError(
+                "sentence-transformers is not installed. "
+                "Install it with: pip install sentence-transformers"
+            ) from exc
+
+        model = SentenceTransformer(model_name)
+        test_vec = model.encode(["probe"], batch_size=1, show_progress_bar=False)
+        return int(test_vec.shape[1])
+
+    @staticmethod
+    def _wants_progress(n_chunks: int, batch_size: int) -> bool:
+        """Show a progress bar only for a real, multi-batch workload.
+
+        A sub-batch embed (a validation probe, a tiny file) finishes in well
+        under a second, so a bar there is just noise. Indexing a repo on CPU is
+        the slow, silent case a bar actually helps.
+        """
+        return n_chunks > batch_size
+
     def embed(self, chunks: list[str]) -> np.ndarray:
         if not chunks:
             return np.empty((0, self._dimensions), dtype=np.float32)
@@ -65,6 +95,6 @@ class LocalEmbedder(Embedder):
         vectors = self._model.encode(
             chunks,
             batch_size=self._batch_size,
-            show_progress_bar=False,
+            show_progress_bar=self._wants_progress(len(chunks), self._batch_size),
         )
         return np.asarray(vectors, dtype=np.float32)

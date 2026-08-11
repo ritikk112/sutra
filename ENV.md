@@ -31,7 +31,14 @@ This file is the authoritative reference for the development environment. Update
 | `starlette` | 1.2.1 | Pulled by mcp 1.27.2 |
 | `pyright` | 1.1.410 | P20-full LSP resolver (`--resolver lsp`); bundles its own node runtime |
 
-## PostgreSQL
+## PostgreSQL (OPTIONAL)
+
+> **Postgres is not required.** Sutra's MVP runs **JSON-only** — index to a
+> folder of artifacts and serve them from memory, no database at any stage
+> (matches the README). Postgres is only needed for the deferred **incremental
+> re-indexing** bookkeeping path (`--pg-url` / `SUTRA_PG_URL`); omit it and
+> everything else works. The rest of this section is the optional Postgres +
+> pgvector setup for that path only.
 
 - **Version:** 16
 - **Host:** `localhost`
@@ -84,12 +91,19 @@ captures = query.captures(tree.root_node)
 
 `captures` returns a dict of `{capture_name: list[Node]}` in v0.25.x (not a list of tuples as in older versions — confirm behavior when implementing).
 
-## Steps to run the pipeline:
+## Steps to run the pipeline (JSON-only, the default):
 - cd /home/ritik/Desktop/sutra
 - source .venv/bin/activate
-- export SUTRA_PG_URL=postgresql://postgres:postgers@localhost:5434/postgres
 - git clone https://github.com/gin-gonic/gin /tmp/gin-repo
 
+- python -m pipelines.full_index \
+  --root /tmp/gin-repo \
+  --repo-url https://github.com/gin-gonic/gin \
+  --output-dir /tmp/gin-out
+
+### Optional: with Postgres for incremental bookkeeping
+Only if you're exercising the deferred incremental path — add `--pg-url`:
+- export SUTRA_PG_URL=postgresql://postgres:postgers@localhost:5434/postgres
 - python -m pipelines.full_index \
   --root /tmp/gin-repo \
   --repo-url https://github.com/gin-gonic/gin \

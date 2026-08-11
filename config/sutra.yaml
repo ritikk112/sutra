@@ -3,7 +3,8 @@
 
 embedder:
   # provider: openai | local | fixture
-  #   openai  — calls OpenAI Embeddings API (requires OPENAI_API_KEY)
+  #   openai  — calls the OpenAI Embeddings API, OR any OpenAI-compatible
+  #             endpoint (Ollama, LM Studio, vLLM, Together, Azure, …) via base_url
   #   local   — sentence-transformers, runs fully offline (requires: pip install sentence-transformers)
   #   fixture — deterministic fake vectors, used in tests and CI (no API key needed)
   provider: openai
@@ -13,6 +14,16 @@ embedder:
   dimensions: 1536          # OpenAI supports dimension reduction; 1536 is native for text-embedding-3-small
   batch_size: 100           # chunks per API call; max is 2048 but 100 keeps latency and blast radius small
   api_key_env: OPENAI_API_KEY   # env var name that holds your key — never put the key itself here
+
+  # OpenAI-compatible endpoint (optional; used when provider: openai)
+  #   base_url — point the OpenAI client at a compatible server instead of api.openai.com.
+  #              When set, `dimensions` MUST be specified (these servers do not share
+  #              OpenAI's 1536 default; `sutra init` discovers it via a probe embed).
+  #              Leave api_key_env blank for endpoints that need no key (e.g. Ollama).
+  # base_url: http://localhost:11434/v1   # example: Ollama
+  # model: nomic-embed-text
+  # dimensions: 768
+  # api_key_env:                          # blank → no API key required
 
   # Local settings (used when provider: local)
   # model: all-MiniLM-L6-v2

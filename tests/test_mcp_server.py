@@ -21,7 +21,7 @@ from sutra.core.extractor.adapters.python import PythonAdapter
 from sutra.core.indexer import Indexer
 from sutra.core.output.json_graph_exporter import JsonGraphExporter
 from sutra.core.resolver import HeuristicResolver
-from sutra.mcp.server import SutraServer
+from sutra.mcp.server import SutraServer, _docstring_summary
 
 _FIXTURES = Path(__file__).parent / "fixtures"
 _FIXTURE_REPO = _FIXTURES / "sample_python_repo"
@@ -110,8 +110,29 @@ class TestTools:
         assert "create_user" in hits[0]["moniker"]
         assert hits[0]["repo"] == "test/sample_python_repo"
         assert hits[0]["file_path"] == "src/services/user.py"
-        assert "rrf" in hits[0]["provenance"]
         assert hits[0]["line_start"] is not None
+
+    def test_search_omits_provenance_by_default(self, server) -> None:
+        """Default search payload is trimmed: no per-channel provenance (opt-in),
+        but the locating fields an agent needs are all present."""
+        result = _call(server, "sutra_search", {
+            "query": "create_user", "repo": "test/sample_python_repo", "top_k": 5,
+        })
+        hits = _payload(result)["result"]
+        assert hits
+        assert "provenance" not in hits[0]
+        for field in ("moniker", "score", "file_path", "line_start", "signature", "docstring"):
+            assert field in hits[0]
+
+    def test_search_include_provenance_returns_channels(self, server) -> None:
+        """include_provenance=True restores the per-channel scores for callers
+        (e.g. benchmarking) that want retrieval transparency."""
+        result = _call(server, "sutra_search", {
+            "query": "create_user", "repo": "test/sample_python_repo",
+            "top_k": 5, "include_provenance": True,
+        })
+        hits = _payload(result)["result"]
+        assert "rrf" in hits[0]["provenance"]
 
     def test_search_all_repos_when_repo_omitted(self, server) -> None:
         result = _call(server, "sutra_search", {"query": "create_user"})
@@ -240,6 +261,24 @@ class TestBootAndReload:
         finally:
             server.watcher.stop()
 
+    def test_removed_artifact_dir_is_unloaded_live(self, tmp_path) -> None:
+        """`sutra remove` deletes an artifact dir; a running server's watcher
+        must hot-unload that repo from the registry within one poll."""
+        import shutil
+        root = tmp_path / "artifacts"
+        served = root / "sample_python_repo"
+        _index_fixture(served)
+        server = SutraServer(artifacts_root=root, watch=True,
+                             audit_db=tmp_path / "a.db")
+        try:
+            assert "test/sample_python_repo" in server.registry.repos()
+
+            shutil.rmtree(served)                 # what `sutra remove` does
+            server.watcher.check_once()           # the running server's poll
+            assert "test/sample_python_repo" not in server.registry.repos()
+        finally:
+            server.watcher.stop()
+
 
 class TestHttpTransport:
     """The streamable-HTTP team server must serve a REMOTE client, exercising
@@ -278,3 +317,25 @@ class TestHttpTransport:
         # 500 = lifespan bug; 421 = Host-allowlist bug. Real remote init = 200.
         assert r.status_code == 200, f"{r.status_code}: {r.text}"
         assert "Task group is not initialized" not in r.text
+
+
+# ---------------------------------------------------------------------------
+# _docstring_summary — the search-payload trim helper (pure, no server)
+# ---------------------------------------------------------------------------
+
+class TestDocstringSummary:
+    def test_takes_first_nonempty_line(self) -> None:
+        doc = "Create a user and persist it.\n\nLong details follow.\nmore"
+        assert _docstring_summary(doc) == "Create a user and persist it."
+
+    def test_skips_leading_blank_lines(self) -> None:
+        assert _docstring_summary("\n\n   Summary here.\nrest") == "Summary here."
+
+    def test_none_and_empty_pass_through(self) -> None:
+        assert _docstring_summary(None) is None
+        assert _docstring_summary("") == ""
+
+    def test_caps_a_very_long_first_line(self) -> None:
+        out = _docstring_summary("x" * 300)
+        assert len(out) == 200
+        assert out.endswith("…")

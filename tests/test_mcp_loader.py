@@ -231,6 +231,82 @@ class TestWatcher:
         # And keeps polling normally afterwards.
         assert watcher.check_once() == []
 
+    def test_fires_on_removed_when_artifact_dir_deleted(self, artifact_dir) -> None:
+        import shutil
+        root = artifact_dir.parent
+        (artifact_dir / READY_SENTINEL).write_text("gen-1")
+        removed: list[Path] = []
+        watcher = ArtifactWatcher(
+            root, lambda _p: None, on_removed=removed.append
+        )
+        # Constructor primed the existing sentinel — no add-fire.
+        assert watcher.check_once() == []
+
+        shutil.rmtree(artifact_dir)                 # the whole repo dir goes away
+        # A removal is NOT a change, so check_once's return (add/change) stays [];
+        # the drop is delivered via on_removed, exactly once.
+        assert watcher.check_once() == []
+        assert removed == [artifact_dir]
+        # Already dropped — no re-fire on the next poll.
+        assert watcher.check_once() == []
+        assert removed == [artifact_dir]
+
+    def test_sentinel_gone_but_dir_present_is_not_a_removal(self, artifact_dir) -> None:
+        """Mid-commit the atomic writer deletes `.ready` while the data dir
+        stays — that must NOT be mistaken for a repo removal."""
+        root = artifact_dir.parent
+        sentinel = artifact_dir / READY_SENTINEL
+        sentinel.write_text("gen-1")
+        removed: list[Path] = []
+        watcher = ArtifactWatcher(
+            root, lambda _p: None, on_removed=removed.append
+        )
+        assert watcher.check_once() == []
+
+        sentinel.unlink()                           # dir still present
+        assert watcher.check_once() == []
+        assert removed == []                        # not a removal
+
+    def test_removed_dir_without_ready_still_unloads(self, tmp_path) -> None:
+        """A repo is served whenever it has graph.json — `.ready` is NOT
+        required (a generation committed but killed before the sentinel).
+        Deleting such a dir must still fire on_removed."""
+        import shutil
+        root = tmp_path / "arts"
+        served = root / "repo__x"
+        served.mkdir(parents=True)
+        (served / "graph.json").write_text("{}")    # loadable, but NO .ready
+        removed: list[Path] = []
+        watcher = ArtifactWatcher(root, lambda _p: None, on_removed=removed.append)
+        assert watcher.check_once() == []           # no .ready -> no add-fire
+
+        shutil.rmtree(served)
+        watcher.check_once()
+        assert removed == [served]                  # unloaded despite no sentinel
+
+    def test_remove_then_readd_refires_reload(self, tmp_path) -> None:
+        """After a removal the dir's bookkeeping is cleared, so a re-index of
+        the same dir re-fires the reload callback (no stale-mtime shadow)."""
+        import shutil
+        root = tmp_path / "arts"
+        served = root / "repo__y"
+        served.mkdir(parents=True)
+        (served / "graph.json").write_text("{}")
+        (served / READY_SENTINEL).write_text("gen-1")
+        fired: list[Path] = []
+        removed: list[Path] = []
+        watcher = ArtifactWatcher(root, fired.append, on_removed=removed.append)
+        assert watcher.check_once() == []           # primed
+
+        shutil.rmtree(served)
+        watcher.check_once()
+        assert removed == [served]
+
+        served.mkdir(parents=True)                  # re-index, fresh sentinel
+        (served / "graph.json").write_text("{}")
+        (served / READY_SENTINEL).write_text("gen-2")
+        assert watcher.check_once() == [served]     # reload fires again
+
 
 # ---------------------------------------------------------------------------
 # GraphTraversal

@@ -21,6 +21,7 @@ class ServingUnit:
     snapshot: ArtifactSnapshot
     pipeline: RetrievalPipeline = field(repr=False)
     traversal: RustworkxTraversal = field(repr=False)
+    artifact_dir: Optional[Path] = None
 
 
 class EmbedderCache:
@@ -122,6 +123,7 @@ def build_serving_unit(
         snapshot=snapshot,
         pipeline=pipeline,
         traversal=traversal,
+        artifact_dir=artifact_dir,
     )
 
 
