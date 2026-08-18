@@ -1,0 +1,178 @@
+{
+ "repo": "ritikk112/sutra",
+ "note": "reconstructed from the 2026-08-18 session (KIND_FILTER_AB.md sutra metric set); golds resolved to exact monikers at commit 2a1f368",
+ "cases": [
+  {
+   "id": "SU-01",
+   "bucket": "B",
+   "query": "which function resolves call relationships using pyright",
+   "golds": [
+    "sutra python ritikk112/sutra sutra/core/resolver/lsp_resolver.py LspResolver#",
+    "sutra python ritikk112/sutra sutra/core/resolver/lsp_resolver.py LspResolver#__init__().",
+    "sutra python ritikk112/sutra sutra/core/resolver/lsp_resolver.py LspResolver#_callee_position().",
+    "sutra python ritikk112/sutra sutra/core/resolver/lsp_resolver.py LspResolver#_map_definition().",
+    "sutra python ritikk112/sutra sutra/core/resolver/lsp_resolver.py LspResolver#resolve().",
+    "sutra python ritikk112/sutra sutra/core/resolver/lsp_resolver.py LspResolverError#"
+   ],
+   "source_qualified_names": [
+    "resolver.lsp_resolver.LspResolver.resolve",
+    "resolver.lsp_resolver.LspResolver"
+   ]
+  },
+  {
+   "id": "SU-02",
+   "bucket": "B",
+   "query": "how are embedding text chunks built for each symbol",
+   "golds": [
+    "sutra python ritikk112/sutra sutra/core/embedder/chunk_builder.py build_chunks().",
+    "sutra python ritikk112/sutra sutra/core/embedder/chunk_builder.py build_chunks()._src_bytes()."
+   ],
+   "source_qualified_names": [
+    "embedder.chunk_builder.build_chunks"
+   ]
+  },
+  {
+   "id": "SU-03",
+   "bucket": "B",
+   "query": "hot reload a repo when its ready sentinel file changes",
+   "golds": [
+    "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#",
+    "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#__init__().",
+    "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#_graph_dirs().",
+    "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#_run().",
+    "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#check_once().",
+    "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#start().",
+    "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#stop()."
+   ],
+   "source_qualified_names": [
+    "mcp.watcher.ArtifactWatcher",
+    "mcp.watcher.ArtifactWatcher.check_once",
+    "mcp.watcher.ArtifactWatcher._run"
+   ]
+  },
+  {
+   "id": "SU-04",
+   "bucket": "B",
+   "query": "rerank search results with a cross encoder model",
+   "golds": [
+    "sutra python ritikk112/sutra sutra/core/retrieval/reranker.py load_rerank_model().",
+    "sutra python ritikk112/sutra sutra/core/retrieval/reranker.py rerank()."
+   ],
+   "source_qualified_names": [
+    "retrieval.reranker.rerank",
+    "retrieval.reranker.load_rerank_model"
+   ]
+  },
+  {
+   "id": "SU-05",
+   "bucket": "B",
+   "query": "keyword search scoring with BM25",
+   "golds": [
+    "sutra python ritikk112/sutra sutra/core/retrieval/channels/bm25_channel.py Bm25Channel#",
+    "sutra python ritikk112/sutra sutra/core/retrieval/channels/bm25_channel.py Bm25Channel#__init__().",
+    "sutra python ritikk112/sutra sutra/core/retrieval/channels/bm25_channel.py Bm25Channel#_symbol_tokens().",
+    "sutra python ritikk112/sutra sutra/core/retrieval/channels/bm25_channel.py Bm25Channel#retrieve()."
+   ],
+   "source_qualified_names": [
+    "channels.bm25_channel.Bm25Channel.retrieve",
+    "channels.bm25_channel.Bm25Channel"
+   ]
+  },
+  {
+   "id": "SU-06",
+   "bucket": "B",
+   "query": "load an artifact bundle from disk and validate it",
+   "golds": [
+    "sutra python ritikk112/sutra sutra/core/artifact/loader.py ArtifactLoader#",
+    "sutra python ritikk112/sutra sutra/core/artifact/loader.py ArtifactLoader#load()."
+   ],
+   "source_qualified_names": [
+    "artifact.loader.ArtifactLoader.load",
+    "artifact.loader.ArtifactLoader"
+   ]
+  },
+  {
+   "id": "SU-07",
+   "bucket": "B",
+   "query": "write the graph and embeddings atomically then mark ready",
+   "golds": [
+    "sutra python ritikk112/sutra sutra/core/artifact/atomic_writer.py AtomicArtifactWriter#",
+    "sutra python ritikk112/sutra sutra/core/artifact/atomic_writer.py AtomicArtifactWriter#commit()."
+   ],
+   "source_qualified_names": [
+    "artifact.atomic_writer.AtomicArtifactWriter.commit",
+    "artifact.atomic_writer.AtomicArtifactWriter"
+   ]
+  },
+  {
+   "id": "SU-08",
+   "bucket": "B",
+   "query": "record every MCP tool call in an audit log",
+   "golds": [
+    "sutra python ritikk112/sutra sutra/mcp/audit.py AuditLog#",
+    "sutra python ritikk112/sutra sutra/mcp/audit.py AuditLog#__init__().",
+    "sutra python ritikk112/sutra sutra/mcp/audit.py AuditLog#_connect().",
+    "sutra python ritikk112/sutra sutra/mcp/audit.py AuditLog#recent().",
+    "sutra python ritikk112/sutra sutra/mcp/audit.py AuditLog#record().",
+    "sutra python ritikk112/sutra sutra/mcp/server.py SutraServer#_audited()."
+   ],
+   "source_qualified_names": [
+    "mcp.audit.AuditLog.record",
+    "mcp.audit.AuditLog",
+    "mcp.server.SutraServer._audited"
+   ]
+  },
+  {
+   "id": "SU-09",
+   "bucket": "B",
+   "query": "choose the embedder provider from the configuration file",
+   "golds": [
+    "sutra python ritikk112/sutra sutra/core/embedder/factory.py from_config().",
+    "sutra python ritikk112/sutra sutra/core/embedder/factory.py from_dict()."
+   ],
+   "source_qualified_names": [
+    "embedder.factory.from_dict",
+    "embedder.factory.from_config"
+   ]
+  },
+  {
+   "id": "SU-10",
+   "bucket": "B",
+   "query": "estimate the dollar cost of embedding tokens",
+   "golds": [
+    "sutra python ritikk112/sutra sutra/core/embedder/openai.py OpenAIEmbedder#_usd_per_1m_tokens().",
+    "sutra python ritikk112/sutra sutra/core/embedder/openai.py OpenAIEmbedder#usage_stats()."
+   ],
+   "source_qualified_names": [
+    "embedder.openai.OpenAIEmbedder._usd_per_1m_tokens",
+    "embedder.openai.OpenAIEmbedder.usage_stats"
+   ]
+  },
+  {
+   "id": "SU-11",
+   "bucket": "B",
+   "query": "split text into tokens for keyword matching",
+   "golds": [
+    "sutra python ritikk112/sutra sutra/core/retrieval/text.py tokenize()."
+   ],
+   "source_qualified_names": [
+    "retrieval.text.tokenize"
+   ]
+  },
+  {
+   "id": "SU-12",
+   "bucket": "B",
+   "query": "resolve a call by matching imports within the same module",
+   "golds": [
+    "sutra python ritikk112/sutra sutra/core/resolver/heuristic.py HeuristicResolver#resolve().",
+    "sutra python ritikk112/sutra sutra/core/resolver/heuristic.py _module_matches().",
+    "sutra python ritikk112/sutra sutra/core/resolver/heuristic.py _module_path_of_file()."
+   ],
+   "source_qualified_names": [
+    "resolver.heuristic.HeuristicResolver.resolve",
+    "resolver.heuristic._module_matches",
+    "resolver.heuristic._module_path_of_file"
+   ]
+  }
+ ]
+}

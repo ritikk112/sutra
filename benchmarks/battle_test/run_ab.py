@@ -28,7 +28,7 @@ from sutra.core.retrieval.channels import VectorChannel          # noqa: E402
 from sutra.core.retrieval.pipeline import RetrievalPipeline      # noqa: E402
 from sutra.core.vector_store import InMemoryVectorStore          # noqa: E402
 
-DATASETS = {
+DEFAULT_MANIFEST = {
     "pallets/flask": ("pallets__flask", "flask.json"),
     "psf/requests": ("psf__requests", "requests.json"),
     "pydantic/pydantic": ("pydantic__pydantic", "pydantic.json"),
@@ -46,8 +46,30 @@ def main() -> None:
     ap.add_argument("--vector-weight", type=float, default=None)
     ap.add_argument("--out", default="ab_results.json")
     ap.add_argument("--quiet-queries", action="store_true")
+    ap.add_argument(
+        "--manifest", default=None,
+        help="JSON file {repo: [artifact_slug, dataset_file]}; dataset paths "
+             "and --out resolve relative to the manifest's directory. "
+             "Default: the battle-test datasets next to this script.",
+    )
+    ap.add_argument(
+        "--artifacts-dir", default=None,
+        help="Artifacts root (default ~/.sutra/artifacts).",
+    )
     args = ap.parse_args()
     modes = args.modes.split(",")
+
+    global SCRATCH, ART
+    if args.manifest:
+        mpath = Path(args.manifest).resolve()
+        datasets = {
+            repo: tuple(v) for repo, v in json.loads(mpath.read_text()).items()
+        }
+        SCRATCH = mpath.parent
+    else:
+        datasets = DEFAULT_MANIFEST
+    if args.artifacts_dir:
+        ART = Path(args.artifacts_dir).expanduser()
 
     embedders: dict[tuple, LocalEmbedder] = {}
 
@@ -62,7 +84,7 @@ def main() -> None:
         return embedders[key]
 
     out = {"config": vars(args)}
-    for repo, (slug, fname) in DATASETS.items():
+    for repo, (slug, fname) in datasets.items():
         cases = json.loads((SCRATCH / fname).read_text())["cases"]
         snapshot = ArtifactLoader().load(ART / slug)
         embedder = get_embedder(snapshot.embedding_model_id, snapshot.embedding_dims)

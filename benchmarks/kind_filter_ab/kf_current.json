@@ -1,0 +1,578 @@
+{
+ "config": {
+  "modes": "hard,off,soft",
+  "no_prefix": false,
+  "verb_boost": null,
+  "dense_only": false,
+  "rrf_k": null,
+  "vector_weight": null,
+  "out": "kf_current.json",
+  "quiet_queries": true,
+  "manifest": "benchmarks/kind_filter_ab/manifest.json",
+  "artifacts_dir": null
+ },
+ "ritikk112/sutra": {
+  "cases": [
+   {
+    "id": "SU-01",
+    "bucket": "B",
+    "query": "which function resolves call relationships using pyright",
+    "golds": [
+     "sutra python ritikk112/sutra sutra/core/resolver/lsp_resolver.py LspResolver#",
+     "sutra python ritikk112/sutra sutra/core/resolver/lsp_resolver.py LspResolver#__init__().",
+     "sutra python ritikk112/sutra sutra/core/resolver/lsp_resolver.py LspResolver#_callee_position().",
+     "sutra python ritikk112/sutra sutra/core/resolver/lsp_resolver.py LspResolver#_map_definition().",
+     "sutra python ritikk112/sutra sutra/core/resolver/lsp_resolver.py LspResolver#resolve().",
+     "sutra python ritikk112/sutra sutra/core/resolver/lsp_resolver.py LspResolverError#"
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "class",
+     "method"
+    ],
+    "ranks": {
+     "hard": 4,
+     "off": 3,
+     "soft": 4
+    }
+   },
+   {
+    "id": "SU-02",
+    "bucket": "B",
+    "query": "how are embedding text chunks built for each symbol",
+    "golds": [
+     "sutra python ritikk112/sutra sutra/core/embedder/chunk_builder.py build_chunks().",
+     "sutra python ritikk112/sutra sutra/core/embedder/chunk_builder.py build_chunks()._src_bytes()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "SU-03",
+    "bucket": "B",
+    "query": "hot reload a repo when its ready sentinel file changes",
+    "golds": [
+     "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#",
+     "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#__init__().",
+     "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#_graph_dirs().",
+     "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#_run().",
+     "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#check_once().",
+     "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#start().",
+     "sutra python ritikk112/sutra sutra/mcp/watcher.py ArtifactWatcher#stop()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "class",
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "SU-04",
+    "bucket": "B",
+    "query": "rerank search results with a cross encoder model",
+    "golds": [
+     "sutra python ritikk112/sutra sutra/core/retrieval/reranker.py load_rerank_model().",
+     "sutra python ritikk112/sutra sutra/core/retrieval/reranker.py rerank()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "SU-05",
+    "bucket": "B",
+    "query": "keyword search scoring with BM25",
+    "golds": [
+     "sutra python ritikk112/sutra sutra/core/retrieval/channels/bm25_channel.py Bm25Channel#",
+     "sutra python ritikk112/sutra sutra/core/retrieval/channels/bm25_channel.py Bm25Channel#__init__().",
+     "sutra python ritikk112/sutra sutra/core/retrieval/channels/bm25_channel.py Bm25Channel#_symbol_tokens().",
+     "sutra python ritikk112/sutra sutra/core/retrieval/channels/bm25_channel.py Bm25Channel#retrieve()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "class",
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "SU-06",
+    "bucket": "B",
+    "query": "load an artifact bundle from disk and validate it",
+    "golds": [
+     "sutra python ritikk112/sutra sutra/core/artifact/loader.py ArtifactLoader#",
+     "sutra python ritikk112/sutra sutra/core/artifact/loader.py ArtifactLoader#load()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "class",
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "SU-07",
+    "bucket": "B",
+    "query": "write the graph and embeddings atomically then mark ready",
+    "golds": [
+     "sutra python ritikk112/sutra sutra/core/artifact/atomic_writer.py AtomicArtifactWriter#",
+     "sutra python ritikk112/sutra sutra/core/artifact/atomic_writer.py AtomicArtifactWriter#commit()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "class",
+     "method"
+    ],
+    "ranks": {
+     "hard": 3,
+     "off": 1,
+     "soft": 3
+    }
+   },
+   {
+    "id": "SU-08",
+    "bucket": "B",
+    "query": "record every MCP tool call in an audit log",
+    "golds": [
+     "sutra python ritikk112/sutra sutra/mcp/audit.py AuditLog#",
+     "sutra python ritikk112/sutra sutra/mcp/audit.py AuditLog#__init__().",
+     "sutra python ritikk112/sutra sutra/mcp/audit.py AuditLog#_connect().",
+     "sutra python ritikk112/sutra sutra/mcp/audit.py AuditLog#recent().",
+     "sutra python ritikk112/sutra sutra/mcp/audit.py AuditLog#record().",
+     "sutra python ritikk112/sutra sutra/mcp/server.py SutraServer#_audited()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "class",
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "SU-09",
+    "bucket": "B",
+    "query": "choose the embedder provider from the configuration file",
+    "golds": [
+     "sutra python ritikk112/sutra sutra/core/embedder/factory.py from_config().",
+     "sutra python ritikk112/sutra sutra/core/embedder/factory.py from_dict()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 2,
+     "off": 2,
+     "soft": 2
+    }
+   },
+   {
+    "id": "SU-10",
+    "bucket": "B",
+    "query": "estimate the dollar cost of embedding tokens",
+    "golds": [
+     "sutra python ritikk112/sutra sutra/core/embedder/openai.py OpenAIEmbedder#_usd_per_1m_tokens().",
+     "sutra python ritikk112/sutra sutra/core/embedder/openai.py OpenAIEmbedder#usage_stats()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "SU-11",
+    "bucket": "B",
+    "query": "split text into tokens for keyword matching",
+    "golds": [
+     "sutra python ritikk112/sutra sutra/core/retrieval/text.py tokenize()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "SU-12",
+    "bucket": "B",
+    "query": "resolve a call by matching imports within the same module",
+    "golds": [
+     "sutra python ritikk112/sutra sutra/core/resolver/heuristic.py HeuristicResolver#resolve().",
+     "sutra python ritikk112/sutra sutra/core/resolver/heuristic.py _module_matches().",
+     "sutra python ritikk112/sutra sutra/core/resolver/heuristic.py _module_path_of_file()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "function",
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   }
+  ],
+  "modes": {
+   "hard": {
+    "recall@5": 1.0,
+    "recall@10": 1.0,
+    "mrr": 0.8402777777777778,
+    "zero_recall": 0
+   },
+   "off": {
+    "recall@5": 1.0,
+    "recall@10": 1.0,
+    "mrr": 0.9027777777777778,
+    "zero_recall": 0
+   },
+   "soft": {
+    "recall@5": 1.0,
+    "recall@10": 1.0,
+    "mrr": 0.8402777777777778,
+    "zero_recall": 0
+   }
+  }
+ },
+ "fastapi/fastapi": {
+  "cases": [
+   {
+    "id": "FA-01",
+    "bucket": "A",
+    "query": "filter the endpoint response data through the declared response model",
+    "golds": [
+     "sutra python fastapi/fastapi fastapi/routing.py serialize_response()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 4,
+     "off": 3,
+     "soft": 3
+    }
+   },
+   {
+    "id": "FA-02",
+    "bucket": "A",
+    "query": "convert a pydantic model instance into a json compatible dict for the response",
+    "golds": [
+     "sutra python fastapi/fastapi fastapi/encoders.py jsonable_encoder()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 3,
+     "off": 6,
+     "soft": 4
+    }
+   },
+   {
+    "id": "FA-03",
+    "bucket": "A",
+    "query": "generate the openapi schema for all the routes of the application",
+    "golds": [
+     "sutra python fastapi/fastapi fastapi/openapi/utils.py get_openapi()."
+    ],
+    "kind_hint": [
+     "class"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": null,
+     "soft": null
+    }
+   },
+   {
+    "id": "FA-04",
+    "bucket": "A",
+    "query": "combine several body parameters into one synthetic request body model",
+    "golds": [
+     "sutra python fastapi/fastapi fastapi/_compat/v2.py create_body_model()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "FA-05",
+    "bucket": "B",
+    "query": "where are endpoint dependencies resolved before the route handler is called",
+    "golds": [
+     "sutra python fastapi/fastapi fastapi/dependencies/utils.py solve_dependencies()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": null,
+     "soft": null
+    }
+   },
+   {
+    "id": "FA-06",
+    "bucket": "B",
+    "query": "run a sync endpoint in a threadpool instead of the event loop",
+    "golds": [
+     "sutra python fastapi/fastapi fastapi/routing.py run_endpoint_function()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 4,
+     "off": 4,
+     "soft": 3
+    }
+   },
+   {
+    "id": "FA-07",
+    "bucket": "B",
+    "query": "validate query parameters against their declared types and collect the errors",
+    "golds": [
+     "sutra python fastapi/fastapi fastapi/dependencies/utils.py request_params_to_args()."
+    ],
+    "kind_hint": [
+     "class"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": null,
+     "soft": null
+    }
+   },
+   {
+    "id": "FA-08",
+    "bucket": "B",
+    "query": "extract the username and password submitted in an oauth2 login form",
+    "golds": [
+     "sutra python fastapi/fastapi fastapi/security/oauth2.py OAuth2PasswordRequestForm#",
+     "sutra python fastapi/fastapi fastapi/security/oauth2.py OAuth2PasswordRequestForm#__init__()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "class",
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "FA-09",
+    "bucket": "C",
+    "query": "class that reads the bearer token from the authorization header for oauth2",
+    "golds": [
+     "sutra python fastapi/fastapi fastapi/security/oauth2.py OAuth2PasswordBearer#",
+     "sutra python fastapi/fastapi fastapi/security/oauth2.py OAuth2PasswordBearer#__call__()."
+    ],
+    "kind_hint": [
+     "class"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "class",
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "FA-10",
+    "bucket": "C",
+    "query": "the exception class raised when request validation fails",
+    "golds": [
+     "sutra python fastapi/fastapi fastapi/exceptions.py RequestValidationError#"
+    ],
+    "kind_hint": [
+     "class"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "class"
+    ],
+    "ranks": {
+     "hard": 2,
+     "off": 9,
+     "soft": 4
+    }
+   },
+   {
+    "id": "FA-11",
+    "bucket": "C",
+    "query": "class that lets an endpoint schedule work to run after the response is sent",
+    "golds": [
+     "sutra python fastapi/fastapi fastapi/background.py BackgroundTasks#",
+     "sutra python fastapi/fastapi fastapi/background.py BackgroundTasks#add_task()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "class",
+     "method"
+    ],
+    "ranks": {
+     "hard": 4,
+     "off": 4,
+     "soft": 4
+    }
+   },
+   {
+    "id": "FA-12",
+    "bucket": "C",
+    "query": "which function analyzes a single endpoint parameter annotation to classify it",
+    "golds": [
+     "sutra python fastapi/fastapi fastapi/dependencies/utils.py analyze_param()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": null,
+     "soft": null
+    }
+   }
+  ],
+  "modes": {
+   "hard": {
+    "recall@5": 0.6666666666666666,
+    "recall@10": 0.6666666666666666,
+    "mrr": 0.3819444444444444,
+    "zero_recall": 4
+   },
+   "off": {
+    "recall@5": 0.5,
+    "recall@10": 0.6666666666666666,
+    "mrr": 0.34259259259259256,
+    "zero_recall": 4
+   },
+   "soft": {
+    "recall@5": 0.6666666666666666,
+    "recall@10": 0.6666666666666666,
+    "mrr": 0.3680555555555556,
+    "zero_recall": 4
+   }
+  }
+ }
+}

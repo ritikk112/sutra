@@ -1,0 +1,105 @@
+{
+ "repo": "fastapi/fastapi",
+ "note": "reconstructed verbatim from the 2026-08-18 session (KIND_FILTER_AB.md fastapi metric set, FT buckets)",
+ "cases": [
+  {
+   "id": "FA-01",
+   "bucket": "A",
+   "query": "filter the endpoint response data through the declared response model",
+   "golds": [
+    "sutra python fastapi/fastapi fastapi/routing.py serialize_response()."
+   ]
+  },
+  {
+   "id": "FA-02",
+   "bucket": "A",
+   "query": "convert a pydantic model instance into a json compatible dict for the response",
+   "golds": [
+    "sutra python fastapi/fastapi fastapi/encoders.py jsonable_encoder()."
+   ]
+  },
+  {
+   "id": "FA-03",
+   "bucket": "A",
+   "query": "generate the openapi schema for all the routes of the application",
+   "golds": [
+    "sutra python fastapi/fastapi fastapi/openapi/utils.py get_openapi()."
+   ]
+  },
+  {
+   "id": "FA-04",
+   "bucket": "A",
+   "query": "combine several body parameters into one synthetic request body model",
+   "golds": [
+    "sutra python fastapi/fastapi fastapi/_compat/v2.py create_body_model()."
+   ]
+  },
+  {
+   "id": "FA-05",
+   "bucket": "B",
+   "query": "where are endpoint dependencies resolved before the route handler is called",
+   "golds": [
+    "sutra python fastapi/fastapi fastapi/dependencies/utils.py solve_dependencies()."
+   ]
+  },
+  {
+   "id": "FA-06",
+   "bucket": "B",
+   "query": "run a sync endpoint in a threadpool instead of the event loop",
+   "golds": [
+    "sutra python fastapi/fastapi fastapi/routing.py run_endpoint_function()."
+   ]
+  },
+  {
+   "id": "FA-07",
+   "bucket": "B",
+   "query": "validate query parameters against their declared types and collect the errors",
+   "golds": [
+    "sutra python fastapi/fastapi fastapi/dependencies/utils.py request_params_to_args()."
+   ]
+  },
+  {
+   "id": "FA-08",
+   "bucket": "B",
+   "query": "extract the username and password submitted in an oauth2 login form",
+   "golds": [
+    "sutra python fastapi/fastapi fastapi/security/oauth2.py OAuth2PasswordRequestForm#",
+    "sutra python fastapi/fastapi fastapi/security/oauth2.py OAuth2PasswordRequestForm#__init__()."
+   ]
+  },
+  {
+   "id": "FA-09",
+   "bucket": "C",
+   "query": "class that reads the bearer token from the authorization header for oauth2",
+   "golds": [
+    "sutra python fastapi/fastapi fastapi/security/oauth2.py OAuth2PasswordBearer#",
+    "sutra python fastapi/fastapi fastapi/security/oauth2.py OAuth2PasswordBearer#__call__()."
+   ]
+  },
+  {
+   "id": "FA-10",
+   "bucket": "C",
+   "query": "the exception class raised when request validation fails",
+   "golds": [
+    "sutra python fastapi/fastapi fastapi/exceptions.py RequestValidationError#"
+   ]
+  },
+  {
+   "id": "FA-11",
+   "bucket": "C",
+   "query": "class that lets an endpoint schedule work to run after the response is sent",
+   "golds": [
+    "sutra python fastapi/fastapi fastapi/background.py BackgroundTasks#",
+    "sutra python fastapi/fastapi fastapi/background.py BackgroundTasks#add_task()."
+   ]
+  },
+  {
+   "id": "FA-12",
+   "bucket": "C",
+   "query": "which function analyzes a single endpoint parameter annotation to classify it",
+   "golds": [
+    "sutra python fastapi/fastapi fastapi/dependencies/utils.py analyze_param()."
+   ]
+  }
+ ]
+}

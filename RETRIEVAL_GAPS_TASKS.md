@@ -223,6 +223,65 @@ harder suite.
 4. Report the correctness delta (either direction) with per-ticket
    pairs; a suite qualifies only if the control arm scores <80%.
 
+## Results (executed 2026-08-19, commits 2a16760..HEAD)
+
+All work TDD'd; suite grew 814 → 840 tests, all green. Eval assets:
+`benchmarks/battle_test/` (36-query set + grids) and
+`benchmarks/kind_filter_ab/` (reconstructed 24-query sets + manifest).
+
+**Task 1 — data symbols (DONE).** Root cause was stronger than thin
+text: variables/modules were excluded from embedding entirely
+(`_EMBEDDABLE`). They now embed (assignment source / docstring+member
+roster). Alone this fixed little — the fusion layer re-buried them —
+but combined with Task 2's weighted RRF, **3 of 4 data-symbol golds
+reach top-10 under soft** (RQ-A1 10, RQ-A3 9, PD-C4 7; FL-A3 still
+misses). Acceptance (≥3/4) met.
+
+**Task 2 — ranking ceiling (DONE, honest partials).**
+- Diagnosis: dense-only run showed 5 of 9 every-mode failures were
+  *present-but-drowned* (vector ranked them top-4; unweighted RRF's
+  agreement scoring buried them). Confirmed the old hybrid<dense
+  finding: dense-only flask r@5 .833 vs fused .583.
+- Fix: weighted RRF — `rrf_k` 60→20, vector weight 1.5 (new defaults;
+  `channel_weights={}` restores classic). On the 36-query set:
+  zero-recall 10→6, r@10 .722→.833, r@5/MRR flat. Acceptance asked
+  r@5 +0.05 — NOT met (flat); adopted for the tail/zero-recall gains.
+- Known cost: FL-B3 became the one query where hard finds a gold
+  (rank 9) that soft misses — the previous 60/60 soft≥hard record is
+  now 59/60 under the new fusion params.
+- docs_src measured: excluding it cut the fastapi index 2055→758
+  symbols and lifted soft MRR .368→.451 on the reconstructed set; the
+  4 chronic fastapi failures persist without docs_src (deeper problem
+  — likely chunk quality for very large functions).
+
+**Task 3 — verb-boost knob (DONE, default unchanged by data).**
+`kind_hint_source` + `kind_boost_verb` implemented. Measured 1.0/1.15/
+1.3: pooled MRR .545/.559/.561 — reducing verb boosts LOSES more than
+it gains, and PD-A3's bad hint turned out noun-derived ("handler"), so
+the knob can't fix it. Default stays kind_boost_verb=None (=1.3).
+
+**Task 4 — bge query prefix (DONE, kept).** `embed_queries` +
+auto-instruction for bge en-family. Pooled soft: r@5 .611→.639, MRR
+.543→.561; tail slightly worse (r@10 .750→.722, zero 9→10). Kept per
+the named acceptance metrics (r@5/MRR); tradeoff recorded.
+
+**Task 5 — hygiene (DONE except CI).** run_ab.py is repo-relative and
+grew --manifest/--artifacts-dir/--rrf-k/--vector-weight/--dense-only/
+--no-prefix; benchmarks committed. KIND_FILTER_AB 24-query sets
+reconstructed from the old session transcript with golds re-resolved
+to exact monikers (`benchmarks/kind_filter_ab/`). Regression check on
+them with all fixes: sutra set now PERFECT (r@5 1.000, zero 0, all
+modes; was soft .833/MRR .731); fastapi soft .583→.667 r@5, MRR
+.263→.368. CI wiring skipped (needs model download; documented here).
+
+**Task 6 — payload slimming (code DONE; live mini-wave pending).**
+Measured: `signature` was 115K of a 126K two-query payload (fastapi's
+Annotated[...Doc()] style). Search hits now carry a 200-char collapsed
+signature summary (full one on sutra_get_symbol). Worst-case payload
+94K→7.3K (−92%). The 2-arm mini wave to confirm context-growth parity
+needs a server restart (stdio server still runs pre-fix code this
+session) — run it at the start of the next session.
+
 ## Explicitly out of scope for this sheet
 
 - The sutra-vs-no-sutra value benchmark (separate protocol, separate
