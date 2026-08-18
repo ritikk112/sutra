@@ -53,6 +53,7 @@ def analyze_file(path: Path):
     first_gold_call = None
     call_index = 0
     out_tokens = 0
+    cache_write_tokens = 0
     for line in text_head.splitlines():
         try:
             rec = json.loads(line)
@@ -61,6 +62,7 @@ def analyze_file(path: Path):
         msg = rec.get("message") or {}
         usage = msg.get("usage") or {}
         out_tokens += usage.get("output_tokens", 0) or 0
+        cache_write_tokens += usage.get("cache_creation_input_tokens", 0) or 0
         content = msg.get("content")
         if not isinstance(content, list):
             continue
@@ -86,6 +88,7 @@ def analyze_file(path: Path):
         "total_tool_calls": sum(counts.values()),
         "first_gold_call": first_gold_call,
         "output_tokens": out_tokens,
+        "cache_write_tokens": cache_write_tokens,
     }
 
 
@@ -111,6 +114,7 @@ def main():
         print(f"  median tool calls: {med([r['total_tool_calls'] for r in rs])}")
         print(f"  median calls-to-gold: {med(loc)}  (localized in {len(loc)}/{n})")
         print(f"  median output tokens: {med([r['output_tokens'] for r in rs])}")
+        print(f"  median cache-write tokens: {med([r['cache_write_tokens'] for r in rs])}")
         print(f"  mean sutra calls: {sum(r['sutra'] for r in rs)/n:.1f}")
     # paired per-ticket medians
     print("\nper-ticket median calls-to-gold (sutra | control):")
