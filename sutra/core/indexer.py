@@ -45,6 +45,9 @@ _EXCLUDED_DIRS = frozenset({
     "dist",
     "build",
     "testdata",   # Go conventional test-fixture directory; ignored by go toolchain
+    "tests",      # test suites are noise in a code-RAG index — they crowd out
+    "test",       # the implementations they exercise (same rationale as _test.go)
+    "__tests__",  # jest/vitest convention
 })
 
 # File extension → language string.
@@ -58,7 +61,15 @@ _EXTENSION_MAP: dict[str, str] = {
 # Filename suffixes that are never indexed (before extension check).
 # _test.go files are excluded at the Indexer level, not the GoAdapter level,
 # to keep the adapter pure (adapters never see test files).
-_EXCLUDED_SUFFIXES = frozenset({"_test.go"})
+_EXCLUDED_SUFFIXES = frozenset({
+    "_test.go",
+    "_test.py", "_spec.py",                    # pytest / unittest trailing form
+    ".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx",   # jest/vitest
+})
+
+# Filename PREFIXES that are never indexed.  pytest's leading form
+# (test_foo.py) can't be expressed as a suffix.
+_EXCLUDED_PREFIXES = frozenset({"test_"})
 
 
 def _dedup_keep_first(symbols: list[Symbol]) -> tuple[list[Symbol], int]:
@@ -366,7 +377,7 @@ class Indexer:
     def _walk_files(self, root: Path) -> Iterator[Path]:
         """
         Yield all files under `root`, skipping excluded directories,
-        excluded suffixes (_test.go), and gitignored files.
+        test files (by dir, prefix or suffix), and gitignored files.
 
         Uses os.walk with in-place pruning of excluded dir names so we never
         descend into .git/, __pycache__/, node_modules/, testdata/, etc.
@@ -382,6 +393,8 @@ class Indexer:
             )
             for filename in sorted(filenames):
                 if any(filename.endswith(suf) for suf in _EXCLUDED_SUFFIXES):
+                    continue
+                if any(filename.startswith(pre) for pre in _EXCLUDED_PREFIXES):
                     continue
                 abs_path = Path(dirpath) / filename
                 if self.gitignore_filter is not None:
