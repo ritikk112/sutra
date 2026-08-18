@@ -66,6 +66,9 @@ class RetrievalPipeline:
         #   "off"  — hints are ignored entirely.
         kind_mode: str = "soft",
         kind_boost: float = 1.3,
+        # Boost for hints derived from the behavioral-VERB fallback (weaker
+        # evidence than an explicit kind noun).  None = same as kind_boost.
+        kind_boost_verb: Optional[float] = None,
     ) -> None:
         if kind_mode not in ("hard", "soft", "off"):
             raise ValueError(
@@ -86,6 +89,7 @@ class RetrievalPipeline:
         self._rerank_model = rerank_model
         self._kind_mode = kind_mode
         self._kind_boost = kind_boost
+        self._kind_boost_verb = kind_boost_verb
 
     @property
     def snapshot(self) -> ArtifactSnapshot:
@@ -117,7 +121,8 @@ class RetrievalPipeline:
         fused = rrf_fuse(per_channel, k=self._rrf_k)
         if self._kind_mode == "soft":
             fused = boost_kinds(
-                fused, parsed, self._snapshot.symbols, self._kind_boost
+                fused, parsed, self._snapshot.symbols, self._kind_boost,
+                verb_weight=self._kind_boost_verb,
             )
 
         results = (

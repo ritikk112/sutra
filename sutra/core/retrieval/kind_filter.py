@@ -32,6 +32,7 @@ def boost_kinds(
     query: ParsedQuery,
     symbols: Mapping[str, dict],
     weight: float = 1.3,
+    verb_weight: Optional[float] = None,
 ) -> list[SearchResult]:
     """
     Soft alternative to the hard pre-filter: multiply the fused score of
@@ -56,8 +57,16 @@ def boost_kinds(
     When the query carries no hint, results are returned unchanged.  Unknown
     monikers keep their score: boosting must never lose a result over a
     lookup gap.
+
+    `verb_weight`, when given, replaces `weight` for hints derived from the
+    behavioral-verb fallback (query.kind_hint_source == "verb") — a verb is
+    weaker evidence of the wanted kind than an explicit noun.
     """
-    if query.kind_hint is None or weight == 1.0:
+    if query.kind_hint is None:
+        return results
+    if verb_weight is not None and query.kind_hint_source == "verb":
+        weight = verb_weight
+    if weight == 1.0:
         return results
     boosted = [
         SearchResult(

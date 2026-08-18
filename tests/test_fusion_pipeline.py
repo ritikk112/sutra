@@ -231,6 +231,31 @@ class TestPipelineHermetic:
         results = pipe.search("the user service class", top_k=50)
         assert all("kind_boost" not in r.provenance for r in results)
 
+    def test_verb_derived_hint_uses_verb_boost(self, snapshot) -> None:
+        # "saves" fires the verb fallback → callable hint with source "verb".
+        # kind_boost_verb=1.0 must neutralize it entirely (behaves like off),
+        # while the noun-derived boost stays at kind_boost.
+        neutral = RetrievalPipeline(
+            snapshot, FixtureEmbedder(), expand=False, kind_boost_verb=1.0
+        )
+        results = neutral.search("what saves the user record", top_k=50)
+        assert all("kind_boost" not in r.provenance for r in results)
+
+        scaled = RetrievalPipeline(
+            snapshot, FixtureEmbedder(), expand=False,
+            kind_boost=1.3, kind_boost_verb=1.15,
+        )
+        results = scaled.search("what saves the user record", top_k=50)
+        boosted = [r for r in results if "kind_boost" in r.provenance]
+        assert boosted
+        assert all(r.provenance["kind_boost"] == 1.15 for r in boosted)
+
+        # Noun-derived hints are untouched by kind_boost_verb.
+        results = scaled.search("the user service class", top_k=50)
+        boosted = [r for r in results if "kind_boost" in r.provenance]
+        assert boosted
+        assert all(r.provenance["kind_boost"] == 1.3 for r in boosted)
+
     def test_invalid_kind_mode_rejected(self, snapshot) -> None:
         with pytest.raises(ValueError, match="kind_mode"):
             RetrievalPipeline(snapshot, FixtureEmbedder(), kind_mode="fuzzy")

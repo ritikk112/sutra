@@ -96,6 +96,36 @@ class TestKindHints:
         )
         assert parsed.kind_hint is None
 
+    def test_noun_hint_source_is_noun(self, analyzer) -> None:
+        parsed = analyzer.parse("the class that stores headers", embed=False)
+        assert parsed.kind_hint == frozenset({"class"})
+        assert parsed.kind_hint_source == "noun"
+
+    def test_verb_fallback_hint_source_is_verb(self, analyzer) -> None:
+        # Behavioral verb, no kind noun → callable hint via the verb fallback.
+        parsed = analyzer.parse("what saves the listing", embed=False)
+        assert parsed.kind_hint == frozenset({"function", "method"})
+        assert parsed.kind_hint_source == "verb"
+
+    def test_no_hint_means_no_source(self, analyzer) -> None:
+        parsed = analyzer.parse("lazyRetry", embed=False)
+        assert parsed.kind_hint is None
+        assert parsed.kind_hint_source is None
+
+    def test_parse_embeds_via_embed_queries(self) -> None:
+        # Query embedding must go through embed_queries so embedders that
+        # apply a query-side instruction prefix (bge) get to apply it.
+        calls = []
+
+        class SpyEmbedder(FixtureEmbedder):
+            def embed_queries(self, chunks):
+                calls.append(chunks)
+                return self.embed(chunks)
+
+        parsed = QueryAnalyzer(embedder=SpyEmbedder()).parse("find the user")
+        assert parsed.embedding is not None
+        assert calls == [["find the user"]]
+
     def test_explicit_noun_beats_verbs(self, analyzer) -> None:
         # "creating" is a behavioral verb, but "dataclass" is explicit → class.
         # (previously used "model", which is no longer a kind noun)
