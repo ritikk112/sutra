@@ -11,7 +11,7 @@ from sutra.core.retrieval.channels.moniker_channel import MonikerChannel
 from sutra.core.retrieval.channels.vector_channel import VectorChannel
 from sutra.core.retrieval.expander import GraphExpander
 from sutra.core.retrieval.fusion import DEFAULT_RRF_K, rrf_fuse
-from sutra.core.retrieval.kind_filter import allowed_monikers
+from sutra.core.retrieval.kind_filter import allowed_monikers, boost_kinds
 from sutra.core.retrieval.query_analyzer import QueryAnalyzer
 from sutra.core.retrieval.types import SearchResult
 from sutra.core.vector_store.in_memory import InMemoryVectorStore
@@ -57,7 +57,20 @@ class RetrievalPipeline:
         rrf_k: int = DEFAULT_RRF_K,
         candidates_per_channel: int = DEFAULT_CANDIDATES_PER_CHANNEL,
         rerank_model: Any = None,
+        # How an inferred kind hint is applied (KIND_FILTER_AB.md):
+        #   "soft" (default) — post-fusion score boost by `kind_boost`;
+        #     wrong hints demote the gold slightly instead of erasing it.
+        #   "hard" — the original pre-filter: non-matching kinds are removed
+        #     from every channel's candidate pool before ranking.  A wrong
+        #     hint zeroes recall for that query; kept for A/B comparison.
+        #   "off"  — hints are ignored entirely.
+        kind_mode: str = "soft",
+        kind_boost: float = 1.3,
     ) -> None:
+        if kind_mode not in ("hard", "soft", "off"):
+            raise ValueError(
+                f"kind_mode must be 'hard', 'soft' or 'off', got {kind_mode!r}"
+            )
         validate_embedder_matches_snapshot(snapshot, embedder)
         self._snapshot = snapshot
         self._analyzer = analyzer or QueryAnalyzer(embedder=embedder)
@@ -71,6 +84,8 @@ class RetrievalPipeline:
         self._rrf_k = rrf_k
         self._candidates = candidates_per_channel
         self._rerank_model = rerank_model
+        self._kind_mode = kind_mode
+        self._kind_boost = kind_boost
 
     @property
     def snapshot(self) -> ArtifactSnapshot:
@@ -83,7 +98,14 @@ class RetrievalPipeline:
         rerank: bool = False,
     ) -> list[SearchResult]:
         parsed = self._analyzer.parse(query)
-        allowed = allowed_monikers(parsed, self._snapshot.symbols)
+        # Hard mode is the only mode that restricts the candidate pool;
+        # soft mode lets every channel rank the full corpus and applies
+        # the hint after fusion (see boost_kinds).
+        allowed = (
+            allowed_monikers(parsed, self._snapshot.symbols)
+            if self._kind_mode == "hard"
+            else None
+        )
 
         per_channel = {
             ch.name: ch.retrieve(
@@ -93,6 +115,10 @@ class RetrievalPipeline:
         }
 
         fused = rrf_fuse(per_channel, k=self._rrf_k)
+        if self._kind_mode == "soft":
+            fused = boost_kinds(
+                fused, parsed, self._snapshot.symbols, self._kind_boost
+            )
 
         results = (
             self._expander.expand(fused) if self._expand else fused

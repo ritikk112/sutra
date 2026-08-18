@@ -202,11 +202,38 @@ class TestPipelineHermetic:
         assert "create_user" in results[0].moniker
         assert "rrf" in results[0].provenance
 
-    def test_kind_hint_restricts_channels(self, snapshot) -> None:
-        pipe = RetrievalPipeline(snapshot, FixtureEmbedder(), expand=False)
+    def test_kind_hint_restricts_channels_in_hard_mode(self, snapshot) -> None:
+        # Hard mode is the legacy behavior, kept for A/B (KIND_FILTER_AB.md).
+        pipe = RetrievalPipeline(
+            snapshot, FixtureEmbedder(), expand=False, kind_mode="hard"
+        )
         results = pipe.search("the user service class", top_k=10)
         kinds = {snapshot.symbols[r.moniker]["kind"] for r in results}
         assert kinds <= {"class"}
+
+    def test_soft_mode_boosts_but_never_erases(self, snapshot) -> None:
+        # Default soft mode: hint-matching kinds are boosted, but symbols of
+        # other kinds stay in the pool — a wrong hint must not zero recall.
+        pipe = RetrievalPipeline(snapshot, FixtureEmbedder(), expand=False)
+        results = pipe.search("the user service class", top_k=50)
+        kinds = {snapshot.symbols[r.moniker]["kind"] for r in results}
+        assert not (kinds <= {"class"})  # non-class symbols survive
+        boosted = [r for r in results if "kind_boost" in r.provenance]
+        assert boosted, "hint-matching symbols should carry the boost marker"
+        assert all(
+            snapshot.symbols[r.moniker]["kind"] == "class" for r in boosted
+        )
+
+    def test_kind_mode_off_ignores_hints(self, snapshot) -> None:
+        pipe = RetrievalPipeline(
+            snapshot, FixtureEmbedder(), expand=False, kind_mode="off"
+        )
+        results = pipe.search("the user service class", top_k=50)
+        assert all("kind_boost" not in r.provenance for r in results)
+
+    def test_invalid_kind_mode_rejected(self, snapshot) -> None:
+        with pytest.raises(ValueError, match="kind_mode"):
+            RetrievalPipeline(snapshot, FixtureEmbedder(), kind_mode="fuzzy")
 
     def test_expansion_can_be_disabled(self, snapshot) -> None:
         on = RetrievalPipeline(snapshot, FixtureEmbedder(), expand=True)
