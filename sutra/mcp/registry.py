@@ -37,21 +37,24 @@ class EmbedderCache:
         self._cache: dict[str, Embedder] = {}
         self._lock = threading.Lock()
 
-    def get(self, model_id: Optional[str]) -> Embedder:
+    def get(self, model_id: Optional[str], dims: Optional[int] = None) -> Embedder:
         key = model_id or "fixture-384"
         with self._lock:
             if key not in self._cache:
-                self._cache[key] = self._build(key)
+                self._cache[key] = self._build(key, dims)
             return self._cache[key]
 
     @staticmethod
-    def _build(model_id: str) -> Embedder:
+    def _build(model_id: str, dims: Optional[int] = None) -> Embedder:
         if model_id.startswith("fixture-"):
             from sutra.core.embedder.fixture import FixtureEmbedder
             return FixtureEmbedder(dims=int(model_id.split("-")[1]))
         if model_id.startswith("sentence-transformers/"):
             from sutra.core.embedder.local import LocalEmbedder
-            return LocalEmbedder(model_name=model_id.split("/", 1)[1])
+            # The artifact's recorded width is authoritative — LocalEmbedder
+            # defaults to 384, which rejects every non-MiniLM model at boot.
+            kwargs = {"dimensions": dims} if dims else {}
+            return LocalEmbedder(model_name=model_id.split("/", 1)[1], **kwargs)
         if model_id.startswith("openai/"):
             import os
             from sutra.core.embedder.openai import OpenAIEmbedder
@@ -106,7 +109,7 @@ def build_serving_unit(
     callers decide whether that's fatal (boot) or skippable (hot reload).
     """
     snapshot = ArtifactLoader().load(artifact_dir)
-    embedder = embedders.get(snapshot.embedding_model_id)
+    embedder = embedders.get(snapshot.embedding_model_id, snapshot.embedding_dims)
 
     analyzer = None
     if analyzer_cache is not None:
