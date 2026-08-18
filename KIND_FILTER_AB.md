@@ -145,6 +145,78 @@ numbers above are the comparison point; adoption is not expected to change
 whether the FT-ticket agents' sutra_search calls return the gold symbols in
 fewer attempts.
 
+## Post-fix agent wave — results (run 2026-08-18, fresh session)
+
+Setup: fresh Claude Code session, MCP server auto-started on the fixed
+branch (soft mode confirmed live via `kind_boost: 1.3` in search
+provenance). Prompts recovered **verbatim** from the baseline session's
+transcript (byte-identical wording, one uniform NEUTRAL template), same
+solver (haiku), same 12 tickets, 1 trial each, read-only. Gold-rank
+analysis scripted over both waves' task transcripts; oversized tool
+results (5 calls) recovered from their persisted files and scored too.
+
+### Tool calls per trial (compare baseline table above)
+
+| ticket | sutra | bash | read |   | ticket | sutra | bash | read |
+|---|---|---|---|---|---|---|---|---|
+| sutra SL1 | 7 | 0 | 6 |   | fastapi FT1 | 6 | 4 | 10 |
+| sutra SL2 | 3 | 10 | 14 |   | fastapi FT2 | 11 | 1 | 13 |
+| sutra SL3 | 3 | 0 | 7 |   | fastapi FT3 | 5 | 16 | 16 |
+| sutra SS1 | 1 | 5 | 12 |   | fastapi FT4 | 8 | 10 | 18 |
+| sutra SS2 | 0 | 4 | 15 |   | fastapi FT5 | 5 | 3 | 3 |
+| sutra SS3 | 3 | 5 | 12 |   | fastapi FT6 | 8 | 2 | 11 |
+
+**Adoption: sutra 5/6 trials (17 calls) vs baseline 1/6 (2 calls);
+fastapi 6/6 (43 calls) vs baseline 5/6 (31 calls).** Framing was
+byte-identical, so this shift is not presentation. With 1 trial/ticket it
+may partly be run-to-run variance, but the direction is consistent with a
+feedback effect: searches that return the gold get followed by more
+searches. All 12 traces again found the correct gold mechanisms
+(self-assessed) — correctness unchanged at 12/12.
+
+### Searches-until-gold (sutra_search calls until the gold symbol appears
+anywhere in a result list; rank = gold's position in that first hit)
+
+| ticket | baseline | post-fix |   | ticket | baseline | post-fix |
+|---|---|---|---|---|---|---|
+| sutra SL1 | #1 (r1) | #1 (r1) |   | fastapi FT1 | #1 (r7) | #1 (r2) |
+| sutra SL2 | no searches | #1 (r3) |   | fastapi FT2 | #2 (r1) | #1 (r10) |
+| sutra SL3 | no searches | #1 (r1) |   | fastapi FT3 | #1 (r6) | #3 (r8) |
+| sutra SS1 | no searches | #1 (r1) |   | fastapi FT4 | no searches | #1 (r3) |
+| sutra SS2 | no searches | no searches |   | fastapi FT5 | #1 (r1) | #1 (r1) |
+| sutra SS3 | no searches | #3 (r3) |   | fastapi FT6 | #3 (r1) | #1 (r3) |
+
+The cleanest single observation is a natural paired A-clash query on FT2:
+baseline query #1 `response_model validation serialization filtering` →
+gold **absent** from all 15 results (hard filter, "model" kind noun); the
+post-fix agent's near-identical first query `response_model validation
+filtering serialization` → gold (serialize_response) present at rank 10,
+and its trace pivoted from there. Same phrasing, hard-erased vs
+soft-retained — the fix's mechanism observed in the wild, not just in the
+retrieval eval.
+
+Reading the table honestly: first-query gold hits on fastapi went 2/5
+ticket-trials-that-searched (FT1, FT5) to 5/6 (all but FT3), and FT6's
+first natural phrasing (`openapi schema generation`) now hits at #1 vs #3.
+But FT3 got *worse* on first-hit (#1→#3) — its golds are the pre-existing
+every-mode ranking failures (docs_src noise), so its hits in both waves
+are luck-of-phrasing, not filter behavior. Per-call hit rate across all
+fastapi searches is flat (~52% baseline, ~51% post-fix): post-fix agents
+issued more narrow follow-up probes (exact private-symbol lookups at
+top_k=5) whose "misses" are not failures. FT4 is not comparable on this
+metric (baseline agent never searched).
+
+### Agent-wave verdict
+
+The wave shows the fix where it was predicted to show: ticket phrasings
+that collide with kind nouns (FT2's "response_model") no longer erase the
+gold, and first-query gold-landing on the fastapi tickets improved from
+2/5 to 5/6. Index adoption rose on both repos under byte-identical
+framing — consistent with better results reinforcing use, though 1
+trial/ticket leaves the adoption delta suggestive rather than proven.
+Correctness stayed 12/12. Nothing in the wave contradicts the retrieval
+eval; the soft-boost default stands.
+
 ## Verdict
 
 The hard kind pre-filter is replaced as default. Measured across 24

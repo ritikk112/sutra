@@ -1,0 +1,104 @@
+{
+  "repo": "pydantic/pydantic",
+  "cases": [
+    {
+      "id": "PD-A1",
+      "bucket": "A",
+      "query": "What actually turns a Python annotation into the pydantic-core validation schema used at runtime?",
+      "golds": ["sutra python pydantic/pydantic pydantic/_internal/_generate_schema.py GenerateSchema#generate_schema()."],
+      "gold_kinds": ["method"],
+      "colliding_noun": "schema",
+      "why": "'schema' is used as domain vocabulary for the core-schema build process; the mapping hints class, but the true gold is GenerateSchema.generate_schema, a method."
+    },
+    {
+      "id": "PD-A2",
+      "bucket": "A",
+      "query": "How do I define an integer type in pydantic that must fall within a certain numeric range?",
+      "golds": ["sutra python pydantic/pydantic pydantic/types.py conint()."],
+      "gold_kinds": ["function"],
+      "colliding_noun": "type",
+      "why": "'type' is used the way pydantic docs use it (a constrained numeric type), hinting class, but the true gold is the conint() factory function, not a class."
+    },
+    {
+      "id": "PD-A3",
+      "bucket": "A",
+      "query": "Inside a custom __get_pydantic_core_schema__, what object do you invoke as the handler to delegate to the next step in the chain?",
+      "golds": ["sutra python pydantic/pydantic pydantic/annotated_handlers.py GetCoreSchemaHandler#"],
+      "gold_kinds": ["class"],
+      "colliding_noun": "handler",
+      "why": "'handler' hints function/method, but the true gold, GetCoreSchemaHandler, is a class whose __call__ delegates to the next schema-generation step."
+    },
+    {
+      "id": "PD-B1",
+      "bucket": "B",
+      "query": "What logic turns a Python-style snake_case attribute name into the camelCase form used for JSON keys?",
+      "golds": ["sutra python pydantic/pydantic pydantic/alias_generators.py to_camel()."],
+      "gold_kinds": ["function"],
+      "why": "Describes the snake_case-to-camelCase conversion behavior implemented by to_camel, without naming it or using kind nouns."
+    },
+    {
+      "id": "PD-B2",
+      "bucket": "B",
+      "query": "How does pydantic decide which member of a union to validate against using a shared tag field found on the input data?",
+      "golds": ["sutra python pydantic/pydantic pydantic/_internal/_discriminated_union.py apply_discriminator()."],
+      "gold_kinds": ["function"],
+      "why": "Describes discriminated-union resolution by a shared tag/discriminator field, implemented by apply_discriminator, without naming it."
+    },
+    {
+      "id": "PD-B3",
+      "bucket": "B",
+      "query": "What happens when you ask for a duplicate of a model instance with certain field values overridden?",
+      "golds": ["sutra python pydantic/pydantic pydantic/main.py BaseModel#model_copy()."],
+      "gold_kinds": ["method"],
+      "why": "Describes the observable behavior of BaseModel.model_copy (duplicate instance with update overrides) without naming it."
+    },
+    {
+      "id": "PD-B4",
+      "bucket": "B",
+      "query": "What finishes preparing a newly defined model after its fields and configuration have been collected, wiring up validation and serialization machinery?",
+      "golds": ["sutra python pydantic/pydantic pydantic/_internal/_model_construction.py complete_model_class()."],
+      "gold_kinds": ["function"],
+      "why": "Describes the finalization step performed by complete_model_class (binds schema/validator/serializer after fields+config collection) without naming it or using kind nouns."
+    },
+    {
+      "id": "PD-B5",
+      "bucket": "B",
+      "query": "What raises an error if you try to reassign an attribute value on an instance whose model has been configured as immutable?",
+      "golds": ["sutra python pydantic/pydantic pydantic/main.py _check_frozen()."],
+      "gold_kinds": ["function"],
+      "why": "Describes the frozen-instance/frozen-field enforcement behavior implemented by _check_frozen, without naming it or using kind nouns."
+    },
+    {
+      "id": "PD-C1",
+      "bucket": "C",
+      "query": "What's the function that converts a PascalCase or camelCase string into snake_case?",
+      "golds": ["sutra python pydantic/pydantic pydantic/alias_generators.py to_snake()."],
+      "gold_kinds": ["function"],
+      "why": "Explicitly asks for 'the function' and the gold to_snake is indeed a function, matching the hinted kind."
+    },
+    {
+      "id": "PD-C2",
+      "bucket": "C",
+      "query": "What's the class responsible for generating a JSON Schema document from pydantic's internal core schema representation?",
+      "golds": ["sutra python pydantic/pydantic pydantic/json_schema.py GenerateJsonSchema#"],
+      "gold_kinds": ["class"],
+      "why": "Explicitly asks for 'the class' and the gold GenerateJsonSchema is indeed a class, matching the hinted kind."
+    },
+    {
+      "id": "PD-C3",
+      "bucket": "C",
+      "query": "What's the method that builds a model instance directly from trusted field values without running any validation?",
+      "golds": ["sutra python pydantic/pydantic pydantic/main.py BaseModel#model_construct()."],
+      "gold_kinds": ["method"],
+      "why": "Explicitly asks for 'the method' and the gold BaseModel.model_construct is indeed a method, matching the hinted kind."
+    },
+    {
+      "id": "PD-C4",
+      "bucket": "C",
+      "query": "Which module holds the snake_case, camelCase, and PascalCase naming convention converters?",
+      "golds": ["sutra python pydantic/pydantic pydantic/alias_generators.py pydantic/alias_generators/"],
+      "gold_kinds": ["module"],
+      "why": "Explicitly asks for 'which module' and the gold is the alias_generators module itself, matching the hinted kind."
+    }
+  ]
+}

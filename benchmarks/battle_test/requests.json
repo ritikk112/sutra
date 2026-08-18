@@ -1,0 +1,104 @@
+{
+  "repo": "psf/requests",
+  "cases": [
+    {
+      "id": "RQ-A1",
+      "bucket": "A",
+      "query": "the full list of event names that hooks are allowed to target when someone registers one",
+      "golds": ["sutra python psf/requests src/requests/hooks.py HOOKS."],
+      "gold_kinds": ["variable"],
+      "colliding_noun": "hooks",
+      "why": "hooks.py:22 HOOKS = ['response'] is the module-level list of valid hook event names; 'hooks' hints function/method but the gold is a plain variable."
+    },
+    {
+      "id": "RQ-A2",
+      "bucket": "A",
+      "query": "how per-request environment settings like proxies and SSL verification get merged with session-level defaults before a request is sent",
+      "golds": ["sutra python psf/requests src/requests/sessions.py Session#merge_environment_settings()."],
+      "gold_kinds": ["method"],
+      "colliding_noun": "settings",
+      "why": "sessions.py:831 Session.merge_environment_settings() merges env proxies/verify/cert into the send kwargs; 'settings' hints variable but the gold is a method."
+    },
+    {
+      "id": "RQ-A3",
+      "bucket": "A",
+      "query": "the fixed set of HTTP status code types that requests automatically follows as redirects without extra handling",
+      "golds": ["sutra python psf/requests src/requests/models.py REDIRECT_STATI."],
+      "gold_kinds": ["variable"],
+      "colliding_noun": "types",
+      "why": "models.py:95 REDIRECT_STATI is a tuple constant of the redirect-eligible status codes; 'types' hints class but the gold is a variable."
+    },
+    {
+      "id": "RQ-B1",
+      "bucket": "B",
+      "query": "how requests decides whether to strip a request body's Authorization header when following a redirect to a different host, keeping it only for same-host hops",
+      "golds": ["sutra python psf/requests src/requests/sessions.py SessionRedirectMixin#should_strip_auth()."],
+      "gold_kinds": ["method"],
+      "why": "sessions.py:154 should_strip_auth compares hostnames (with an http->https same-port exception) to decide whether to drop the Authorization header on redirect."
+    },
+    {
+      "id": "RQ-B2",
+      "bucket": "B",
+      "query": "how the next redirect location gets pulled out of a response's headers before the session follows it further",
+      "golds": ["sutra python psf/requests src/requests/sessions.py SessionRedirectMixin#get_redirect_target()."],
+      "gold_kinds": ["method"],
+      "why": "sessions.py:134 get_redirect_target reads resp.headers['location'] (re-encoding latin1->utf8) and returns the redirect URI or None."
+    },
+    {
+      "id": "RQ-B3",
+      "bucket": "B",
+      "query": "how requests works out the total size of a request body that could be a plain string, a file-like object, or a buffer, without fully reading it",
+      "golds": ["sutra python psf/requests src/requests/utils.py super_len()."],
+      "gold_kinds": ["function"],
+      "why": "utils.py:160 super_len() inspects __len__, .len, or fstat on file descriptors to compute body size for Content-Length."
+    },
+    {
+      "id": "RQ-B4",
+      "bucket": "B",
+      "query": "the trick requests uses to write a file to disk safely so a crash midway won't leave a corrupted partial file in its place",
+      "golds": ["sutra python psf/requests src/requests/utils.py atomic_open()."],
+      "gold_kinds": ["function"],
+      "why": "utils.py:329 atomic_open() writes to a temp file via mkstemp and os.replace()s it into place, removing the temp file on failure."
+    },
+    {
+      "id": "RQ-B5",
+      "bucket": "B",
+      "query": "how a target URL gets checked against the NO_PROXY environment list to decide whether proxying should be skipped entirely",
+      "golds": ["sutra python psf/requests src/requests/utils.py should_bypass_proxies()."],
+      "gold_kinds": ["function"],
+      "why": "utils.py:810 should_bypass_proxies() checks no_proxy/NO_PROXY env vars (and localhost/netloc rules) to decide whether to skip proxying a URL."
+    },
+    {
+      "id": "RQ-C1",
+      "bucket": "C",
+      "query": "the function that re-quotes a URI so illegal characters get percent-encoded while already-escaped sequences are preserved",
+      "golds": ["sutra python psf/requests src/requests/utils.py requote_uri()."],
+      "gold_kinds": ["function"],
+      "why": "utils.py:704 requote_uri() runs an unquote/quote cycle so the URI is fully and consistently percent-encoded."
+    },
+    {
+      "id": "RQ-C2",
+      "bucket": "C",
+      "query": "the class that stores HTTP response headers in a way that treats header names case-insensitively",
+      "golds": ["sutra python psf/requests src/requests/structures.py CaseInsensitiveDict#"],
+      "gold_kinds": ["class"],
+      "why": "structures.py:20 CaseInsensitiveDict is a MutableMapping that preserves original key case but compares/looks up keys case-insensitively; used for headers."
+    },
+    {
+      "id": "RQ-C3",
+      "bucket": "C",
+      "query": "the method that walks a chain of redirect responses and yields each intermediate response or request as the session follows them",
+      "golds": ["sutra python psf/requests src/requests/sessions.py SessionRedirectMixin#resolve_redirects()."],
+      "gold_kinds": ["method"],
+      "why": "sessions.py:186 resolve_redirects() is a generator that loops while resp.is_redirect, yielding Responses (or Requests when yield_requests=True) for each hop."
+    },
+    {
+      "id": "RQ-C4",
+      "bucket": "C",
+      "query": "the function that prepends a URL scheme like http when the given URL doesn't already specify one",
+      "golds": ["sutra python psf/requests src/requests/utils.py prepend_scheme_if_needed()."],
+      "gold_kinds": ["function"],
+      "why": "utils.py:1040 prepend_scheme_if_needed() parses the URL and prepends the given scheme only if one isn't already present, without replacing an existing scheme."
+    }
+  ]
+}

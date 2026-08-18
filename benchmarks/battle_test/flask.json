@@ -1,0 +1,104 @@
+{
+  "repo": "pallets/flask",
+  "cases": [
+    {
+      "id": "FL-A1",
+      "bucket": "A",
+      "query": "How does Flask load application settings from a Python file on disk?",
+      "golds": ["sutra python pallets/flask src/flask/config.py Config#from_pyfile()."],
+      "gold_kinds": ["method"],
+      "colliding_noun": "settings",
+      "why": "'settings' hints variable, but the loader is Config.from_pyfile, a method (config.py:187) that execs the file as a module and copies uppercase attrs via from_object."
+    },
+    {
+      "id": "FL-A2",
+      "bucket": "A",
+      "query": "How do you turn a class-based view into a plain view function you can pass to add_url_rule?",
+      "golds": ["sutra python pallets/flask src/flask/views.py View#as_view()."],
+      "gold_kinds": ["method"],
+      "colliding_noun": "class",
+      "why": "'class-based' hints class, but the conversion is done by View.as_view, a classmethod (views.py:86) that returns a closure named 'view' registrable as a route function."
+    },
+    {
+      "id": "FL-A3",
+      "bucket": "A",
+      "query": "Where does Flask keep the shared type aliases used for response and header values across its modules?",
+      "golds": ["sutra python pallets/flask src/flask/typing.py src/flask/typing/"],
+      "gold_kinds": ["module"],
+      "colliding_noun": "type",
+      "why": "'type aliases' hints class, but these are plain module-level type aliases defined in typing.py (e.g. ResponseValue, HeadersValue), and the only indexed symbol is the module itself, kind=module."
+    },
+    {
+      "id": "FL-B1",
+      "bucket": "B",
+      "query": "How does Flask make sure request-scoped cleanup code still runs even when the view raised an exception during dispatch?",
+      "golds": ["sutra python pallets/flask src/flask/app.py Flask#do_teardown_request()."],
+      "gold_kinds": ["method"],
+      "why": "Flask.do_teardown_request (app.py:1423) runs all teardown_request callbacks and the request_tearing_down signal right before the request context pops, passing the exception if dispatch failed, per do_teardown_request's docstring at app.py:1423-1453."
+    },
+    {
+      "id": "FL-B2",
+      "bucket": "B",
+      "query": "How can code register something to run and tweak the response right after the current request finishes, without affecting other requests?",
+      "golds": ["sutra python pallets/flask src/flask/ctx.py after_this_request()."],
+      "gold_kinds": ["function"],
+      "why": "after_this_request (ctx.py:118) appends the given callable to ctx._after_request_functions so it only runs for the current request, unlike Scaffold.after_request which applies to every request."
+    },
+    {
+      "id": "FL-B3",
+      "bucket": "B",
+      "query": "How does Flask turn the signed cookie sent by the browser back into the session dictionary at the start of a request, falling back to an empty session if the signature is invalid?",
+      "golds": ["sutra python pallets/flask src/flask/sessions.py SecureCookieSessionInterface#open_session()."],
+      "gold_kinds": ["method"],
+      "why": "SecureCookieSessionInterface.open_session (sessions.py:323) reads the cookie value, verifies it with the signing serializer, and returns an empty SecureCookieSession on missing cookie or BadSignature."
+    },
+    {
+      "id": "FL-B4",
+      "bucket": "B",
+      "query": "What allows work started in a new thread from inside a view to keep seeing the same request and app data that were active in that view, since new threads don't automatically pick this up?",
+      "golds": ["sutra python pallets/flask src/flask/ctx.py copy_current_request_context()."],
+      "gold_kinds": ["function"],
+      "why": "copy_current_request_context (ctx.py:154) captures the active context and wraps the decorated callable to push a copy of it before running, so background threads/greenlets see the same request/app data."
+    },
+    {
+      "id": "FL-B5",
+      "bucket": "B",
+      "query": "How does Flask serve a single uploaded file from inside a directory while blocking a client-supplied filename from escaping outside that directory?",
+      "golds": ["sutra python pallets/flask src/flask/helpers.py send_from_directory()."],
+      "gold_kinds": ["function"],
+      "why": "send_from_directory (helpers.py:543) docstring states it uses werkzeug.security.safe_join to ensure the client-supplied path cannot point outside the given directory before delegating to send_file."
+    },
+    {
+      "id": "FL-C1",
+      "bucket": "C",
+      "query": "What is the method that reads configuration values from environment variables sharing a common prefix?",
+      "golds": ["sutra python pallets/flask src/flask/config.py Config#from_prefixed_env()."],
+      "gold_kinds": ["method"],
+      "why": "Config.from_prefixed_env (config.py:126) loads env vars starting with a given prefix (default FLASK_), strips the prefix, and sets them as config keys; kind=method matches the explicit 'method' noun."
+    },
+    {
+      "id": "FL-C2",
+      "bucket": "C",
+      "query": "What is the class that holds the temporary registration state used while a blueprint is being attached to an application?",
+      "golds": ["sutra python pallets/flask src/flask/sansio/blueprints.py BlueprintSetupState#"],
+      "gold_kinds": ["class"],
+      "why": "BlueprintSetupState (sansio/blueprints.py:34) docstring calls itself 'a temporary holder object for registering a blueprint with the application'; kind=class matches the explicit 'class' noun."
+    },
+    {
+      "id": "FL-C3",
+      "bucket": "C",
+      "query": "What is the function that converts a view's return value into a proper response object you can then attach headers to?",
+      "golds": ["sutra python pallets/flask src/flask/helpers.py make_response()."],
+      "gold_kinds": ["function"],
+      "why": "helpers.make_response (helpers.py:151) is the module-level convenience function whose docstring describes converting a view's return value into a Response so headers can be attached; kind=function matches the explicit 'function' noun."
+    },
+    {
+      "id": "FL-C4",
+      "bucket": "C",
+      "query": "What is the method that determines the correct exception class and status code to use when handling a given error identifier?",
+      "golds": ["sutra python pallets/flask src/flask/sansio/scaffold.py Scaffold#_get_exc_class_and_code()."],
+      "gold_kinds": ["method"],
+      "why": "Scaffold._get_exc_class_and_code (sansio/scaffold.py:665) resolves an int HTTP code or Exception subclass to (exc_class, code), used when registering/looking up error handlers; kind=method matches the explicit 'method' noun."
+    }
+  ]
+}
