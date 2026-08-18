@@ -1,0 +1,297 @@
+<meta charset="utf-8">
+<title>Sutra Benchmark — Consolidated (3 repos)</title>
+<style>
+  :root{
+    --surface-1:#fcfcfb; --plane:#f9f9f7;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+    --with:#2a78d6; --without:#eb6834;
+    --l1:#2a78d6; --l2:#1baf7a; --l3:#4a3aa7; --l4:#eb6834;
+    --good:#006300; --bad:#c0392b; --card:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --surface-1:#1a1a19; --plane:#0d0d0d; --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+      --with:#3987e5; --without:#d95926; --l1:#3987e5; --l2:#199e70; --l3:#9085e9; --l4:#d95926;
+      --good:#0ca30c; --bad:#e66767; --card:#161615;
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-1:#1a1a19; --plane:#0d0d0d; --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --with:#3987e5; --without:#d95926; --l1:#3987e5; --l2:#199e70; --l3:#9085e9; --l4:#d95926;
+    --good:#0ca30c; --bad:#e66767; --card:#161615;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--plane); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px; margin:0 auto; padding:32px 20px 80px}
+  header{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap}
+  h1{font-size:1.7rem; margin:0 0 4px; letter-spacing:-0.02em}
+  .sub{color:var(--ink-2); font-size:.95rem; margin:0; max-width:70ch}
+  .meta{color:var(--muted); font-size:.8rem; margin-top:6px}
+  .theme-btn{background:var(--card); color:var(--ink-2); border:1px solid var(--border); border-radius:8px; padding:7px 12px; font:inherit; font-size:.82rem; cursor:pointer}
+  .theme-btn:hover{color:var(--ink)}
+  section{margin-top:34px}
+  h2{font-size:1.05rem; margin:0 0 2px; letter-spacing:-0.01em}
+  .note{color:var(--ink-2); font-size:.86rem; margin:0 0 16px; max-width:76ch}
+  .callout{background:var(--card); border:1px solid var(--border); border-left:3px solid var(--l1); border-radius:10px; padding:14px 16px; margin-top:16px; font-size:.9rem; color:var(--ink-2); max-width:80ch}
+  .callout.warn{border-left-color:var(--without)}
+  .callout b{color:var(--ink)}
+  .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin-top:22px}
+  .tile{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 18px 16px}
+  .tile .k{font-size:1.9rem; font-weight:650; letter-spacing:-0.03em; line-height:1.05}
+  .tile .k.good{color:var(--good)} .tile .k.bad{color:var(--bad)}
+  .tile .lbl{font-size:.82rem; color:var(--ink-2); margin-top:6px}
+  .tile .foot{font-size:.74rem; color:var(--muted); margin-top:8px}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 16px 8px}
+  .legend{display:flex; gap:18px; align-items:center; font-size:.82rem; color:var(--ink-2); margin:2px 0 6px 4px; flex-wrap:wrap}
+  .legend .sw{display:inline-block; width:14px; height:3px; border-radius:2px; margin-right:6px; vertical-align:3px}
+  .legend .sq{display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px}
+  .chart-scroll{overflow-x:auto}
+  svg{display:block; max-width:100%; height:auto}
+  .tick{fill:var(--muted); font-size:11px}
+  .axlabel{fill:var(--ink-2); font-size:12px}
+  .barval{fill:var(--ink); font-size:11px; font-weight:600; font-variant-numeric:tabular-nums}
+  .grp{fill:var(--ink-2); font-size:12px}
+  .endlab{font-size:11px; font-weight:600; font-variant-numeric:tabular-nums}
+  table{border-collapse:collapse; width:100%; font-size:.82rem; margin-top:8px}
+  th,td{text-align:right; padding:7px 9px; border-bottom:1px solid var(--grid); font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left; font-variant-numeric:normal}
+  thead th{color:var(--ink-2); font-weight:600; border-bottom:1px solid var(--axis)}
+  td.save{color:var(--good); font-weight:600}
+  td.cost{color:var(--bad); font-weight:600}
+  .caveats{font-size:.84rem; color:var(--ink-2); max-width:82ch}
+  .caveats li{margin:6px 0}
+  .tooltip{position:fixed; pointer-events:none; opacity:0; transition:opacity .08s; background:var(--ink); color:var(--surface-1); font-size:.78rem; padding:6px 9px; border-radius:7px; white-space:nowrap; z-index:9; transform:translate(-50%,-130%); font-variant-numeric:tabular-nums}
+  @media print{
+    @page{ margin:14mm 12mm; }
+    :root{ --plane:#ffffff; --card:#ffffff; }
+    body{ background:#fff; }
+    .wrap{ max-width:100%; padding:0; }
+    .theme-btn{ display:none; }
+    section{ margin-top:20px; }
+    header, .callout, .card, section, .tiles, table, .tile{ break-inside:avoid; page-break-inside:avoid; }
+    h2{ break-after:avoid; }
+    .chart-scroll{ overflow:visible; }
+    .tiles{ page-break-inside:avoid; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Sutra Benchmark — Consolidated</h1>
+      <p class="sub">Same A/B (index vs grep) across three repos spanning 40× in size. What the first run implied, and what two real repos actually showed.</p>
+      <p class="meta">2026-07-08 · sutra 1.9k · frappe 13.4k · dify 75k symbols · claude-sonnet · 5 tickets each · checkouts aligned to indexed commits</p>
+    </div>
+    <button class="theme-btn" id="themeBtn">◐ Theme</button>
+  </header>
+
+  <div class="tiles">
+    <div class="tile"><div class="k good">−18→−49%</div><div class="lbl">fewer <b>agentic turns</b> — grows with repo size</div><div class="foot">the cleanest, monotonic signal</div></div>
+    <div class="tile"><div class="k good">+10→−46%</div><div class="lbl"><b>wall-clock</b> — penalty on tiny repo → big win on large</div><div class="foot">flips and widens with size</div></div>
+    <div class="tile"><div class="k bad">+28 / +56%</div><div class="lbl">more <b>fresh tokens</b> on real repos</div><div class="foot">the −54% token "win" did NOT generalize</div></div>
+    <div class="tile"><div class="k good">= ×3</div><div class="lbl"><b>equal quality</b> on every run</div><div class="foot">no correctness traded for speed</div></div>
+  </div>
+
+  <div class="callout warn">
+    <b>Corrected conclusion:</b> the first run (tiny self-repo) suggested Sutra saves ~54% of tokens. Two larger real
+    repos did not reproduce that — Sutra used <b>more</b> tokens on both. The honest takeaway: <b>Sutra is a speed-and-steps
+    optimization, not a token optimization.</b> It reliably cuts wall-clock and agentic turns on real codebases (and the win grows
+    with size), but its dense semantic-search payloads cost more tokens than terse grep output.
+  </div>
+
+  <section>
+    <h2>Scaling: Sutra's effect as the repo grows</h2>
+    <p class="note">Each line = one metric's % change vs grep-only, across the three repo sizes. <b>Below the zero line = Sutra better.</b> Turns and wall-clock trend steadily down (wins grow); fresh tokens jump from a −54% win on the tiny repo to a cost on both real ones.</p>
+    <div class="card">
+      <div class="legend">
+        <span><span class="sw" style="background:var(--l1)"></span>Wall-clock</span>
+        <span><span class="sw" style="background:var(--l2)"></span>Assistant turns</span>
+        <span><span class="sw" style="background:var(--l3)"></span>Tool calls</span>
+        <span><span class="sw" style="background:var(--l4)"></span>Fresh tokens</span>
+      </div>
+      <div class="chart-scroll"><svg id="c_scale" viewBox="0 0 680 380" role="img" aria-label="Sutra effect scaling by repo size"></svg></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The clean wins — wall-clock &amp; turns (per repo)</h2>
+    <p class="note">The two metrics that hold up monotonically. On both real repos Sutra roughly cut wall-clock by a third to a half, and did it in far fewer turns.</p>
+    <div class="card">
+      <div class="legend"><span><span class="sq" style="background:var(--with)"></span>WITH Sutra</span><span><span class="sq" style="background:var(--without)"></span>WITHOUT Sutra</span></div>
+      <div class="chart-scroll"><svg id="c_dur" viewBox="0 0 680 280" role="img" aria-label="Wall-clock per repo"></svg></div>
+      <div class="chart-scroll" style="margin-top:8px"><svg id="c_turns" viewBox="0 0 680 280" role="img" aria-label="Turns per repo"></svg></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The honest cost — fresh tokens (per repo)</h2>
+    <p class="note">Only the tiny self-repo (left) favored Sutra on tokens, because the grep agent read whole files there. On both real repos Sutra's search payloads cost more.</p>
+    <div class="card">
+      <div class="legend"><span><span class="sq" style="background:var(--with)"></span>WITH Sutra</span><span><span class="sq" style="background:var(--without)"></span>WITHOUT Sutra</span></div>
+      <div class="chart-scroll"><svg id="c_tok" viewBox="0 0 680 280" role="img" aria-label="Fresh tokens per repo"></svg></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Billed cost — the actual bill (per repo)</h2>
+    <p class="note">The real money, not the "total context" work metric. Each agent's exact per-turn token usage priced at Sonnet-5 standard rates ($3/$15 per MTok; cache reads 0.1×, cache writes 1.25×). <b>Sutra cost more on all three repos</b> — its dense search payloads generate premium-priced cache-writes, and loading the MCP tools inflates every turn's cached context.</p>
+    <div class="card">
+      <div class="legend"><span><span class="sq" style="background:var(--with)"></span>WITH Sutra</span><span><span class="sq" style="background:var(--without)"></span>WITHOUT Sutra</span></div>
+      <div class="chart-scroll"><svg id="c_cost" viewBox="0 0 680 280" role="img" aria-label="Billed cost per repo"></svg></div>
+    </div>
+    <p class="note" style="margin-top:10px"><b>Note:</b> a separate definitive run (6 fresh agents, fresh tickets — see <code>FINAL_REPORT.md</code>) put the aggregate cost at <b>$7.26 WITH vs $4.35 WITHOUT (+67%)</b>, confirming the direction here.</p>
+  </section>
+
+  <section>
+    <h2>All measured figures</h2>
+    <div class="chart-scroll">
+      <table>
+        <thead><tr><th>Metric</th>
+          <th>sutra A</th><th>sutra B</th><th>eff</th>
+          <th>frappe A</th><th>frappe B</th><th>eff</th>
+          <th>dify A</th><th>dify B</th><th>eff</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:10px">A = WITH Sutra, B = WITHOUT. "eff" = Sutra effect (green = used less, red = used more).</p>
+  </section>
+
+  <section>
+    <h2>Caveats</h2>
+    <ul class="caveats">
+      <li><b>n = 1 per repo</b> — directional, not statistical. The fact that only <i>turns</i> and <i>wall-clock</i> are strictly monotonic (tool calls, total-context and tokens bounce in magnitude) is itself the sign that per-run variance is real. A defensible claim needs ≥3 trials per repo with medians.</li>
+      <li><b>Earlier "monotonic across the board" was overstated</b> — that read came from only two points (sutra→dify). The frappe midpoint shows tool-calls and total-context are directionally consistent but not clean lines.</li>
+      <li><b>Equal-quality is qualitative</b> — both agents were independently correct and deep; on two runs each side found a real bug the other missed. No separate grader scored them.</li>
+      <li><b>Token lenses differ</b> — <code>subagent_tokens</code> weights cache opaquely; fresh (non-cache input+output) best reflects model work.</li>
+      <li><b>"Total context" is a work metric, NOT a bill.</b> It sums every token the model re-read each turn (mostly cheap cache reads at 0.1×), so its "sutra −43%" reading does <b>not</b> mean cost savings. On the actual billed-cost chart above, Sutra costs <b>more</b> on all three repos — cache reads are 90% off, while Sutra's dense payloads create premium 1.25× cache-writes.</li>
+      <li><b>frappe source</b> was a fresh shallow clone in the scratchpad aligned to the indexed commit; the off-limits <code>first-bench</code> copy was never touched (verified from transcripts).</li>
+    </ul>
+  </section>
+</div>
+
+<div class="tooltip" id="tt"></div>
+
+<script>
+const REPOS=['sutra','frappe','dify'];
+const SYM={sutra:'1.9k',frappe:'13.4k',dify:'75k'};
+const DATA={
+  sutra:{ with:{reported:73480,fresh:50145,total:1668789,tools:22,turns:32,reads:11,dur:110.2},
+          without:{reported:79538,fresh:110026,total:2201018,tools:28,turns:39,reads:15,dur:100.1}},
+  frappe:{with:{reported:89533,fresh:46569,total:2942652,tools:35,turns:49,reads:20,dur:170.3},
+          without:{reported:71629,fresh:29872,total:3387222,tools:43,turns:70,reads:23,dur:247.0}},
+  dify:{  with:{reported:126881,fresh:66739,total:4507149,tools:40,turns:56,reads:13,dur:232.6},
+          without:{reported:115465,fresh:51929,total:7978895,tools:75,turns:109,reads:19,dur:429.6}},
+};
+const EFF={ // sutra effect % by metric across [sutra,frappe,dify]
+  dur:[10.1,-31.1,-45.9], turns:[-17.9,-30.0,-48.6], tools:[-21.4,-18.6,-46.7], fresh:[-54.4,55.9,28.5],
+};
+const C=getComputedStyle(document.documentElement); const col=n=>C.getPropertyValue(n).trim();
+const tt=document.getElementById('tt');
+const showTip=(e,h)=>{tt.innerHTML=h;tt.style.left=e.clientX+'px';tt.style.top=e.clientY+'px';tt.style.opacity=1;};
+const hideTip=()=>tt.style.opacity=0;
+const fmt=n=>n.toLocaleString('en-US');
+const NS='http://www.w3.org/2000/svg';
+const mk=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+// multi-series line chart, signed y with zero reference
+function lineChart(id, series, xlabels, opts){
+  const svg=document.getElementById(id); while(svg.firstChild)svg.removeChild(svg.firstChild);
+  const W=680,H=380,m={t:18,r:96,b:52,l:52},iw=W-m.l-m.r,ih=H-m.t-m.b;
+  const {min,max}=opts, yr=max-min;
+  const Y=v=>m.t+ih-((v-min)/yr)*ih;
+  const X=i=>m.l+ (xlabels.length===1?iw/2 : (i/(xlabels.length-1))*iw);
+  opts.ticks.forEach(tv=>{const y=Y(tv);
+    svg.appendChild(mk('line',{x1:m.l,x2:m.l+iw,y1:y,y2:y,stroke:tv===0?col('--axis'):col('--grid'),'stroke-width':tv===0?1.5:1}));
+    const tx=mk('text',{x:m.l-8,y:y+4,'text-anchor':'end',class:'tick'});tx.textContent=(tv>0?'+':'')+tv+'%';svg.appendChild(tx);});
+  // "Sutra better" band label under zero
+  const zlab=mk('text',{x:m.l+4,y:Y(0)+15,class:'tick',style:'font-size:10px;fill:'+col('--good')});
+  zlab.textContent='▼ below 0 = Sutra better'; svg.appendChild(zlab);
+  xlabels.forEach((lb,i)=>{const x=X(i);
+    const t1=mk('text',{x,y:H-m.b+22,'text-anchor':'middle',class:'grp'});t1.textContent=lb.name;svg.appendChild(t1);
+    const t2=mk('text',{x,y:H-m.b+38,'text-anchor':'middle',class:'tick'});t2.textContent=lb.sym+' sym';svg.appendChild(t2);});
+  const endlabs=[];
+  series.forEach(s=>{const c=col(s.color);
+    let d='';s.vals.forEach((v,i)=>{d+=(i?'L':'M')+X(i)+' '+Y(v)+' ';});
+    svg.appendChild(mk('path',{d,fill:'none',stroke:c,'stroke-width':2.5,'stroke-linejoin':'round','stroke-linecap':'round'}));
+    s.vals.forEach((v,i)=>{const cx=X(i),cy=Y(v);
+      svg.appendChild(mk('circle',{cx,cy,r:4.5,fill:col('--surface-1'),stroke:c,'stroke-width':2.5}));
+      const hit=mk('circle',{cx,cy,r:12,fill:'transparent'});hit.style.cursor='pointer';
+      hit.addEventListener('mousemove',e=>showTip(e,`<b>${s.name}</b> · ${xlabels[i].name}<br>Sutra ${v<=0?'':'+'}${v}% ${v<=0?'(less)':'(more)'}`));
+      hit.addEventListener('mouseleave',hideTip);svg.appendChild(hit);});
+    endlabs.push({y:Y(s.vals[s.vals.length-1]), name:s.name, val:s.vals[s.vals.length-1], color:c});});
+  // vertical anti-collision for end labels: sort by y, enforce min gap
+  const lx=X(xlabels.length-1)+8, GAP=13;
+  endlabs.sort((a,b)=>a.y-b.y);
+  for(let i=1;i<endlabs.length;i++){ if(endlabs[i].y-endlabs[i-1].y<GAP) endlabs[i].y=endlabs[i-1].y+GAP; }
+  endlabs.forEach(l=>{const el=mk('text',{x:lx,y:l.y+4,class:'endlab',fill:l.color});
+    el.textContent=`${l.val>0?'+':''}${l.val}%`; svg.appendChild(el);});
+}
+
+// grouped vertical bars: groups over repos, with/without pair
+function groupedBars(id, groups, opts){
+  const svg=document.getElementById(id); while(svg.firstChild)svg.removeChild(svg.firstChild);
+  const W=680,H=opts.H||280,m={t:16,r:14,b:44,l:60},iw=W-m.l-m.r,ih=H-m.t-m.b;
+  opts.ticks.forEach(tv=>{const y=m.t+ih-(tv/opts.max)*ih;
+    svg.appendChild(mk('line',{x1:m.l,x2:m.l+iw,y1:y,y2:y,stroke:col('--grid'),'stroke-width':1}));
+    const tx=mk('text',{x:m.l-8,y:y+4,'text-anchor':'end',class:'tick'});tx.textContent=opts.tickfmt(tv);svg.appendChild(tx);});
+  svg.appendChild(mk('line',{x1:m.l,x2:m.l+iw,y1:m.t+ih,y2:m.t+ih,stroke:col('--axis'),'stroke-width':1}));
+  const gw=iw/groups.length, barW=Math.min(60,(gw-40)/2);
+  groups.forEach((g,i)=>{const gx=m.l+i*gw+gw/2;
+    [['with',col('--with')],['without',col('--without')]].forEach((p,j)=>{
+      const val=g.vals[p[0]], h=(val/opts.max)*ih, x=gx-(barW+3)+j*(barW+3), y=m.t+ih-h;
+      const r=mk('rect',{x,y,width:barW,height:Math.max(h,0.5),rx:4,ry:4,fill:p[1]}); r.style.cursor='pointer';
+      r.addEventListener('mousemove',e=>showTip(e,`<b>${g.label}</b> · ${p[0]==='with'?'WITH':'WITHOUT'} Sutra<br>${opts.tipfmt(val)}`));
+      r.addEventListener('mouseleave',hideTip); svg.appendChild(r);
+      const vt=mk('text',{x:x+barW/2,y:y-6,'text-anchor':'middle',class:'barval'});vt.textContent=opts.barfmt(val);svg.appendChild(vt);});
+    const gl=mk('text',{x:gx,y:H-m.b+20,'text-anchor':'middle',class:'grp'});gl.textContent=g.label;svg.appendChild(gl);
+    const gl2=mk('text',{x:gx,y:H-m.b+36,'text-anchor':'middle',class:'tick'});gl2.textContent=g.sym+' sym';svg.appendChild(gl2);});
+  if(opts.title){const tt2=mk('text',{x:m.l,y:12,class:'axlabel',style:'font-weight:600'});tt2.textContent=opts.title;svg.appendChild(tt2);}
+}
+
+function render(){
+  lineChart('c_scale',[
+    {name:'Wall-clock', color:'--l1', vals:EFF.dur},
+    {name:'Turns', color:'--l2', vals:EFF.turns},
+    {name:'Tool calls', color:'--l3', vals:EFF.tools},
+    {name:'Fresh tokens', color:'--l4', vals:EFF.fresh},
+  ], REPOS.map(r=>({name:r, sym:SYM[r]})), {min:-60,max:60,ticks:[-60,-40,-20,0,20,40,60]});
+
+  groupedBars('c_dur', REPOS.map(r=>({label:r,sym:SYM[r],vals:{with:DATA[r].with.dur,without:DATA[r].without.dur}})),
+    {max:450, ticks:[0,150,300,450], tickfmt:v=>v+'s', barfmt:v=>v.toFixed(0)+'s', tipfmt:v=>v.toFixed(1)+' s', title:'Wall-clock (seconds)'});
+  groupedBars('c_turns', REPOS.map(r=>({label:r,sym:SYM[r],vals:{with:DATA[r].with.turns,without:DATA[r].without.turns}})),
+    {max:120, ticks:[0,30,60,90,120], tickfmt:v=>v, barfmt:v=>v, tipfmt:v=>v+' turns', title:'Assistant turns'});
+  groupedBars('c_tok', REPOS.map(r=>({label:r,sym:SYM[r],vals:{with:DATA[r].with.fresh,without:DATA[r].without.fresh}})),
+    {max:120000, ticks:[0,30000,60000,90000,120000], tickfmt:v=>v/1000+'k', barfmt:v=>(v/1000).toFixed(0)+'k', tipfmt:v=>fmt(v)+' tokens', title:'Fresh tokens (input+output, non-cache)'});
+  // billed cost at Sonnet-5 standard rates ($/run), from each agent's exact token breakdown
+  const COST={sutra:{with:2.05,without:2.03}, frappe:{with:2.57,without:1.55}, dify:{with:4.09,without:3.65}};
+  groupedBars('c_cost', REPOS.map(r=>({label:r,sym:SYM[r],vals:{with:COST[r].with,without:COST[r].without}})),
+    {max:5, ticks:[0,1,2,3,4,5], tickfmt:v=>'$'+v, barfmt:v=>'$'+v.toFixed(2), tipfmt:v=>'$'+v.toFixed(2)+' billed', title:'Billed cost per run (USD, Sonnet-5 standard rates)'});
+}
+
+// table
+const METRICS=[
+  ['Reported tokens','reported',0],['Fresh tokens','fresh',0],['Total context','total',0],
+  ['Tool calls','tools',0],['Assistant turns','turns',0],['Files read','reads',0],['Wall-clock (s)','dur',1],
+];
+function effClass(a,b,invert){ // less is better for all these; sutra used less => save
+  return a<b ? 'save':'cost';
+}
+const tb=document.getElementById('tbody');
+METRICS.forEach(([label,key,dec])=>{
+  const tr=document.createElement('tr'); let cells=`<td>${label}</td>`;
+  REPOS.forEach(r=>{const a=DATA[r].with[key], b=DATA[r].without[key];
+    const e=((a-b)/b*100), cls=a<b?'save':'cost';
+    const av=dec?a.toFixed(1):fmt(a), bv=dec?b.toFixed(1):fmt(b);
+    cells+=`<td>${av}</td><td>${bv}</td><td class="${cls}">${e>0?'+':''}${e.toFixed(0)}%</td>`;});
+  tr.innerHTML=cells; tb.appendChild(tr);
+});
+
+render();
+document.getElementById('themeBtn').addEventListener('click',()=>{const root=document.documentElement;const cur=root.getAttribute('data-theme');
+  root.setAttribute('data-theme', cur==='dark'?'light':cur==='light'?'dark':(matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+  setTimeout(render,20);});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(!document.documentElement.getAttribute('data-theme'))render();});
+</script>

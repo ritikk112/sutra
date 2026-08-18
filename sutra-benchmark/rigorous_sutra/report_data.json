@@ -1,0 +1,494 @@
+{
+ "tids": [
+  "SL1",
+  "SL2",
+  "SL3",
+  "SS1",
+  "SS2",
+  "SS3"
+ ],
+ "arms": [
+  "SUTRA_ONLY",
+  "GREP_ONLY",
+  "BOTH"
+ ],
+ "per_cell": {
+  "SL1|SUTRA_ONLY": {
+   "cost": 0.3204,
+   "cost_rng": [
+    0.2504,
+    0.4739
+   ],
+   "turns": 11.5,
+   "score": 4.0,
+   "scores": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 3.0,
+   "grep": 0.0
+  },
+  "SL1|GREP_ONLY": {
+   "cost": 0.2346,
+   "cost_rng": [
+    0.2014,
+    0.2534
+   ],
+   "turns": 9.5,
+   "score": 4.0,
+   "scores": [
+    3,
+    3,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 0.0,
+   "grep": 2.0
+  },
+  "SL1|BOTH": {
+   "cost": 0.1906,
+   "cost_rng": [
+    0.1552,
+    0.2324
+   ],
+   "turns": 7.0,
+   "score": 4.0,
+   "scores": [
+    3,
+    3,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 0.0,
+   "grep": 1.5
+  },
+  "SL2|SUTRA_ONLY": {
+   "cost": 0.4789,
+   "cost_rng": [
+    0.2843,
+    0.6612
+   ],
+   "turns": 19.0,
+   "score": 3.5,
+   "scores": [
+    3,
+    3,
+    3,
+    4,
+    4,
+    4
+   ],
+   "sutra": 6.5,
+   "grep": 0.0
+  },
+  "SL2|GREP_ONLY": {
+   "cost": 0.2793,
+   "cost_rng": [
+    0.2631,
+    0.3598
+   ],
+   "turns": 12.5,
+   "score": 4.0,
+   "scores": [
+    2,
+    3,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 0.0,
+   "grep": 2.0
+  },
+  "SL2|BOTH": {
+   "cost": 0.2841,
+   "cost_rng": [
+    0.2727,
+    0.3265
+   ],
+   "turns": 13.0,
+   "score": 4.0,
+   "scores": [
+    2,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 0.0,
+   "grep": 3.5
+  },
+  "SL3|SUTRA_ONLY": {
+   "cost": 0.3251,
+   "cost_rng": [
+    0.2425,
+    0.5483
+   ],
+   "turns": 12.5,
+   "score": 4.0,
+   "scores": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 4.5,
+   "grep": 0.0
+  },
+  "SL3|GREP_ONLY": {
+   "cost": 0.2637,
+   "cost_rng": [
+    0.2506,
+    0.2818
+   ],
+   "turns": 8.5,
+   "score": 4.0,
+   "scores": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 0.0,
+   "grep": 1.5
+  },
+  "SL3|BOTH": {
+   "cost": 0.2596,
+   "cost_rng": [
+    0.2481,
+    0.2881
+   ],
+   "turns": 7.5,
+   "score": 4.0,
+   "scores": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 0.0,
+   "grep": 1.0
+  },
+  "SS1|SUTRA_ONLY": {
+   "cost": 0.3605,
+   "cost_rng": [
+    0.3255,
+    0.4811
+   ],
+   "turns": 14.0,
+   "score": 4.0,
+   "scores": [
+    3,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 4.5,
+   "grep": 0.0
+  },
+  "SS1|GREP_ONLY": {
+   "cost": 0.2578,
+   "cost_rng": [
+    0.2353,
+    0.2944
+   ],
+   "turns": 11.0,
+   "score": 4.0,
+   "scores": [
+    3,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 0.0,
+   "grep": 3.0
+  },
+  "SS1|BOTH": {
+   "cost": 0.2726,
+   "cost_rng": [
+    0.1843,
+    0.3067
+   ],
+   "turns": 10.0,
+   "score": 4.0,
+   "scores": [
+    3,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 0.0,
+   "grep": 2.5
+  },
+  "SS2|SUTRA_ONLY": {
+   "cost": 0.5198,
+   "cost_rng": [
+    0.4535,
+    0.7711
+   ],
+   "turns": 19.0,
+   "score": 3.0,
+   "scores": [
+    3,
+    3,
+    3,
+    3,
+    4,
+    4
+   ],
+   "sutra": 6.0,
+   "grep": 0.0
+  },
+  "SS2|GREP_ONLY": {
+   "cost": 0.3896,
+   "cost_rng": [
+    0.3103,
+    0.4673
+   ],
+   "turns": 18.5,
+   "score": 3.0,
+   "scores": [
+    3,
+    3,
+    3,
+    3,
+    4,
+    4
+   ],
+   "sutra": 0.0,
+   "grep": 8.5
+  },
+  "SS2|BOTH": {
+   "cost": 0.3102,
+   "cost_rng": [
+    0.2834,
+    0.4291
+   ],
+   "turns": 16.0,
+   "score": 3.0,
+   "scores": [
+    2,
+    3,
+    3,
+    3,
+    4,
+    4
+   ],
+   "sutra": 0.0,
+   "grep": 6.5
+  },
+  "SS3|SUTRA_ONLY": {
+   "cost": 0.6097,
+   "cost_rng": [
+    0.498,
+    0.9806
+   ],
+   "turns": 23.0,
+   "score": 3.0,
+   "scores": [
+    3,
+    3,
+    3,
+    3,
+    4,
+    4
+   ],
+   "sutra": 8.0,
+   "grep": 0.0
+  },
+  "SS3|GREP_ONLY": {
+   "cost": 0.2588,
+   "cost_rng": [
+    0.2332,
+    0.3087
+   ],
+   "turns": 12.0,
+   "score": 4.0,
+   "scores": [
+    3,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 0.0,
+   "grep": 3.0
+  },
+  "SS3|BOTH": {
+   "cost": 0.2772,
+   "cost_rng": [
+    0.2245,
+    0.3064
+   ],
+   "turns": 13.0,
+   "score": 4.0,
+   "scores": [
+    3,
+    4,
+    4,
+    4,
+    4,
+    4
+   ],
+   "sutra": 0.0,
+   "grep": 3.0
+  }
+ },
+ "per_arm": {
+  "SUTRA_ONLY": {
+   "cost_med": 0.4709,
+   "cost_rng": [
+    0.2425,
+    0.9806
+   ],
+   "cost_total": 16.879,
+   "score_mean": 3.67,
+   "score_med": 4.0,
+   "score_dist": {
+    "3": 12,
+    "4": 24
+   },
+   "turns_med": 16.0,
+   "sutra_used": 36,
+   "grep_used": 0,
+   "n": 36
+  },
+  "GREP_ONLY": {
+   "cost_med": 0.269,
+   "cost_rng": [
+    0.2014,
+    0.4673
+   ],
+   "cost_total": 10.239,
+   "score_mean": 3.69,
+   "score_med": 4.0,
+   "score_dist": {
+    "2": 1,
+    "3": 9,
+    "4": 26
+   },
+   "turns_med": 11.0,
+   "sutra_used": 0,
+   "grep_used": 36,
+   "n": 36
+  },
+  "BOTH": {
+   "cost_med": 0.2765,
+   "cost_rng": [
+    0.1552,
+    0.4291
+   ],
+   "cost_total": 9.741,
+   "score_mean": 3.69,
+   "score_med": 4.0,
+   "score_dist": {
+    "2": 2,
+    "3": 7,
+    "4": 27
+   },
+   "turns_med": 11.5,
+   "sutra_used": 0,
+   "grep_used": 36,
+   "n": 36
+  }
+ },
+ "per_class": {
+  "lexical|SUTRA_ONLY": {
+   "cost_med": 0.3578,
+   "cost_rng": [
+    0.2425,
+    0.6612
+   ],
+   "score_med": 4.0,
+   "score_dist": {
+    "3": 3,
+    "4": 15
+   }
+  },
+  "lexical|GREP_ONLY": {
+   "cost_med": 0.2621,
+   "cost_rng": [
+    0.2014,
+    0.3598
+   ],
+   "score_med": 4.0,
+   "score_dist": {
+    "2": 1,
+    "3": 3,
+    "4": 14
+   }
+  },
+  "lexical|BOTH": {
+   "cost_med": 0.2596,
+   "cost_rng": [
+    0.1552,
+    0.3265
+   ],
+   "score_med": 4.0,
+   "score_dist": {
+    "2": 1,
+    "3": 2,
+    "4": 15
+   }
+  },
+  "semantic|SUTRA_ONLY": {
+   "cost_med": 0.509,
+   "cost_rng": [
+    0.3255,
+    0.9806
+   ],
+   "score_med": 3.5,
+   "score_dist": {
+    "3": 9,
+    "4": 9
+   }
+  },
+  "semantic|GREP_ONLY": {
+   "cost_med": 0.2895,
+   "cost_rng": [
+    0.2332,
+    0.4673
+   ],
+   "score_med": 4.0,
+   "score_dist": {
+    "3": 6,
+    "4": 12
+   }
+  },
+  "semantic|BOTH": {
+   "cost_med": 0.2883,
+   "cost_rng": [
+    0.1843,
+    0.4291
+   ],
+   "score_med": 4.0,
+   "score_dist": {
+    "2": 1,
+    "3": 5,
+    "4": 12
+   }
+  }
+ }
+}

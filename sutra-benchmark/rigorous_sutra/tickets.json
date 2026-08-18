@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "protocol": "3-arm (SUTRA_ONLY / GREP_ONLY / BOTH) x 1 repo (sutra) x 6 tickets x 6 trials",
+    "repo": {"name": "sutra", "sutra_repo": "sutra", "commit": "6a1a33a0d44616336511adeebbcecd42e60192fc", "symbols": 1896, "embeddings": 1715, "checkout": "/tmp/claude-1000/-home-ritik-Desktop-sutra/5d5da943-8e2c-467b-8fbe-07a9b7f411aa/scratchpad/sutra_src"},
+    "keyword_check": "grep -rIiw --include=*.py over the pinned worktree. registered_kw = the word a naive dev would grep from the ticket; LEXICAL: registered_kw present & lands near the answer. SEMANTIC: the symptom words a dev would grep from the described behavior are ~absent in code.",
+    "gold_authored_by": "overseer via scout workflow wf_519b78dc (grep + sutra index cross-checked); every cited file:line verified to exist at 6a1a33a; every gold fact confirmed reachable in the sutra index (pipelines/full_index.py main() is indexed=true, so the LSP opt-in is reachable via graph traversal — no external-package gap like dify DL3)."
+  },
+  "sutra": [
+    {"id":"SL1","class":"lexical","registered_kw":"rerank","kw_count":13,
+     "text":"Trace how sutra re-scores its initial search candidates with a second-pass reranker model and applies the final top-k cutoff, identifying where candidates below the cutoff are dropped."},
+    {"id":"SL2","class":"lexical","registered_kw":"moniker","kw_count":199,
+     "text":"Trace how sutra builds the stable identifier (the \"moniker\") it uses to refer to a code symbol across re-indexes, and what disambiguates two symbols that share the same name."},
+    {"id":"SL3","class":"lexical","registered_kw":"incremental","kw_count":28,
+     "text":"Trace how sutra performs an incremental re-index of only the files that changed between two commits: how it computes the changed-file set and how it treats added vs modified vs deleted files."},
+    {"id":"SS1","class":"semantic","registered_kw":"combine","kw_count":0,"code_token":"rrf_fuse / fusion (reciprocal rank fusion)","semantic_strength":"strong",
+     "text":"Sutra runs several independent searches for one query — an exact-name lookup, a keyword search, and a vector-similarity search — each returning its own ranked list. Trace how those separate ranked lists get combined into the single ordering the caller finally sees."},
+    {"id":"SS2","class":"semantic","registered_kw":"isolation","kw_count":0,"code_token":"registry.get / ServingUnit / per-snapshot pipeline","semantic_strength":"strong",
+     "text":"A single sutra server has many repositories indexed at once. Trace what guarantees that a search asking about repository A can never return a symbol that actually belongs to repository B."},
+    {"id":"SS3","class":"semantic","registered_kw":"launch","kw_count":1,"code_token":"LspResolver / pyright-langserver subprocess.Popen / Indexer.index resolve kickoff","semantic_strength":"moderate (concept reachable via the graph but not via a naive symptom grep; 'resolver' is present but is not a symptom word — symptom words launch/spawn/'language server'~0)",
+     "text":"Sutra needs to link a function call in one file to where that function is actually defined in a different file. Some calls are ambiguous and can't be linked by simple heuristics, so during indexing sutra brings in a heavier external program to work them out. Trace when that external program is started and how that step is turned on."}
+  ]
+}

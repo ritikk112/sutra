@@ -1,0 +1,238 @@
+<meta charset="utf-8">
+<title>Sutra index vs grep — single-repo A/B/C (n=6)</title>
+<style>
+  :root{
+    --ink:#14181c; --muted:#5b6570; --surface:#ffffff; --panel:#f6f8fa; --line:#e3e8ee;
+    --grep:#2a78d6; --both:#1baf7a; --sutra:#eb6834; --shadow:0 1px 2px rgba(20,24,28,.06),0 4px 16px rgba(20,24,28,.06);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --ink:#e8eaed; --muted:#9aa4af; --surface:#0e1216; --panel:#161b21; --line:#28303a; --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.35); }
+  }
+  :root[data-theme="light"]{ --ink:#14181c; --muted:#5b6570; --surface:#ffffff; --panel:#f6f8fa; --line:#e3e8ee; --shadow:0 1px 2px rgba(20,24,28,.06),0 4px 16px rgba(20,24,28,.06); }
+  :root[data-theme="dark"]{ --ink:#e8eaed; --muted:#9aa4af; --surface:#0e1216; --panel:#161b21; --line:#28303a; --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.35); }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1060px;margin:0 auto;padding:32px 22px 72px}
+  header h1{font-size:26px;line-height:1.2;margin:0 0 6px;letter-spacing:-.01em}
+  header p.sub{color:var(--muted);margin:0 0 4px;font-size:15px}
+  .tag{display:inline-block;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px;margin:8px 6px 0 0}
+  .grid{display:grid;gap:16px}
+  .tiles{grid-template-columns:repeat(3,1fr);margin:26px 0 8px}
+  @media(max-width:720px){.tiles{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px;box-shadow:var(--shadow)}
+  .tile .big{font-size:30px;font-weight:680;letter-spacing:-.02em;line-height:1.05}
+  .tile .lbl{color:var(--muted);font-size:13px;margin-top:6px}
+  .tile .sub{font-size:12.5px;margin-top:8px;color:var(--muted)}
+  section{margin-top:30px}
+  section h2{font-size:16.5px;margin:0 0 3px;letter-spacing:-.01em}
+  section p.note{color:var(--muted);font-size:13.5px;margin:0 0 14px}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:2px 0 12px;font-size:13px;color:var(--muted)}
+  .legend b{display:inline-flex;align-items:center;gap:7px;font-weight:500;color:var(--ink)}
+  .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .chart{width:100%;overflow-x:auto}
+  svg{display:block;max-width:100%}
+  table{border-collapse:collapse;width:100%;font-size:13px;margin-top:4px}
+  th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  thead th{color:var(--muted);font-weight:600;border-bottom:1.5px solid var(--line)}
+  td.arm{font-weight:600}
+  .foot{color:var(--muted);font-size:12.5px;margin-top:34px;border-top:1px solid var(--line);padding-top:16px}
+  .foot code{background:var(--panel);padding:1px 5px;border-radius:5px;border:1px solid var(--line)}
+  .callout{border-left:3px solid var(--sutra);background:var(--panel);border-radius:0 12px 12px 0;padding:14px 18px;margin-top:8px}
+  .callout .k{font-size:22px;font-weight:680;color:var(--sutra)}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Does the Sutra index beat grep for an AI agent?</h1>
+  <p class="sub">Pre-registered, blind-graded A/B/C benchmark on a single repo — <b>Sutra's own codebase</b> (commit <code>6a1a33a</code>, 1896 symbols).</p>
+  <p class="sub">3 arms · 6 tickets (3 lexical / 3 semantic) · <b>6 trials/cell</b> · 108 solves + 108 blind grades · model <code>claude-sonnet-5</code>.</p>
+  <div>
+    <span class="tag">0 constraint violations</span>
+    <span class="tag">0 fabrications in 108 solves</span>
+    <span class="tag">cost = exact tokens × Sonnet-5 rates</span>
+    <span class="tag">replicates the 2-repo run</span>
+  </div>
+</header>
+
+<div class="grid tiles">
+  <div class="card tile">
+    <div class="big">4 · 4 · 4</div>
+    <div class="lbl">Median blind score (Sutra / grep / both), out of 4</div>
+    <div class="sub">Means 3.67 · 3.69 · 3.69 — statistically identical. No arm found a wrong root cause.</div>
+  </div>
+  <div class="card tile">
+    <div class="big" style="color:var(--sutra)">+75%</div>
+    <div class="lbl">Sutra-only cost vs grep ($0.471 vs $0.269 / run)</div>
+    <div class="sub">Costlier on 6/6 tickets → sign-test p = 0.031. Direction is significant.</div>
+  </div>
+  <div class="card tile">
+    <div class="big">0 / 36</div>
+    <div class="lbl">Times the "both tools" agent chose the index</div>
+    <div class="sub">Every free-choice trial went pure grep → "both" ≈ grep baseline.</div>
+  </div>
+</div>
+
+<section>
+  <h2>Cost per ticket — median with min–max range</h2>
+  <p class="note">Bars = median $/run; whiskers = min–max across the 6 trials. Sutra-only (orange) is highest on every ticket; the gap is widest on the semantic tickets (SS1–SS3), peaking at SS3 where the ranges are fully disjoint.</p>
+  <div class="legend">
+    <b><span class="sw" style="background:var(--grep)"></span>grep-only</b>
+    <b><span class="sw" style="background:var(--both)"></span>both (real user)</b>
+    <b><span class="sw" style="background:var(--sutra)"></span>sutra-only</b>
+  </div>
+  <div class="chart" id="c_cell"></div>
+</section>
+
+<section>
+  <h2>Cost overall — all 6 tickets pooled</h2>
+  <p class="note">Whiskers show the full spread of 36 runs/arm. Pooled ranges overlap (a conservative "magnitude not significant"), yet the per-ticket direction above is unanimous.</p>
+  <div class="chart" id="c_overall"></div>
+</section>
+
+<section>
+  <h2>Answer quality — blind score distribution (36 runs/arm)</h2>
+  <p class="note">Score 4 = correct + a real edge case beyond gold · 3 = correct mechanism · 2 = right area, key fact missing · 0–1 = wrong/fabricated (none occurred). Distributions are near-identical; the index-only arm has slightly fewer 4s, never more.</p>
+  <div class="legend">
+    <b><span class="sw" style="background:#2a78d6"></span>score 4</b>
+    <b><span class="sw" style="background:#7fb0e3"></span>score 3</b>
+    <b><span class="sw" style="background:#cfe0f3"></span>score 2</b>
+  </div>
+  <div class="chart" id="c_qual"></div>
+</section>
+
+<section>
+  <h2>Why "both" ≈ grep</h2>
+  <div class="callout">
+    <div class="k">36 / 36 pure grep</div>
+    Given both grep and the Sutra index and free to choose, the agent made <b>zero</b> <code>sutra_*</code> calls in all 36 trials — on the index tool's <i>own</i> source code. This is more extreme than the earlier 2-repo run (28/36) and is the direct reason the realistic "both" arm is indistinguishable from grep. It reflects agent tool-selection behavior: an agent explicitly told to prefer the index would be a separate experiment.
+  </div>
+</section>
+
+<section>
+  <h2>Full data — per cell (median, n=6)</h2>
+  <div class="chart">
+  <table>
+    <thead><tr><th>Ticket</th><th>Class</th><th>Arm</th><th>Cost $/run</th><th>Range</th><th>Turns</th><th>Score (mean)</th><th>Scores (6 trials)</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  </div>
+</section>
+
+<div class="foot">
+  <b>Method integrity.</b> Arm constraints verified post-hoc from every transcript's tool calls: SUTRA_ONLY used grep 0/36 and the index 36/36; GREP_ONLY used the index 0/36. All 108 solves parsed, all 108 blind-graded, 0 violations, 0 fabrications. Repo pinned to a clean worktree at <code>6a1a33a</code> so all arms saw byte-identical code. Gold authored by an 8-agent overseer workflow cross-checking grep + the index, every <code>file:line</code> re-verified.<br><br>
+  <b>Scope &amp; limits.</b> This measures read-only tracing on a repo already on disk — grep's home turf. It does <i>not</i> test cross-repo search, unfamiliar-codebase onboarding, or discovery when identifier names are unknown (the index's design strengths). One model, one repo, n=6; effect <i>direction</i> is consistent across 3 repos now, magnitudes still carry variance. Full write-up in <code>REPORT.md</code>.
+</div>
+</div>
+
+<script>
+const DATA = {
+  cells: {
+    SL1:{SUTRA_ONLY:[0.3204,0.2504,0.4739],GREP_ONLY:[0.2346,0.2014,0.2534],BOTH:[0.1906,0.1552,0.2324]},
+    SL2:{SUTRA_ONLY:[0.4789,0.2843,0.6612],GREP_ONLY:[0.2793,0.2631,0.3598],BOTH:[0.2841,0.2727,0.3265]},
+    SL3:{SUTRA_ONLY:[0.3251,0.2425,0.5483],GREP_ONLY:[0.2637,0.2506,0.2818],BOTH:[0.2596,0.2481,0.2881]},
+    SS1:{SUTRA_ONLY:[0.3605,0.3255,0.4811],GREP_ONLY:[0.2578,0.2353,0.2944],BOTH:[0.2726,0.1843,0.3067]},
+    SS2:{SUTRA_ONLY:[0.5198,0.4535,0.7711],GREP_ONLY:[0.3896,0.3103,0.4673],BOTH:[0.3102,0.2834,0.4291]},
+    SS3:{SUTRA_ONLY:[0.6097,0.4980,0.9806],GREP_ONLY:[0.2588,0.2332,0.3087],BOTH:[0.2772,0.2245,0.3064]},
+  },
+  overall:{SUTRA_ONLY:[0.4709,0.2425,0.9806],GREP_ONLY:[0.2690,0.2014,0.4673],BOTH:[0.2765,0.1552,0.4291]},
+  qual:{SUTRA_ONLY:{2:0,3:12,4:24},GREP_ONLY:{2:1,3:9,4:26},BOTH:{2:2,3:7,4:27}},
+  turns:{SL1:{SUTRA_ONLY:12,GREP_ONLY:10,BOTH:7},SL2:{SUTRA_ONLY:19,GREP_ONLY:12,BOTH:13},SL3:{SUTRA_ONLY:12,GREP_ONLY:8,BOTH:8},SS1:{SUTRA_ONLY:14,GREP_ONLY:11,BOTH:10},SS2:{SUTRA_ONLY:19,GREP_ONLY:18,BOTH:16},SS3:{SUTRA_ONLY:23,GREP_ONLY:12,BOTH:13}},
+  scores:{SL1:{SUTRA_ONLY:[4,4,4,4,4,4],GREP_ONLY:[3,3,4,4,4,4],BOTH:[3,3,4,4,4,4]},SL2:{SUTRA_ONLY:[3,3,3,4,4,4],GREP_ONLY:[2,3,4,4,4,4],BOTH:[2,4,4,4,4,4]},SL3:{SUTRA_ONLY:[4,4,4,4,4,4],GREP_ONLY:[4,4,4,4,4,4],BOTH:[4,4,4,4,4,4]},SS1:{SUTRA_ONLY:[3,4,4,4,4,4],GREP_ONLY:[3,4,4,4,4,4],BOTH:[3,4,4,4,4,4]},SS2:{SUTRA_ONLY:[3,3,3,3,4,4],GREP_ONLY:[3,3,3,3,4,4],BOTH:[2,3,3,3,4,4]},SS3:{SUTRA_ONLY:[3,3,3,3,4,4],GREP_ONLY:[3,4,4,4,4,4],BOTH:[3,4,4,4,4,4]}},
+};
+const CLASS={SL1:"lexical",SL2:"lexical",SL3:"lexical",SS1:"semantic",SS2:"semantic",SS3:"semantic"};
+const ARMS=["GREP_ONLY","BOTH","SUTRA_ONLY"];
+const COL={GREP_ONLY:"var(--grep)",BOTH:"var(--both)",SUTRA_ONLY:"var(--sutra)"};
+const NAME={GREP_ONLY:"grep",BOTH:"both",SUTRA_ONLY:"sutra"};
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const SVGNS="http://www.w3.org/2000/svg";
+function el(t,a){const e=document.createElementNS(SVGNS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+
+function groupedBars(mount, categories, getTriple, {ymax, h=250, unit="$", fmt=(v)=>"$"+v.toFixed(2)}){
+  const padL=46,padR=12,padT=12,padB=42, gw=Math.max(560, categories.length*116);
+  const W=gw, plotW=W-padL-padR, plotH=h-padT-padB;
+  const svg=el("svg",{viewBox:`0 0 ${W} ${h}`,width:W,height:h,role:"img"});
+  // gridlines + y labels
+  const ticks=5;
+  for(let i=0;i<=ticks;i++){
+    const v=ymax*i/ticks, y=padT+plotH-(v/ymax)*plotH;
+    svg.appendChild(el("line",{x1:padL,y1:y,x2:W-padR,y2:y,stroke:cssv("--line"),"stroke-width":1}));
+    const tx=el("text",{x:padL-8,y:y+4,"text-anchor":"end",fill:cssv("--muted"),"font-size":11});
+    tx.textContent=(unit==="$"?"$":"")+v.toFixed(unit==="$"?2:0); svg.appendChild(tx);
+  }
+  const catW=plotW/categories.length;
+  categories.forEach((cat,ci)=>{
+    const triple=getTriple(cat); // {arm:[med,min,max]}
+    const bw=Math.min(26,(catW-18)/3), gap=(catW-bw*3)/2;
+    ARMS.forEach((arm,ai)=>{
+      const [med,mn,mx]=triple[arm];
+      const x=padL+ci*catW+gap/1.2+ai*bw+ai*3;
+      const y=padT+plotH-(med/ymax)*plotH, bh=(med/ymax)*plotH;
+      const rect=el("rect",{x:x,y:y,width:bw,height:bh,rx:3,fill:COL[arm]});
+      rect.appendChild(el("title",{})).textContent=`${cat} · ${NAME[arm]}: median ${fmt(med)}  [${fmt(mn)}–${fmt(mx)}]`;
+      svg.appendChild(rect);
+      // whisker min-max
+      const cx=x+bw/2, ymn=padT+plotH-(mn/ymax)*plotH, ymx=padT+plotH-(mx/ymax)*plotH;
+      svg.appendChild(el("line",{x1:cx,y1:ymx,x2:cx,y2:ymn,stroke:cssv("--ink"),"stroke-width":1.4,opacity:.55}));
+      svg.appendChild(el("line",{x1:cx-3,y1:ymx,x2:cx+3,y2:ymx,stroke:cssv("--ink"),"stroke-width":1.4,opacity:.55}));
+      svg.appendChild(el("line",{x1:cx-3,y1:ymn,x2:cx+3,y2:ymn,stroke:cssv("--ink"),"stroke-width":1.4,opacity:.55}));
+    });
+    const lab=el("text",{x:padL+ci*catW+catW/2,y:h-24,"text-anchor":"middle",fill:cssv("--ink"),"font-size":12,"font-weight":600});
+    lab.textContent=cat; svg.appendChild(lab);
+    if(CLASS[cat]){const s=el("text",{x:padL+ci*catW+catW/2,y:h-10,"text-anchor":"middle",fill:cssv("--muted"),"font-size":10});s.textContent=CLASS[cat];svg.appendChild(s);}
+  });
+  mount.innerHTML=""; mount.appendChild(svg);
+}
+
+function qualityBars(mount){
+  const h=190,padL=70,padR=90,padT=8,padB=10,W=620,plotW=W-padL-padR;
+  const svg=el("svg",{viewBox:`0 0 ${W} ${h}`,width:W,height:h,role:"img"});
+  const rowH=44, gap=14, total=36;
+  const scol={4:"#2a78d6",3:"#7fb0e3",2:"#cfe0f3"};
+  ["SUTRA_ONLY","GREP_ONLY","BOTH"].forEach((arm,i)=>{
+    const y=padT+i*(rowH+gap);
+    const nm=el("text",{x:padL-10,y:y+rowH/2+4,"text-anchor":"end",fill:cssv("--ink"),"font-size":12.5,"font-weight":600});
+    nm.textContent=NAME[arm]; svg.appendChild(nm);
+    let x=padL;
+    [4,3,2].forEach(sc=>{
+      const c=DATA.qual[arm][sc]||0; if(c===0)return;
+      const w=(c/total)*plotW;
+      const r=el("rect",{x:x+1,y:y,width:Math.max(0,w-2),height:rowH,rx:3,fill:scol[sc]});
+      r.appendChild(el("title",{})).textContent=`${NAME[arm]}: ${c} runs scored ${sc}`;
+      svg.appendChild(r);
+      if(w>22){const t=el("text",{x:x+w/2,y:y+rowH/2+4,"text-anchor":"middle",fill:sc===2?cssv("--ink"):"#fff","font-size":11.5,"font-weight":600});t.textContent=c;svg.appendChild(t);}
+      x+=w;
+    });
+    const mean={SUTRA_ONLY:3.67,GREP_ONLY:3.69,BOTH:3.69}[arm];
+    const mt=el("text",{x:W-padR+12,y:y+rowH/2+4,fill:cssv("--muted"),"font-size":12});mt.textContent="mean "+mean;svg.appendChild(mt);
+  });
+  mount.innerHTML=""; mount.appendChild(svg);
+}
+
+function table(){
+  const tb=document.getElementById("tbody");
+  Object.keys(DATA.cells).forEach(tid=>{
+    ARMS.forEach((arm,ai)=>{
+      const [med,mn,mx]=DATA.cells[tid][arm];
+      const scs=DATA.scores[tid][arm], sMed=scs.slice().sort((a,b)=>a-b)[Math.floor(scs.length/2)];
+      const tr=document.createElement("tr");
+      tr.innerHTML=`<td>${ai===0?tid:""}</td><td>${ai===0?CLASS[tid]:""}</td>`+
+        `<td class="arm" style="color:${COL[arm]}">${NAME[arm]}</td>`+
+        `<td>$${med.toFixed(4)}</td><td style="color:var(--muted)">${mn.toFixed(3)}–${mx.toFixed(3)}</td>`+
+        `<td>${DATA.turns[tid][arm]}</td><td>${(scs.reduce((a,b)=>a+b,0)/scs.length).toFixed(1)}</td>`+
+        `<td style="color:var(--muted)">${scs.join(" ")}</td>`;
+      tb.appendChild(tr);
+    });
+  });
+}
+
+function render(){
+  groupedBars(document.getElementById("c_cell"), Object.keys(DATA.cells), c=>DATA.cells[c], {ymax:1.0});
+  groupedBars(document.getElementById("c_overall"), ["all 6 tickets"], ()=>DATA.overall, {ymax:1.0, h:210});
+  qualityBars(document.getElementById("c_qual"));
+}
+table(); render();
+// re-render on theme toggle so CSS-var colors refresh
+new MutationObserver(render).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+matchMedia("(prefers-color-scheme:dark)").addEventListener("change",render);
+</script>

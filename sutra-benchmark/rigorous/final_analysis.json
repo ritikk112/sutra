@@ -1,0 +1,1231 @@
+{
+ "per_cell": {
+  "dify|DL1|BOTH": {
+   "repo": "dify",
+   "tid": "DL1",
+   "arm": "BOTH",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.48,
+   "cost_range": [
+    0.3744,
+    0.5653
+   ],
+   "turns_median": 20,
+   "turns_range": [
+    13,
+    26
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 4,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DL1|GREP_ONLY": {
+   "repo": "dify",
+   "tid": "DL1",
+   "arm": "GREP_ONLY",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.3865,
+   "cost_range": [
+    0.3747,
+    0.4045
+   ],
+   "turns_median": 15,
+   "turns_range": [
+    14,
+    16
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 3,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DL1|SUTRA_ONLY": {
+   "repo": "dify",
+   "tid": "DL1",
+   "arm": "SUTRA_ONLY",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.6767,
+   "cost_range": [
+    0.4947,
+    0.7039
+   ],
+   "turns_median": 26,
+   "turns_range": [
+    19,
+    27
+   ],
+   "score_median": 4,
+   "scores": [
+    3,
+    4,
+    4
+   ],
+   "sutra_median": 4,
+   "grep_median": 0,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DL2|BOTH": {
+   "repo": "dify",
+   "tid": "DL2",
+   "arm": "BOTH",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.5074,
+   "cost_range": [
+    0.4365,
+    0.5637
+   ],
+   "turns_median": 21,
+   "turns_range": [
+    18,
+    22
+   ],
+   "score_median": 1,
+   "scores": [
+    1,
+    1,
+    2
+   ],
+   "sutra_median": 1,
+   "grep_median": 7,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DL2|GREP_ONLY": {
+   "repo": "dify",
+   "tid": "DL2",
+   "arm": "GREP_ONLY",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.4278,
+   "cost_range": [
+    0.3814,
+    0.4665
+   ],
+   "turns_median": 19,
+   "turns_range": [
+    18,
+    19
+   ],
+   "score_median": 1,
+   "scores": [
+    1,
+    1,
+    2
+   ],
+   "sutra_median": 0,
+   "grep_median": 6,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DL2|SUTRA_ONLY": {
+   "repo": "dify",
+   "tid": "DL2",
+   "arm": "SUTRA_ONLY",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.6753,
+   "cost_range": [
+    0.4123,
+    1.0029
+   ],
+   "turns_median": 22,
+   "turns_range": [
+    18,
+    23
+   ],
+   "score_median": 1,
+   "scores": [
+    1,
+    1,
+    1
+   ],
+   "sutra_median": 9,
+   "grep_median": 0,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DL3|BOTH": {
+   "repo": "dify",
+   "tid": "DL3",
+   "arm": "BOTH",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.5897,
+   "cost_range": [
+    0.4619,
+    0.7056
+   ],
+   "turns_median": 31,
+   "turns_range": [
+    27,
+    34
+   ],
+   "score_median": 4,
+   "scores": [
+    3,
+    4,
+    4
+   ],
+   "sutra_median": 1,
+   "grep_median": 14,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DL3|GREP_ONLY": {
+   "repo": "dify",
+   "tid": "DL3",
+   "arm": "GREP_ONLY",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.6079,
+   "cost_range": [
+    0.4861,
+    0.6913
+   ],
+   "turns_median": 34,
+   "turns_range": [
+    30,
+    36
+   ],
+   "score_median": 4,
+   "scores": [
+    3,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 18,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DL3|SUTRA_ONLY": {
+   "repo": "dify",
+   "tid": "DL3",
+   "arm": "SUTRA_ONLY",
+   "cls": "lexical",
+   "n": 2,
+   "cost_median": 1.9192,
+   "cost_range": [
+    1.7762,
+    2.0623
+   ],
+   "turns_median": 61.0,
+   "turns_range": [
+    53,
+    69
+   ],
+   "score_median": 3.0,
+   "scores": [
+    3,
+    3
+   ],
+   "sutra_median": 21.0,
+   "grep_median": 0.0,
+   "any_fabrication": false,
+   "note": "SUTRA_ONLY could not stay grep-free (answer is in external graphon pkg not indexed); 2 clean trial(s) kept, both violating runs dropped"
+  },
+  "dify|DS1|BOTH": {
+   "repo": "dify",
+   "tid": "DS1",
+   "arm": "BOTH",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.2582,
+   "cost_range": [
+    0.2075,
+    0.2681
+   ],
+   "turns_median": 10,
+   "turns_range": [
+    9,
+    10
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 2,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DS1|GREP_ONLY": {
+   "repo": "dify",
+   "tid": "DS1",
+   "arm": "GREP_ONLY",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.2649,
+   "cost_range": [
+    0.2066,
+    0.3039
+   ],
+   "turns_median": 11,
+   "turns_range": [
+    10,
+    12
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 3,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DS1|SUTRA_ONLY": {
+   "repo": "dify",
+   "tid": "DS1",
+   "arm": "SUTRA_ONLY",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.2774,
+   "cost_range": [
+    0.2399,
+    0.3458
+   ],
+   "turns_median": 13,
+   "turns_range": [
+    13,
+    14
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 2,
+   "grep_median": 0,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DS2|BOTH": {
+   "repo": "dify",
+   "tid": "DS2",
+   "arm": "BOTH",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.6859,
+   "cost_range": [
+    0.5896,
+    0.7495
+   ],
+   "turns_median": 36,
+   "turns_range": [
+    33,
+    41
+   ],
+   "score_median": null,
+   "scores": [],
+   "sutra_median": 2,
+   "grep_median": 14,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DS2|GREP_ONLY": {
+   "repo": "dify",
+   "tid": "DS2",
+   "arm": "GREP_ONLY",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.4596,
+   "cost_range": [
+    0.4103,
+    0.5143
+   ],
+   "turns_median": 29,
+   "turns_range": [
+    21,
+    36
+   ],
+   "score_median": null,
+   "scores": [],
+   "sutra_median": 0,
+   "grep_median": 12,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DS2|SUTRA_ONLY": {
+   "repo": "dify",
+   "tid": "DS2",
+   "arm": "SUTRA_ONLY",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 1.7924,
+   "cost_range": [
+    0.872,
+    1.9366
+   ],
+   "turns_median": 55,
+   "turns_range": [
+    29,
+    55
+   ],
+   "score_median": null,
+   "scores": [],
+   "sutra_median": 22,
+   "grep_median": 0,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DS3|BOTH": {
+   "repo": "dify",
+   "tid": "DS3",
+   "arm": "BOTH",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.2806,
+   "cost_range": [
+    0.2645,
+    0.2967
+   ],
+   "turns_median": 13,
+   "turns_range": [
+    13,
+    13
+   ],
+   "score_median": null,
+   "scores": [],
+   "sutra_median": 0,
+   "grep_median": 3,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DS3|GREP_ONLY": {
+   "repo": "dify",
+   "tid": "DS3",
+   "arm": "GREP_ONLY",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.3091,
+   "cost_range": [
+    0.1524,
+    0.3379
+   ],
+   "turns_median": 13,
+   "turns_range": [
+    11,
+    15
+   ],
+   "score_median": null,
+   "scores": [],
+   "sutra_median": 0,
+   "grep_median": 3,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "dify|DS3|SUTRA_ONLY": {
+   "repo": "dify",
+   "tid": "DS3",
+   "arm": "SUTRA_ONLY",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.3367,
+   "cost_range": [
+    0.3201,
+    0.4883
+   ],
+   "turns_median": 15,
+   "turns_range": [
+    14,
+    16
+   ],
+   "score_median": null,
+   "scores": [],
+   "sutra_median": 4,
+   "grep_median": 0,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FL1|BOTH": {
+   "repo": "frappe",
+   "tid": "FL1",
+   "arm": "BOTH",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.4004,
+   "cost_range": [
+    0.3802,
+    0.5042
+   ],
+   "turns_median": 15,
+   "turns_range": [
+    15,
+    19
+   ],
+   "score_median": 4,
+   "scores": [
+    1,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 3,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FL1|GREP_ONLY": {
+   "repo": "frappe",
+   "tid": "FL1",
+   "arm": "GREP_ONLY",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.6506,
+   "cost_range": [
+    0.4614,
+    0.715
+   ],
+   "turns_median": 21,
+   "turns_range": [
+    15,
+    26
+   ],
+   "score_median": 4,
+   "scores": [
+    3,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 10,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FL1|SUTRA_ONLY": {
+   "repo": "frappe",
+   "tid": "FL1",
+   "arm": "SUTRA_ONLY",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.7346,
+   "cost_range": [
+    0.6079,
+    0.769
+   ],
+   "turns_median": 18,
+   "turns_range": [
+    15,
+    20
+   ],
+   "score_median": 3,
+   "scores": [
+    2,
+    3,
+    4
+   ],
+   "sutra_median": 3,
+   "grep_median": 0,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FL2|BOTH": {
+   "repo": "frappe",
+   "tid": "FL2",
+   "arm": "BOTH",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.452,
+   "cost_range": [
+    0.4188,
+    0.5596
+   ],
+   "turns_median": 23,
+   "turns_range": [
+    22,
+    28
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 7,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FL2|GREP_ONLY": {
+   "repo": "frappe",
+   "tid": "FL2",
+   "arm": "GREP_ONLY",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.6025,
+   "cost_range": [
+    0.4568,
+    0.6674
+   ],
+   "turns_median": 29,
+   "turns_range": [
+    19,
+    34
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 10,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FL2|SUTRA_ONLY": {
+   "repo": "frappe",
+   "tid": "FL2",
+   "arm": "SUTRA_ONLY",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.7446,
+   "cost_range": [
+    0.4413,
+    1.0201
+   ],
+   "turns_median": 29,
+   "turns_range": [
+    16,
+    32
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 6,
+   "grep_median": 0,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FL3|BOTH": {
+   "repo": "frappe",
+   "tid": "FL3",
+   "arm": "BOTH",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.2828,
+   "cost_range": [
+    0.2583,
+    0.348
+   ],
+   "turns_median": 17,
+   "turns_range": [
+    11,
+    22
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 3,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FL3|GREP_ONLY": {
+   "repo": "frappe",
+   "tid": "FL3",
+   "arm": "GREP_ONLY",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 0.293,
+   "cost_range": [
+    0.2687,
+    0.3392
+   ],
+   "turns_median": 15,
+   "turns_range": [
+    12,
+    21
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 5,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FL3|SUTRA_ONLY": {
+   "repo": "frappe",
+   "tid": "FL3",
+   "arm": "SUTRA_ONLY",
+   "cls": "lexical",
+   "n": 3,
+   "cost_median": 1.7673,
+   "cost_range": [
+    0.7623,
+    1.8654
+   ],
+   "turns_median": 61,
+   "turns_range": [
+    39,
+    71
+   ],
+   "score_median": 4,
+   "scores": [
+    3,
+    4,
+    4
+   ],
+   "sutra_median": 17,
+   "grep_median": 0,
+   "any_fabrication": false,
+   "note": "1 violating trial dropped; clean re-run added (n=3)"
+  },
+  "frappe|FS1|BOTH": {
+   "repo": "frappe",
+   "tid": "FS1",
+   "arm": "BOTH",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.1992,
+   "cost_range": [
+    0.1558,
+    0.287
+   ],
+   "turns_median": 15,
+   "turns_range": [
+    11,
+    17
+   ],
+   "score_median": 3,
+   "scores": [
+    3,
+    3,
+    3
+   ],
+   "sutra_median": 0,
+   "grep_median": 5,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FS1|GREP_ONLY": {
+   "repo": "frappe",
+   "tid": "FS1",
+   "arm": "GREP_ONLY",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.2597,
+   "cost_range": [
+    0.1498,
+    0.2677
+   ],
+   "turns_median": 14,
+   "turns_range": [
+    10,
+    20
+   ],
+   "score_median": 4,
+   "scores": [
+    3,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 3,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FS1|SUTRA_ONLY": {
+   "repo": "frappe",
+   "tid": "FS1",
+   "arm": "SUTRA_ONLY",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.4929,
+   "cost_range": [
+    0.3732,
+    0.5074
+   ],
+   "turns_median": 22,
+   "turns_range": [
+    19,
+    25
+   ],
+   "score_median": 3,
+   "scores": [
+    3,
+    3,
+    4
+   ],
+   "sutra_median": 4,
+   "grep_median": 0,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FS2|BOTH": {
+   "repo": "frappe",
+   "tid": "FS2",
+   "arm": "BOTH",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.3281,
+   "cost_range": [
+    0.2844,
+    0.384
+   ],
+   "turns_median": 19,
+   "turns_range": [
+    17,
+    20
+   ],
+   "score_median": 3,
+   "scores": [
+    3,
+    3,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 6,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FS2|GREP_ONLY": {
+   "repo": "frappe",
+   "tid": "FS2",
+   "arm": "GREP_ONLY",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.3627,
+   "cost_range": [
+    0.3063,
+    0.4372
+   ],
+   "turns_median": 23,
+   "turns_range": [
+    16,
+    24
+   ],
+   "score_median": 4,
+   "scores": [
+    3,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 6,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FS2|SUTRA_ONLY": {
+   "repo": "frappe",
+   "tid": "FS2",
+   "arm": "SUTRA_ONLY",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.3789,
+   "cost_range": [
+    0.3473,
+    0.4219
+   ],
+   "turns_median": 15,
+   "turns_range": [
+    14,
+    22
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 3,
+   "grep_median": 0,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FS3|BOTH": {
+   "repo": "frappe",
+   "tid": "FS3",
+   "arm": "BOTH",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.2328,
+   "cost_range": [
+    0.1652,
+    0.3206
+   ],
+   "turns_median": 12,
+   "turns_range": [
+    10,
+    21
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 3,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FS3|GREP_ONLY": {
+   "repo": "frappe",
+   "tid": "FS3",
+   "arm": "GREP_ONLY",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.3453,
+   "cost_range": [
+    0.2302,
+    0.3912
+   ],
+   "turns_median": 17,
+   "turns_range": [
+    12,
+    18
+   ],
+   "score_median": 4,
+   "scores": [
+    4,
+    4,
+    4
+   ],
+   "sutra_median": 0,
+   "grep_median": 5,
+   "any_fabrication": false,
+   "note": ""
+  },
+  "frappe|FS3|SUTRA_ONLY": {
+   "repo": "frappe",
+   "tid": "FS3",
+   "arm": "SUTRA_ONLY",
+   "cls": "semantic",
+   "n": 3,
+   "cost_median": 0.2495,
+   "cost_range": [
+    0.2148,
+    0.8719
+   ],
+   "turns_median": 14,
+   "turns_range": [
+    12,
+    27
+   ],
+   "score_median": 4,
+   "scores": [
+    3,
+    4,
+    4
+   ],
+   "sutra_median": 3,
+   "grep_median": 0,
+   "any_fabrication": false,
+   "note": "1 violating trial dropped; clean re-run added (n=3)"
+  }
+ },
+ "per_repo_class_arm": {
+  "dify|lexical|BOTH": {
+   "cost_median": 0.5074,
+   "cost_range": [
+    0.3744,
+    0.7056
+   ],
+   "turns_median": 22,
+   "turns_range": [
+    13,
+    34
+   ],
+   "score_median": 4,
+   "score_dist": {
+    "1": 2,
+    "2": 1,
+    "3": 1,
+    "4": 5
+   },
+   "n": 9,
+   "any_fab": false
+  },
+  "dify|lexical|GREP_ONLY": {
+   "cost_median": 0.4278,
+   "cost_range": [
+    0.3747,
+    0.6913
+   ],
+   "turns_median": 19,
+   "turns_range": [
+    14,
+    36
+   ],
+   "score_median": 4,
+   "score_dist": {
+    "1": 2,
+    "2": 1,
+    "3": 1,
+    "4": 5
+   },
+   "n": 9,
+   "any_fab": false
+  },
+  "dify|lexical|SUTRA_ONLY": {
+   "cost_median": 0.6903,
+   "cost_range": [
+    0.4123,
+    2.0623
+   ],
+   "turns_median": 24.5,
+   "turns_range": [
+    18,
+    69
+   ],
+   "score_median": 3.0,
+   "score_dist": {
+    "1": 3,
+    "3": 3,
+    "4": 2
+   },
+   "n": 8,
+   "any_fab": false
+  },
+  "dify|semantic|BOTH": {
+   "cost_median": 0.2806,
+   "cost_range": [
+    0.2075,
+    0.7495
+   ],
+   "turns_median": 13,
+   "turns_range": [
+    9,
+    41
+   ],
+   "score_median": 4,
+   "score_dist": {
+    "4": 3
+   },
+   "n": 9,
+   "any_fab": false
+  },
+  "dify|semantic|GREP_ONLY": {
+   "cost_median": 0.3091,
+   "cost_range": [
+    0.1524,
+    0.5143
+   ],
+   "turns_median": 13,
+   "turns_range": [
+    10,
+    36
+   ],
+   "score_median": 4,
+   "score_dist": {
+    "4": 3
+   },
+   "n": 9,
+   "any_fab": false
+  },
+  "dify|semantic|SUTRA_ONLY": {
+   "cost_median": 0.3458,
+   "cost_range": [
+    0.2399,
+    1.9366
+   ],
+   "turns_median": 15,
+   "turns_range": [
+    13,
+    55
+   ],
+   "score_median": 4,
+   "score_dist": {
+    "4": 3
+   },
+   "n": 9,
+   "any_fab": false
+  },
+  "frappe|lexical|BOTH": {
+   "cost_median": 0.4004,
+   "cost_range": [
+    0.2583,
+    0.5596
+   ],
+   "turns_median": 19,
+   "turns_range": [
+    11,
+    28
+   ],
+   "score_median": 4,
+   "score_dist": {
+    "1": 1,
+    "4": 8
+   },
+   "n": 9,
+   "any_fab": false
+  },
+  "frappe|lexical|GREP_ONLY": {
+   "cost_median": 0.4614,
+   "cost_range": [
+    0.2687,
+    0.715
+   ],
+   "turns_median": 21,
+   "turns_range": [
+    12,
+    34
+   ],
+   "score_median": 4,
+   "score_dist": {
+    "3": 1,
+    "4": 8
+   },
+   "n": 9,
+   "any_fab": false
+  },
+  "frappe|lexical|SUTRA_ONLY": {
+   "cost_median": 0.7623,
+   "cost_range": [
+    0.4413,
+    1.8654
+   ],
+   "turns_median": 29,
+   "turns_range": [
+    15,
+    71
+   ],
+   "score_median": 4,
+   "score_dist": {
+    "2": 1,
+    "3": 2,
+    "4": 6
+   },
+   "n": 9,
+   "any_fab": false
+  },
+  "frappe|semantic|BOTH": {
+   "cost_median": 0.2844,
+   "cost_range": [
+    0.1558,
+    0.384
+   ],
+   "turns_median": 17,
+   "turns_range": [
+    10,
+    21
+   ],
+   "score_median": 3,
+   "score_dist": {
+    "3": 5,
+    "4": 4
+   },
+   "n": 9,
+   "any_fab": false
+  },
+  "frappe|semantic|GREP_ONLY": {
+   "cost_median": 0.3063,
+   "cost_range": [
+    0.1498,
+    0.4372
+   ],
+   "turns_median": 17,
+   "turns_range": [
+    10,
+    24
+   ],
+   "score_median": 4,
+   "score_dist": {
+    "3": 2,
+    "4": 7
+   },
+   "n": 9,
+   "any_fab": false
+  },
+  "frappe|semantic|SUTRA_ONLY": {
+   "cost_median": 0.3789,
+   "cost_range": [
+    0.2148,
+    0.8719
+   ],
+   "turns_median": 19,
+   "turns_range": [
+    12,
+    27
+   ],
+   "score_median": 4,
+   "score_dist": {
+    "3": 3,
+    "4": 6
+   },
+   "n": 9,
+   "any_fab": false
+  }
+ },
+ "semantic_quality_excluding_DS2": {
+  "dify|BOTH": {
+   "score_median": 4,
+   "n": 3,
+   "dist": {
+    "4": 3
+   }
+  },
+  "dify|GREP_ONLY": {
+   "score_median": 4,
+   "n": 3,
+   "dist": {
+    "4": 3
+   }
+  },
+  "dify|SUTRA_ONLY": {
+   "score_median": 4,
+   "n": 3,
+   "dist": {
+    "4": 3
+   }
+  },
+  "frappe|BOTH": {
+   "score_median": 3,
+   "n": 9,
+   "dist": {
+    "3": 5,
+    "4": 4
+   }
+  },
+  "frappe|GREP_ONLY": {
+   "score_median": 4,
+   "n": 9,
+   "dist": {
+    "3": 2,
+    "4": 7
+   }
+  },
+  "frappe|SUTRA_ONLY": {
+   "score_median": 4,
+   "n": 9,
+   "dist": {
+    "3": 3,
+    "4": 6
+   }
+  }
+ }
+}

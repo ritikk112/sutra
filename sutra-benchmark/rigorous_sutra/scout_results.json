@@ -1,0 +1,239 @@
+[
+ {
+  "slug": "rerank_cutoff",
+  "class_hint": "semantic",
+  "ticket_symptom": "When I turn on the high-precision second-pass relevance model for a search, far fewer results come back than I asked for and lower-ranked matches silently disappear \u2014 anything past a certain rank gets cut off. With the second pass off, the same query returns the full list. Where does the pipeline re-score the candidate set and decide which ones to keep versus discard?",
+  "entry_points": [
+   "sutra/core/retrieval/reranker.py:87 \u2014 def rerank(query, candidates, snapshot, model, top_k) (the cross-encoder re-scoring function)",
+   "sutra/core/retrieval/reranker.py:114 \u2014 scores = model.predict([(query, doc) ...]) (cross-encoder second-pass scoring)",
+   "sutra/core/retrieval/reranker.py:125 \u2014 return rescored[:top_k] ... (final top-k cutoff after sort-desc on line 124)",
+   "sutra/core/retrieval/pipeline.py:79 \u2014 RetrievalPipeline.search(query, top_k, rerank) (pipeline entry that gates + truncates)",
+   "sutra/core/retrieval/pipeline.py:101-117 \u2014 if rerank: branch feeding results[:DEFAULT_RERANK_CANDIDATES] (line 113) into _rerank with top_k",
+   "sutra/core/retrieval/pipeline.py:21 \u2014 DEFAULT_RERANK_CANDIDATES = 50 (reranker input width cap)"
+  ],
+  "mechanism": "RetrievalPipeline.search (sutra/core/retrieval/pipeline.py:79) runs analyzer\u2192channels\u2192RRF fusion\u2192optional expansion to produce `results`. When the per-query `rerank=True` flag is set (pipeline.py:101), it lazily loads the CrossEncoder and calls reranker.rerank with only the top DEFAULT_RERANK_CANDIDATES=50 of that list (`results[:DEFAULT_RERANK_CANDIDATES]`, pipeline.py:113) plus `top_k`. Inside rerank() (reranker.py:87), each candidate is turned into a synthesized document (build_rerank_text), scored in one batch by the heavier cross-encoder via `model.predict` (reranker.py:114), rebuilt into new SearchResults whose score is the rerank score, sorted descending (reranker.py:124), and truncated to `rescored[:top_k]` (reranker.py:125) \u2014 this slice is what drops every candidate below the top_k cutoff. When rerank=False the reranker is never invoked and the pipeline instead applies the plain `results[:top_k]` cutoff (pipeline.py:119) with no re-scoring.",
+  "must_contain": [
+   "The heavier second-pass scoring is a cross-encoder run in rerank() at sutra/core/retrieval/reranker.py, which calls model.predict on (query, document) pairs (reranker.py:114) to produce new relevance scores.",
+   "After re-scoring, rerank() sorts candidates by the rerank score in descending order (reranker.py:124) and returns rescored[:top_k] (reranker.py:125) \u2014 the top_k slice is the final cutoff that drops all lower-ranked candidates.",
+   "The reranker runs only when the per-query rerank=True flag is set in RetrievalPipeline.search (pipeline.py:101), and it receives only the top DEFAULT_RERANK_CANDIDATES=50 of the fused/expanded list via results[:DEFAULT_RERANK_CANDIDATES] (pipeline.py:21 and :113); with rerank=False the pipeline instead applies the plain results[:top_k] cutoff (pipeline.py:119)."
+  ],
+  "naive_lexical_keyword": "truncate",
+  "naive_lexical_count": 0,
+  "lands_near_answer": false,
+  "symptom_keywords_absent": [
+   "truncate",
+   "cutoff",
+   "rescore"
+  ],
+  "answer_fully_in_repo": true,
+  "ambiguity_risk": "Low. Two truncation sites exist \u2014 the plain results[:top_k] at pipeline.py:119 (no re-scoring) and rescored[:top_k] at reranker.py:125 (after cross-encoder). The ticket scopes to the 'heavier second-pass model re-scoring then applying the cutoff', which unambiguously selects the rerank path (pipeline.py:101-117 \u2192 reranker.py:114/124/125). The input-width cap (results[:50], pipeline.py:113) and the output top-k cutoff (reranker.py:125) are complementary parts of one mechanism, not competing answers. The cross-encoder inference itself (CrossEncoder.predict) lives in the external sentence-transformers package, but the re-scoring orchestration, sort, and cutoff \u2014 the actual mechanism asked about \u2014 are all in-repo.",
+  "confidence": "high"
+ },
+ {
+  "slug": "moniker_build",
+  "class_hint": "semantic",
+  "ticket_symptom": "After re-indexing a repo, two symbols that share the same name \u2014 a class and a function called the same thing in one file, a helper defined inside two different functions, or two same-named defs in the same scope \u2014 sometimes end up pointing at the same entry / one overwrites the other. What gives each symbol its stable unique id across re-indexes, and how are same-name symbols kept from clashing?",
+  "entry_points": [
+   "sutra/core/extractor/moniker.py:106 \u2014 MonikerBuilder._build returns f\"{SCHEME} {self.language} {self.repo_name} {file_path} {descriptor}\" (the 5-field space-delimited moniker)",
+   "sutra/core/extractor/moniker.py:108 \u2014 MonikerBuilder._prefix renders the enclosing (name,suffix) scope chain into the descriptor prefix",
+   "sutra/core/extractor/moniker.py:113-150 \u2014 for_function/for_method/for_class/for_variable/for_module append the kind suffix ().  / #  / .  / /",
+   "sutra/core/extractor/adapters/python.py:142 \u2014 _scope_chain builds the outermost-first (name,suffix) enclosing chain (does NOT stop at function boundaries \u2192 nested-scope disambiguation)",
+   "sutra/core/extractor/adapters/python.py:471 \u2014 _disambiguate inserts (N) before the trailing suffix for the Nth genuine same-scope same-name collision",
+   "sutra/core/indexer.py:64 \u2014 _dedup_keep_first keep-first backstop that drops any symbols whose moniker still collides"
+  ],
+  "mechanism": "A symbol's stable id (\"moniker\") is built by MonikerBuilder._build (moniker.py:106) as a single space-delimited 5-field string: \"sutra <language> <repo_name> <file_path> <descriptor>\". Same-name symbols are disambiguated by three composed layers, not one: (1) file_path is a moniker field, so identical names in different files never collide; (2) the descriptor carries a kind suffix \u2014 ().  for function/method, # for class, .  for variable, /  for module (appended by the for_* methods) \u2014 plus a scope-chain PREFIX rendered by _prefix from an `enclosing` tuple, so a class and a function of the same name, or a nested/function-local helper vs a top-level def, get distinct descriptors; the python adapter's _scope_chain (python.py:142) computes that chain and deliberately does not stop at function boundaries so function-local symbols are self-describing. (3) For the rare genuine same-scope, same-name case (true \"overloads\"), _disambiguate (python.py:471) keeps the first occurrence's moniker and rewrites the Nth as `(N)` inserted before the terminating suffix; a final keep-first dedup backstop in indexer.py (_dedup_keep_first, line 64) drops any duplicate-moniker symbols that still slip through.",
+  "must_contain": [
+   "The moniker is a space-delimited 5-field string `sutra <language> <repo_name> <file_path> <descriptor>` constructed by MonikerBuilder._build in sutra/core/extractor/moniker.py \u2014 file_path being one of those fields is what keeps same-named symbols in different files distinct.",
+   "The descriptor disambiguates by kind via an atomic trailing suffix \u2014 `().` for function/method, `#` for class, `.` for variable, `/` for module \u2014 and by a scope-chain prefix (rendered by _prefix from the `enclosing` chain, built by _scope_chain in python.py) so nested/function-local and top-level same-name symbols differ.",
+   "Genuinely same-scope same-name collisions are broken by _disambiguate in sutra/core/extractor/adapters/python.py, which keeps the first occurrence and inserts `(N)` before the trailing suffix for the Nth duplicate (with _dedup_keep_first in indexer.py as a final keep-first backstop)."
+  ],
+  "naive_lexical_keyword": "duplicate",
+  "naive_lexical_count": 6,
+  "lands_near_answer": false,
+  "symptom_keywords_absent": [
+   "collide",
+   "reindex",
+   "clash"
+  ],
+  "answer_fully_in_repo": true,
+  "ambiguity_risk": "Low-to-moderate, and it is a completeness spread rather than two mutually-exclusive answers. The 'how the id is built' core is unambiguously moniker.py (MonikerBuilder._build), but the disambiguation logic is split across files: the kind-suffix + scope-prefix scheme lives in moniker.py (_prefix / for_* methods), the scope-chain that feeds it is _scope_chain in python.py, the true same-name tie-break is _disambiguate in python.py, and the final drop is _dedup_keep_first in indexer.py. A responder could stop at the suffix scheme and miss _disambiguate, or cite only _disambiguate and miss the file_path/suffix layers \u2014 but all live in the same sutra/core/extractor pipeline and none is a competing 'wrong-but-plausible' file, so the ticket is not drop-worthy.",
+  "confidence": "high"
+ },
+ {
+  "slug": "incremental_changed_files",
+  "class_hint": "lexical",
+  "ticket_symptom": "After I commit some edits and re-run indexing on an already-indexed repo, Sutra finishes fast and only re-processes the handful of files I touched instead of the whole repo. How does it figure out that set of files, and what does it do differently for a file I added, one I edited, one I deleted, and one I renamed?",
+  "entry_points": [
+   "sutra/core/git_differ.py:51 \u2014 changed_files(root, from_sha, to_sha): computes the changed-file set",
+   "sutra/core/git_differ.py:80-88 \u2014 subprocess.run of `git diff --name-status --diff-filter=ACDM --no-renames {from_sha}..{to_sha}`",
+   "sutra/core/git_differ.py:110-115 \u2014 status-letter classification: A/C\u2192added, M\u2192modified, D\u2192deleted",
+   "sutra/core/git_differ.py:46-48 \u2014 ChangedFiles.all_to_index property = added | modified",
+   "sutra/core/incremental_updater.py:176-177 \u2014 current_sha=resolve_commit_hash(root), old_sha=state_store.get_last_commit_sha(repo_name)",
+   "sutra/core/incremental_updater.py:200 \u2014 diff = changed_files(root, old_sha, current_sha)",
+   "sutra/core/incremental_updater.py:238 \u2014 _process_deleted_files(diff.deleted) removes deleted files' symbols",
+   "sutra/core/incremental_updater.py:241 \u2014 to_index = _filter_indexable(root, diff.all_to_index) then re-extract/re-embed"
+  ],
+  "mechanism": "IncrementalUpdater.update() (sutra/core/incremental_updater.py:151) reads the last indexed commit SHA from the state store (old_sha) and the current HEAD (current_sha via resolve_commit_hash), then calls changed_files(root, old_sha, current_sha) in sutra/core/git_differ.py:51. That function shells out to `git diff --name-status --diff-filter=ACDM --no-renames {from_sha}..{to_sha}` and parses each line's leading status letter: A or C \u2192 added, M \u2192 modified, D \u2192 deleted, returning three disjoint frozensets in a ChangedFiles dataclass. The updater treats added\u222amodified (ChangedFiles.all_to_index) as the files to re-extract and re-embed, while deleted files are handled separately by _process_deleted_files (their symbols are removed from the graph store and pgvector). --no-renames (plus R being excluded from --diff-filter=ACDM) is deliberate: a `git mv` is reported as a delete of the old path plus an add of the new path rather than a single rename, matching the locked design (rename = delete old moniker + add new moniker), at the cost of re-embedding the renamed file's unchanged content.",
+  "must_contain": [
+   "The changed-file set is computed by changed_files() in sutra/core/git_differ.py by running `git diff --name-status --diff-filter=ACDM --no-renames <from_sha>..<to_sha>`, where from_sha is the last indexed commit SHA (from the state store) and to_sha is current HEAD.",
+   "Files are classified by the git status letter \u2014 A (and C/copied) \u2192 added, M \u2192 modified, D \u2192 deleted; added and modified are unioned (all_to_index) and re-extracted/re-embedded, while deleted files are processed separately to remove their symbols.",
+   "Rename detection is disabled with --no-renames (and R is excluded from --diff-filter=ACDM), so a renamed file is treated as a delete of the old path plus an add of the new path."
+  ],
+  "naive_lexical_keyword": "diff",
+  "naive_lexical_count": 25,
+  "lands_near_answer": true,
+  "symptom_keywords_absent": [
+   "re-process",
+   "reembed",
+   "recompute"
+  ],
+  "answer_fully_in_repo": true,
+  "ambiguity_risk": "Low-to-moderate. The clean answer is the file-level changed-set computation split across two files: git_differ.changed_files (how the set is computed + added/modified/deleted classification) and incremental_updater.update (how each class is consumed). A distinct, lower-level mechanism lives in the SAME updater \u2014 the per-file four-way body_hash diff in _process_file (incremental_updater.py:275-365, deleted/added/changed/unchanged monikers) \u2014 plus the >50% fallback-threshold full re-index (lines 215-227). The symptom is deliberately scoped to 'which files get re-processed and how added/edited/deleted/renamed files differ', which points squarely at the git-diff file-set + A/M/D handling and not the per-symbol diff or the fallback, so ambiguity is manageable, but a grader should accept the git_differ file-set answer as gold and not require the per-symbol body_hash detail.",
+  "confidence": "high"
+ },
+ {
+  "slug": "repo_isolation_read",
+  "class_hint": "semantic",
+  "ticket_symptom": "One sutra server is serving several indexed codebases at once. When I run a search and pass the name of one repository, could it ever hand back a symbol that actually belongs to a different repository on the same server? I want to understand exactly what keeps one project's search results from bleeding into another's.",
+  "entry_points": [
+   "sutra/mcp/server.py:195 sutra_search() tool \u2014 the search entrypoint",
+   "sutra/mcp/server.py:204 repos = [repo] if repo else server.registry.repos()",
+   "sutra/mcp/server.py:207-208 unit = server._unit(name); unit.pipeline.search(...)",
+   "sutra/mcp/server.py:96 SutraServer._unit() -> registry.get(repo)",
+   "sutra/mcp/registry.py:82 SnapshotRegistry.get() \u2014 repo_name -> ServingUnit dict lookup",
+   "sutra/mcp/registry.py:97 build_serving_unit(): snapshot = ArtifactLoader().load(artifact_dir); repo_name=snapshot.repo_name",
+   "sutra/core/retrieval/pipeline.py:79 RetrievalPipeline.search() \u2014 signature has NO repo parameter",
+   "sutra/core/vector_store/in_memory.py:20 InMemoryVectorStore(snapshot) \u2014 built from one snapshot's vectors"
+  ],
+  "mechanism": "Repo isolation on the read/search path is achieved by physical partitioning, not by any query-time repo filter. The MCP server keeps one immutable ServingUnit per repository in a SnapshotRegistry keyed by repo_name (registry.py). Each ServingUnit bundles that repo's own ArtifactSnapshot, its own RetrievalPipeline (whose InMemoryVectorStore, Bm25Channel and MonikerChannel are all built from that single snapshot's vectors/symbols), and its own graph traversal \u2014 see build_serving_unit(), which does snapshot = ArtifactLoader().load(artifact_dir). At query time sutra_search() resolves the target unit via server._unit(name) -> registry.get(repo) and calls only that unit's pipeline.search(). RetrievalPipeline.search() has no repo argument and no repo WHERE-clause: it can only ever see the one snapshot it was constructed from, so a search on repo A physically cannot reach repo B's data because B lives in a different ServingUnit/snapshot the query never touches. (When repo is omitted, the server explicitly loops over registry.repos() and tags each result with its unit's repo \u2014 still one-unit-at-a-time, never a merged store.)",
+  "must_contain": [
+   "Repo scope is enforced by selecting a per-repo ServingUnit from SnapshotRegistry via registry.get(repo) (server.py sutra_search / _unit); the server has no shared cross-repo index and applies no repo filter inside the query.",
+   "Each ServingUnit's RetrievalPipeline (and its InMemoryVectorStore/channels) is built from exactly one repo's ArtifactSnapshot in build_serving_unit() (snapshot = ArtifactLoader().load(artifact_dir)), and RetrievalPipeline.search() takes no repo parameter \u2014 isolation is physical partitioning, not a query-time WHERE/filter.",
+   "The vector store's filter_monikers argument is a kind/candidate filter WITHIN one snapshot (not repo scoping), and sql_reader.py's `WHERE repo_name = %s` is the incremental-indexing write path, which is never imported or executed on the MCP search read path."
+  ],
+  "naive_lexical_keyword": "repo",
+  "naive_lexical_count": 116,
+  "lands_near_answer": true,
+  "symptom_keywords_absent": [
+   "isolation",
+   "tenant",
+   "leak"
+  ],
+  "answer_fully_in_repo": true,
+  "ambiguity_risk": "The correct mechanism is single and unambiguous (per-repo ServingUnit selection via registry.get + a pipeline built from one snapshot), but there are two active decoys a grader/dev could mistake for the answer: (1) sutra/core/vector_store/in_memory.py's `filter_monikers` masking, which LOOKS like scoping but is a kind/candidate filter within one snapshot \u2014 verified it carries no repo notion; (2) sutra/core/graph/sql_reader.py's `WHERE repo_name = %s`, which is the incremental-indexing write path and is provably NOT on the search read path (grep shows SqlIncrementalReader is imported nowhere, and mcp/retrieval/vector_store/artifact never import psycopg2/SQL \u2014 search is 100% in-memory from artifact snapshots). A correct answer must land on unit selection + per-snapshot pipeline, not on either decoy.",
+  "confidence": "high"
+ },
+ {
+  "slug": "channel_fusion_rrf",
+  "class_hint": "semantic",
+  "ticket_symptom": "When a query matches something by exact name, by keyword, and by vector similarity at the same time, the final ordering of search results looks off \u2014 one channel's single top hit floats to the top even when the other two channels agree on a different, better match further down. How does Sutra decide the single combined ordering out of the three separate result lists, and why doesn't a channel with a huge raw score win?",
+  "entry_points": [
+   "sutra/core/retrieval/fusion.py:12 \u2014 rrf_fuse() (Reciprocal Rank Fusion; core formula loop at lines 37-40, final sort at line 46, DEFAULT_RRF_K=60 at line 9)",
+   "sutra/core/retrieval/pipeline.py:95 \u2014 RetrievalPipeline.search() calls rrf_fuse(per_channel, k=self._rrf_k); per_channel dict of {channel.name: ranked list} built at lines 88-93 from VectorChannel, Bm25Channel, MonikerChannel"
+  ],
+  "mechanism": "RetrievalPipeline.search() (pipeline.py:79) runs the three independent channels \u2014 MonikerChannel (exact-name/moniker), Bm25Channel (keyword), VectorChannel (vector similarity) \u2014 each returning its own ranked list[SearchResult], collected into a dict keyed by channel name (pipeline.py:88-93). It then calls rrf_fuse() (fusion.py:12) which merges the lists by Reciprocal Rank Fusion: for each channel it re-assigns ranks itself via enumerate(results, start=1) (fusion.py:38) and adds 1.0/(k+rank) to each moniker's running score (fusion.py:39-40) with k=DEFAULT_RRF_K=60 (fusion.py:9). Raw per-channel scores (e.g. BM25 ~11.2 vs cosine ~0.83) are deliberately never compared \u2014 only ordinal ranks enter the sum, and the large k dampens the head so one channel's #1 cannot dominate consistent mid-rank agreement from the others. Results are then ordered by (-fused_score, moniker) for a deterministic tie-break (fusion.py:46), and each fused result carries the union of channel provenance plus {\\\"rrf\\\": score}.",
+  "must_contain": [
+   "The three separate channel result lists (moniker/exact-name, BM25 keyword, vector similarity) are combined by Reciprocal Rank Fusion in rrf_fuse() at sutra/core/retrieval/fusion.py, invoked from RetrievalPipeline.search() at pipeline.py:95",
+   "The fused score of a document is the sum over channels of 1/(k + rank) with k = DEFAULT_RRF_K = 60, and the rank is assigned by fusion itself via enumerate(results, start=1) (fusion.py:38) \u2014 not read from the channel's own score",
+   "Raw channel scores are never compared across channels; only ordinal ranks enter the formula, and results are finally sorted by descending fused score with moniker as a deterministic tie-break (fusion.py:46)"
+  ],
+  "naive_lexical_keyword": "merge",
+  "naive_lexical_count": 3,
+  "lands_near_answer": false,
+  "symptom_keywords_absent": [
+   "combine",
+   "blend",
+   "interleave"
+  ],
+  "answer_fully_in_repo": true,
+  "ambiguity_risk": "Low. Two nearby stages could be confused with the answer but are distinct: (a) the reranker (sutra/core/retrieval/reranker.py, invoked at pipeline.py:101-117) is an OPTIONAL cross-encoder pass that re-scores already-fused results, not the combining of the three channel lists; (b) GraphExpander.expand (expander.py) adds one-hop graph neighbors after fusion. The combining of the separate channel ranked lists into one ordering is unambiguously rrf_fuse() in fusion.py, called at pipeline.py:95 \u2014 single mechanism, single location.",
+  "confidence": "high"
+ },
+ {
+  "slug": "body_hash_skip",
+  "class_hint": "semantic",
+  "ticket_symptom": "When I re-index a repo after committing a small change, functions I never touched are still getting their vectors recomputed \u2014 the update takes as long as a fresh index instead of only reprocessing what actually changed. How does Sutra decide a symbol is untouched and reuse its existing embedding?",
+  "entry_points": [
+   "sutra/core/incremental_updater.py:275 IncrementalUpdater._process_file (per-file four-way diff entry point)",
+   "sutra/core/incremental_updater.py:300 old_state = self.reader.get_symbols_for_files(...) returns {moniker: body_hash} for the file's existing symbols",
+   "sutra/core/incremental_updater.py:311-318 changed_monikers (old_state[m] != new_symbols[m].body_hash) vs unchanged_monikers (== body_hash)",
+   "sutra/core/incremental_updater.py:334-337 symbols_to_write = added + changed only (unchanged excluded)",
+   "sutra/core/incremental_updater.py:343-346 embedder.embed() runs only for symbols_to_write"
+  ],
+  "mechanism": "In IncrementalUpdater._process_file (sutra/core/incremental_updater.py:275), the updater fetches the prior per-symbol state via reader.get_symbols_for_files() (line 300), which returns a dict mapping each existing moniker to its stored body_hash (a sha256 of the symbol's raw body bytes, set by the extractor adapters). For monikers present in both the old and new extraction, it partitions them by comparing hashes: changed_monikers where old_state[m] != new_symbols[m].body_hash (lines 311-313) and unchanged_monikers where old_state[m] == new_symbols[m].body_hash (lines 315-317). Only added + changed symbols are collected into symbols_to_write (lines 334-337); the embedding step at lines 343-346 (build_chunks + embedder.embed + pgvector_store.write) runs exclusively over symbols_to_write. Because unchanged symbols are never placed in symbols_to_write, they are never re-chunked, never re-embedded, and their existing pgvector rows are left untouched \u2014 that is the skip.",
+  "must_contain": [
+   "The decision is made in IncrementalUpdater._process_file in sutra/core/incremental_updater.py by comparing the symbol's stored body_hash (from reader.get_symbols_for_files) against the freshly extracted symbol's body_hash; equal hash => unchanged, unequal => changed.",
+   "Only added + changed symbols are put into symbols_to_write, and the embedder.embed() call (with build_chunks/pgvector_store.write) runs only over symbols_to_write, so unchanged symbols are never re-embedded.",
+   "Because unchanged symbols are excluded from symbols_to_write, their existing pgvector vectors are left untouched (no DB write / no embedder call for them)."
+  ],
+  "naive_lexical_keyword": "embed",
+  "naive_lexical_count": 34,
+  "lands_near_answer": true,
+  "symptom_keywords_absent": [
+   "stale",
+   "recompute",
+   "re-embed (as a single token 'reembed')"
+  ],
+  "answer_fully_in_repo": true,
+  "ambiguity_risk": "Low. The skip/no-op decision lives in exactly one place: IncrementalUpdater._process_file's body_hash partition (incremental_updater.py:311-318) plus the symbols_to_write exclusion feeding the embed call. body_hash is also referenced in the extractor adapters (where it is computed as sha256 of body bytes) and in the docstring of UpdateResult/base.py, but those only DEFINE the hash \u2014 they do not decide to skip re-embedding. The full Indexer path always embeds everything and has no skip logic, so it is not a competing answer. A minor dilution: grepping 'embed' (34 hits) surfaces the embedder module, chunk_builder, and indexer before this file, and the 'embed' hit inside incremental_updater is the embed CALL, not the body_hash comparison that actually drives the skip \u2014 so the naive grep reaches the file but not the mechanism.",
+  "confidence": "high"
+ },
+ {
+  "slug": "lsp_kickoff",
+  "class_hint": "lexical",
+  "ticket_symptom": "When I index a repo, a call from one file to a function/method defined in another file only gets connected to the correct definition when the callee name is unambiguous. If the same method name exists on several classes, those cross-file calls stay unresolved in the graph under the default settings, and only link correctly after I turn on the deeper analysis. When and how does the indexer actually start the background type-checking/language-server process that resolves these hard cases, and why doesn't it run by default?",
+  "entry_points": [
+   "pipelines/full_index.py:94 \u2014 `elif args.resolver == \"lsp\":` builds the chain `resolver = ChainResolver(HeuristicResolver(), LspResolver(root=args.root))` (lines 94-100); default is `--resolver heuristic` (line 69), which never starts pyright",
+   "sutra/core/indexer.py:244 \u2014 `res_stats = self.resolver.resolve(symbols, relationships)` inside `Indexer.index()` (guarded by `if self.resolver is not None:` at line 243), the single point where resolution is kicked off during indexing",
+   "sutra/core/resolver/lsp_resolver.py:204 \u2014 `client = _LspClient(self._command, self._root)`, reached only after the early-out `if not work: return stats` at line 201; the pyright process is spawned lazily, once per resolve() run",
+   "sutra/core/resolver/lsp_resolver.py:52 \u2014 `_LspClient.__init__` does `subprocess.Popen(command, ...)`; command defaults to `[<sys.executable dir>/pyright-langserver, \"--stdio\"]` (LspResolver.__init__ lines 159-161)",
+   "sutra/core/resolver/lsp_resolver.py:312 \u2014 `ChainResolver.resolve` runs each stage in order (line 328-329); combined with `if rel.is_resolved: continue` (lsp_resolver.py:189, heuristic.py:131) the LSP only sees CALLS edges the heuristic left unresolved"
+  ],
+  "mechanism": "Cross-file CALLS resolution is opt-in and staged. `pipelines/full_index.py` maps the `--resolver` flag to a resolver object: `heuristic` (default) -> `HeuristicResolver()`, and `lsp` -> `ChainResolver(HeuristicResolver(), LspResolver(root))` (full_index.py:90-100). That resolver is handed to `Indexer`, and `Indexer.index()` invokes `self.resolver.resolve(symbols, relationships)` at indexer.py:244, AFTER extraction/aggregation but before chunk building \u2014 because pyright needs the real source files on disk, resolution runs at INDEX time only. `ChainResolver` runs the heuristic first; each stage skips already-resolved edges (`if rel.is_resolved: continue`), so the LSP only pays for the ambiguous residue (e.g. a method name defined on several classes). Inside `LspResolver.resolve` a work list of unresolved Python CALLS whose callee short-name matches an indexed symbol is built; if it is empty the method returns before touching pyright (`if not work: return stats`, line 201). Only then is one warm `_LspClient` created (lsp_resolver.py:204), which in `_LspClient.__init__` spawns a single `pyright-langserver --stdio` subprocess via `subprocess.Popen` (line 52) shared across all files; for each caller file it sends `textDocument/didOpen` then `textDocument/definition` at the callee token, and maps the definition location back to a moniker via a per-file interval index, setting `is_resolved=True` and `resolved_by=\\\"lsp\\\"`.",
+  "must_contain": [
+   "Cross-file/ambiguous CALLS resolution via the language server runs at INDEX time (not query/serve time): the pyright process is started from inside Indexer.index() when it calls self.resolver.resolve() (indexer.py:244), because pyright analyzes real files on disk",
+   "pyright is opt-in via `--resolver lsp` (default is `heuristic`, which never starts pyright); the lsp mode builds ChainResolver(HeuristicResolver(), LspResolver(root)) in pipelines/full_index.py so the heuristic runs first and the LSP only sees the CALLS edges the heuristic left unresolved",
+   "The pyright-langserver --stdio process is spawned lazily and once per resolve() run: LspResolver.resolve returns early via `if not work: return stats` when no matchable unresolved Python CALLS exist, and only otherwise constructs one _LspClient whose __init__ does subprocess.Popen(pyright-langserver --stdio) shared across all files"
+  ],
+  "naive_lexical_keyword": "resolver",
+  "naive_lexical_count": 42,
+  "lands_near_answer": true,
+  "symptom_keywords_absent": [
+   "launch",
+   "language server",
+   "spawn"
+  ],
+  "answer_fully_in_repo": true,
+  "ambiguity_risk": "Low / effectively single mechanism. The trace spans two files but they are complementary parts of one pipeline, not competing answers: pipelines/full_index.py holds the opt-in flag -> ChainResolver(Heuristic, Lsp) wiring, and sutra/core/resolver/lsp_resolver.py holds the actual lazy pyright spawn (_LspClient subprocess.Popen) and the ChainResolver residue ordering; Indexer.index():244 is the single invocation point. A responder could over-emphasize the wiring file vs the spawn file, but a correct answer names the same chain. The only real subtlety (not an alternative location) is that the answer's difficulty is the WHEN/HOW (opt-in default, chain-residue, lazy once-per-run spawn), not finding the code \u2014 grepping `resolver`/`lsp`/`pyright` lands directly in lsp_resolver.py. pyright itself is a third-party binary, but every gold fact about when/how sutra starts it lives in-repo.",
+  "confidence": "high"
+ },
+ {
+  "slug": "unresolved_relationships",
+  "class_hint": "semantic",
+  "ticket_symptom": "When I query the callers/callees of a function through Sutra's graph, calls to standard-library or third-party functions (e.g. logger.error, isinstance, requests.get) never show up as edges \u2014 only calls to functions defined inside the repo appear. Where in the pipeline are calls to targets that aren't in the repo left out of the stored graph?",
+  "entry_points": [
+   "sutra/core/graph/sql_writer.py:355 \u2014 SqlGraphWriter._write_relationships: `if not rel.is_resolved or rel.target_id is None: skipped += 1; continue` (the storage-drop of dangling edges)",
+   "sutra/core/graph/sql_writer.py:22-26 \u2014 module docstring 'Unresolved relationships ... Skipped entirely ... the SQL store only carries resolved relationships'",
+   "sutra/core/extractor/adapters/python.py:667-674 \u2014 PythonAdapter.extract emits each CALLS edge with is_resolved=False, target_id unset (None), target_name=literal callee name",
+   "sutra/core/resolver/base.py:14-19 \u2014 ResolutionStats.matchable docstring: builtins/third-party callees (logger.error, isinstance) are 'structurally out of reach and excluded from the denominator', so they stay unresolved",
+   "sutra/core/resolver/heuristic.py:154-155 \u2014 HeuristicResolver.resolve: `candidates = by_name.get(name); if not candidates: continue` leaves an edge unresolved when no in-repo symbol bears the callee name"
+  ],
+  "mechanism": "The Python extractor never resolves calls at extraction time: for every call site it emits a Relationship(kind=CALLS, is_resolved=False, target_id=None, target_name=<literal callee name>) (python.py:667-674, and the method/class variants at 636-644/615-622). Phase-2's HeuristicResolver then tries to flip each unresolved CALLS to a known moniker by matching the callee short-name against in-repo symbol names; a callee that names a builtin or a third-party/library function (or any symbol not indexed) has no entry in the by_name pool, so resolve() hits `if not candidates: continue` (heuristic.py:154-155) and the edge stays is_resolved=False with target_id=None \u2014 such callees are explicitly excluded from the `matchable` denominator (resolver/base.py:14-19). Finally SqlGraphWriter._write_relationships iterates the relationships and executes `if not rel.is_resolved or rel.target_id is None: skipped += 1; continue` (sql_writer.py:355), so the dangling edge is NEVER inserted into the sutra_relationships table; only a `Skipped N unresolved relationships` line is printed to stderr (sql_writer.py:238-243). The queryable SQL graph therefore carries only resolved, in-repo CALLS edges, which is why callers/callees traversal omits library calls.",
+  "must_contain": [
+   "The extractor emits every CALLS relationship as unresolved: is_resolved=False and target_id=None, keeping only the literal callee name in target_name \u2014 no in-repo resolution happens at extraction time (python.py extract, ~line 667-674).",
+   "A callee that is not an in-repo symbol (a builtin or third-party/library function) can never be resolved: the heuristic resolver finds no candidate for that name and leaves the edge is_resolved=False (it is excluded from ResolutionStats.matchable).",
+   "SqlGraphWriter._write_relationships (sql_writer.py:355) skips any relationship where `not rel.is_resolved or rel.target_id is None`, so unresolved/dangling edges are never written to the sutra_relationships table \u2014 only a skipped count is logged to stderr."
+  ],
+  "naive_lexical_keyword": "callee",
+  "naive_lexical_count": 7,
+  "lands_near_answer": false,
+  "symptom_keywords_absent": [
+   "library",
+   "builtin",
+   "dangling"
+  ],
+  "answer_fully_in_repo": true,
+  "ambiguity_risk": "Real, and it must be managed by ticket framing. 'How Sutra stores an unresolved call' has TWO divergent code paths: (1) the SQL/graph store \u2014 sql_writer.py:355 DROPS unresolved edges entirely (they never reach sutra_relationships); and (2) the JSON artifact \u2014 json_graph_exporter._relationship_to_dict (json_graph_exporter.py:228-233) PRESERVES the unresolved edge in graph.json with is_resolved=False, target_id=null, target_name kept. So a naive 'where is the unresolved edge stored' could correctly land on either. The ticket is deliberately phrased around the *queryable graph / callers-callees traversal* (which reads the SQL store and, in traversal.py:77 / expander.py:48, additionally skips any rel lacking target_id), pinning the intended answer to the sql_writer drop rather than the graph.json exporter. A grader must accept the SQL-store-drop mechanism and should not treat the graph.json-preserves-it path as the answer. Secondary minor ambiguity: the drop is enforced in three sibling spots (sql_writer.py:355, traversal.py:77, expander.py:48) \u2014 sql_writer is the canonical storage-side one.",
+  "confidence": "medium"
+ }
+]

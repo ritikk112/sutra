@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "protocol": "3-arm (SUTRA_ONLY / GREP_ONLY / BOTH) x 2 repos x 6 tickets x 3 trials",
+    "repos": {
+      "frappe": {"commit": "1eeb4a5", "symbols": 13436, "checkout": "/tmp/claude-1000/-home-ritik-Desktop-sutra/f2ce7530-a1a4-4531-9856-7d9aa4558a38/scratchpad/frappe_src"},
+      "dify":   {"commit": "d67123e", "symbols": 74825, "checkout": "/home/ritik/Desktop/dify/dify"}
+    },
+    "keyword_check": "grep -ricI -w --include=*.py over the checkout; registered_kw = the word a naive dev would grep; code_token = the identifier the mechanism actually uses. LEXICAL: registered_kw present & lands near answer. SEMANTIC: registered_kw ~absent."
+  },
+  "frappe": [
+    {"id":"FL1","class":"lexical","registered_kw":"scheduler","kw_count":118,
+     "text":"Trace how Frappe fires recurring background jobs on a time schedule, and identify a point where a job that is DUE nonetheless does not get enqueued."},
+    {"id":"FL2","class":"lexical","registered_kw":"has_permission","kw_count":287,
+     "text":"Trace how Frappe decides whether the current user may READ a given document, and identify where that check can be bypassed."},
+    {"id":"FL3","class":"lexical","registered_kw":"rate_limit","kw_count":28,
+     "text":"Trace how Frappe throttles too-frequent inbound web requests, and where the limit is actually enforced for a request."},
+    {"id":"FS1","class":"semantic","registered_kw":"optimistic","kw_count":0,"code_token":"check_if_latest / modified (272, generic)",
+     "text":"A user opens a record; before they save, a colleague edits and saves the same record. Frappe refuses the first user's save rather than silently discarding the colleague's change. Trace the mechanism that detects this and the exception it raises."},
+    {"id":"FS2","class":"semantic","registered_kw":"starve","kw_count":0,"code_token":"queue (short/default/long)",
+     "text":"A flood of slow, long-running background jobs shouldn't delay quick jobs behind them. Trace where Frappe separates jobs so the slow ones can't hold up the fast ones."},
+    {"id":"FS3","class":"semantic","registered_kw":"bleed","kw_count":0,"code_token":"make_key / db_name prefix",
+     "text":"One worker process serves many different sites off the same Redis. Trace what stops a value cached for site A from ever being read during a request for site B."}
+  ],
+  "dify": [
+    {"id":"DL1","class":"lexical","registered_kw":"rerank","kw_count":182,
+     "text":"Trace how retrieval reranks candidate documents and applies the top-k cutoff, and where results below the score threshold are dropped."},
+    {"id":"DL2","class":"lexical","registered_kw":"quota","kw_count":262,
+     "text":"Trace how Dify checks a workspace's billing quota before running a model call, and where an over-quota call is rejected."},
+    {"id":"DL3","class":"lexical","registered_kw":"variable_pool","kw_count":861,
+     "text":"Trace how a workflow variable reference like {{#node.field#}} is parsed and resolved to a concrete value, and where an unresolved reference fails."},
+    {"id":"DS1","class":"semantic","registered_kw":"hog","kw_count":0,"code_token":"rate_limit (126, feature name)",
+     "text":"Where does Dify stop a single application from taking all the in-flight request slots so other applications still get served? Trace where the count is checked and where it is released."},
+    {"id":"DS2","class":"semantic","registered_kw":"runaway","kw_count":1,"code_token":"APP_MAX_EXECUTION_TIME",
+     "text":"A generation that keeps going far too long should be cut off rather than run forever. Trace where Dify force-stops such a run and what event it emits."},
+    {"id":"DS3","class":"semantic","registered_kw":"poison","kw_count":0,"code_token":"indexing status / error",
+     "text":"A document that repeatedly fails to index should not be retried endlessly and should end up visibly failed. Trace where that failure is recorded and the retry stops."}
+  ]
+}

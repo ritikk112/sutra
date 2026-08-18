@@ -1,0 +1,144 @@
+<meta charset="utf-8">
+<title>Sutra A/B/C Benchmark — Rigorous (n=3)</title>
+<style>
+  :root{--surface:#fcfcfb;--plane:#f9f9f7;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.10);
+    --grep:#2a78d6;--both:#1baf7a;--sutra:#eb6834;--good:#006300;--bad:#c0392b;--card:#fff;}
+  @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--surface:#1a1a19;--plane:#0d0d0d;--ink:#fff;--ink2:#c3c2b7;--muted:#898781;--grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);--grep:#3987e5;--both:#199e70;--sutra:#d95926;--good:#0ca30c;--bad:#e66767;--card:#161615;}}
+  :root[data-theme=dark]{--surface:#1a1a19;--plane:#0d0d0d;--ink:#fff;--ink2:#c3c2b7;--muted:#898781;--grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);--grep:#3987e5;--both:#199e70;--sutra:#d95926;--good:#0ca30c;--bad:#e66767;--card:#161615;}
+  *{box-sizing:border-box}body{margin:0;background:var(--plane);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:30px 20px 70px}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+  h1{font-size:1.6rem;margin:0 0 3px;letter-spacing:-.02em}.sub{color:var(--ink2);font-size:.93rem;margin:0;max-width:74ch}.meta{color:var(--muted);font-size:.79rem;margin-top:6px}
+  .tb{background:var(--card);color:var(--ink2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;font:inherit;font-size:.8rem;cursor:pointer}
+  section{margin-top:32px}h2{font-size:1.05rem;margin:0 0 2px}.note{color:var(--ink2);font-size:.85rem;margin:0 0 14px;max-width:78ch}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:13px;margin-top:20px}
+  .tile{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px}
+  .tile .k{font-size:1.5rem;font-weight:650;letter-spacing:-.02em;line-height:1.1}.tile .k.good{color:var(--good)}.tile .k.bad{color:var(--bad)}
+  .tile .l{font-size:.8rem;color:var(--ink2);margin-top:6px}.tile .f{font-size:.72rem;color:var(--muted);margin-top:7px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px 14px 8px}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.8rem;color:var(--ink2);margin:0 0 6px 4px}.legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  .callout{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--sutra);border-radius:10px;padding:13px 15px;margin-top:14px;font-size:.89rem;color:var(--ink2);max-width:80ch}.callout b{color:var(--ink)}
+  .scroll{overflow-x:auto}svg{display:block;max-width:100%;height:auto}
+  .tk{fill:var(--muted);font-size:11px}.gl{fill:var(--ink2);font-size:11px}.bl{fill:var(--ink);font-size:10.5px;font-weight:600;font-variant-numeric:tabular-nums}
+  table{border-collapse:collapse;width:100%;font-size:.82rem;margin-top:6px}th,td{text-align:right;padding:6px 9px;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums}th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}thead th{color:var(--ink2);border-bottom:1px solid var(--axis)}
+  .caveats{font-size:.83rem;color:var(--ink2);max-width:82ch}.caveats li{margin:5px 0}
+</style>
+<div class="wrap">
+<header><div>
+  <h1>Sutra A/B/C Benchmark — Rigorous <span style="color:var(--muted);font-weight:400">(pre-registered, n=3)</span></h1>
+  <p class="sub">Three arms — <b style="color:var(--sutra)">SUTRA_ONLY</b> (index only), <b style="color:var(--grep)">GREP_ONLY</b> (baseline), <b style="color:var(--both)">BOTH</b> (real user) — on 108 solves + 108 blind grades, with min–max ranges shown so overlap is visible.</p>
+  <p class="meta">2026-07-09 · claude-sonnet-5 · frappe 13.4k + dify 74.8k symbols · 6 tickets/repo (3 lexical, 3 semantic) · 3 trials/cell</p>
+</div><button class="tb" id="tb">◐ Theme</button></header>
+
+<div class="tiles">
+  <div class="tile"><div class="k good">= 4/4</div><div class="l">blind grade median, <b>every arm</b> (ex-ambiguous DS2)</div><div class="f">the index doesn't change answer quality</div></div>
+  <div class="tile"><div class="k bad">+67%</div><div class="l"><b>SUTRA_ONLY</b> overall $/run vs grep ($0.642 vs $0.384)</div><div class="f">…but every per-cell range overlaps → not significant at n=3</div></div>
+  <div class="tile"><div class="k">≈ grep</div><div class="l"><b>BOTH</b> costs $0.377 ≈ GREP $0.384</div><div class="f">28/36 BOTH trials used the index 0 times</div></div>
+  <div class="tile"><div class="k">no win</div><div class="l">no arm wins on <b>turns</b>; SUTRA_ONLY trends higher</div><div class="f">all ranges overlap</div></div>
+</div>
+
+<div class="callout"><b>Why earlier n=1 runs contradicted each other:</b> given both tools, the agent used Sutra <b>almost never</b> (median 0 calls; 28/36 pure grep) — so "with Sutra" mostly meant "grep," and the rare times it did search, cost spiked (SUTRA_ONLY runs ranged to $2.06). High variance + rare index use = flip-flopping single runs.</div>
+
+<section>
+  <h2>Billed cost per arm, by repo × ticket class</h2>
+  <p class="note">Bars = median $/run; whiskers = min–max across the 3 trials. <b>SUTRA_ONLY (orange) is highest in all four cells, but its whisker overlaps grep's in every one</b> — a consistent direction, not a significant gap at n=3.</p>
+  <div class="card">
+    <div class="legend"><span><span class="sw" style="background:var(--sutra)"></span>SUTRA_ONLY</span><span><span class="sw" style="background:var(--grep)"></span>GREP_ONLY</span><span><span class="sw" style="background:var(--both)"></span>BOTH</span></div>
+    <div class="scroll"><svg id="c_cost" viewBox="0 0 700 320" role="img" aria-label="Cost by arm and cell"></svg></div>
+  </div>
+</section>
+
+<section>
+  <h2>Overall cost &amp; the BOTH-arm fallback</h2>
+  <div class="card">
+    <div class="scroll"><svg id="c_over" viewBox="0 0 700 240" role="img" aria-label="Overall cost per arm"></svg></div>
+    <p class="note" style="margin:8px 0 0"><b>BOTH-arm tool mix:</b> median sutra calls = <b>0</b> (frappe &amp; dify); grep calls ≈ 4.5 / 6. <b>28 of 36</b> BOTH trials never touched the index.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Quality is equal — blind grade medians</h2>
+  <p class="note">Median 0–4 grade per arm within each repo×class. Flat at ~4 across arms = the index neither helps nor hurts correctness. (dify-lexical SUTRA_ONLY dips to 3 due to DL3, whose answer sits in an external package — hard for all arms.)</p>
+  <div class="card"><div class="scroll"><svg id="c_q" viewBox="0 0 700 250" role="img" aria-label="Quality medians"></svg></div></div>
+</section>
+
+<section>
+  <h2>All figures — median [min–max]</h2>
+  <div class="scroll"><table><thead><tr><th>Repo / class</th><th>Arm</th><th>Cost $ med [range]</th><th>Turns med [range]</th><th>Score med</th><th>vs grep</th></tr></thead><tbody id="tb2"></tbody></table></div>
+</section>
+
+<section><h2>Caveats</h2><ul class="caveats">
+  <li><b>n = 3 per cell</b> — exposes the (large) variance but not significance; every cost/turn arm-comparison range overlaps. A firm claim needs ≥10 trials/cell.</li>
+  <li><b>DS2 gold is ambiguous</b> (dify has several valid "stop a long run" mechanisms); its raw scores are excluded from the quality read.</li>
+  <li><b>DL3 is partly out-of-scope</b> (answer in the external <code>graphon</code> package) — depresses dify-lexical scores for all arms and made the index-only constraint unenforceable there (a real index-vs-filesystem limitation).</li>
+  <li><b>Semantic strength is asymmetric</b>: frappe tickets are strongly semantic (concept unnamed in code); dify names its concepts, so its semantic tickets are weaker. Flagged per ticket.</li>
+  <li>Single blind grader per answer; read-only tracing tasks only.</li>
+</ul></section>
+</div>
+<script>
+const C=getComputedStyle(document.documentElement),col=n=>C.getPropertyValue(n).trim();
+const NS="http://www.w3.org/2000/svg",mk=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+// data: repo/class -> arm -> {m:median,lo,hi,turns:[med,lo,hi],score}
+const CELLS=[
+ {label:"frappe · lexical", d:{SUTRA:[.762,.44,1.87],GREP:[.461,.27,.72],BOTH:[.400,.26,.56]}, turns:{SUTRA:[29,15,71],GREP:[21,12,34],BOTH:[19,11,28]}, score:{SUTRA:4,GREP:4,BOTH:4}},
+ {label:"frappe · semantic",d:{SUTRA:[.379,.22,.87],GREP:[.306,.15,.44],BOTH:[.284,.16,.38]}, turns:{SUTRA:[19,12,27],GREP:[17,10,24],BOTH:[17,10,21]}, score:{SUTRA:4,GREP:4,BOTH:3}},
+ {label:"dify · lexical",   d:{SUTRA:[.690,.41,2.06],GREP:[.428,.38,.69],BOTH:[.507,.37,.71]}, turns:{SUTRA:[24,18,69],GREP:[19,14,36],BOTH:[22,13,34]}, score:{SUTRA:3,GREP:4,BOTH:4}},
+ {label:"dify · semantic",  d:{SUTRA:[.346,.24,1.94],GREP:[.309,.15,.51],BOTH:[.281,.21,.75]}, turns:{SUTRA:[15,13,55],GREP:[13,10,36],BOTH:[13,9,41]}, score:{SUTRA:4,GREP:4,BOTH:4}},
+];
+const ARMS=[["SUTRA","--sutra"],["GREP","--grep"],["BOTH","--both"]];
+function costChart(){
+  const svg=document.getElementById("c_cost");while(svg.firstChild)svg.removeChild(svg.firstChild);
+  const W=700,H=320,m={t:14,r:12,b:52,l:44},iw=W-m.l-m.r,ih=H-m.t-m.b,max=2.1;
+  [0,.5,1,1.5,2].forEach(v=>{const y=m.t+ih-v/max*ih;svg.appendChild(mk("line",{x1:m.l,x2:m.l+iw,y1:y,y2:y,stroke:col("--grid")}));const t=mk("text",{x:m.l-6,y:y+4,"text-anchor":"end",class:"tk"});t.textContent="$"+v.toFixed(1);svg.appendChild(t);});
+  svg.appendChild(mk("line",{x1:m.l,x2:m.l+iw,y1:m.t+ih,y2:m.t+ih,stroke:col("--axis")}));
+  const gw=iw/CELLS.length,bw=Math.min(38,(gw-30)/3);
+  CELLS.forEach((cell,i)=>{const gx=m.l+i*gw+gw/2;
+    ARMS.forEach((a,j)=>{const[md,lo,hi]=cell.d[a[0]];const x=gx-(bw*1.5+3)+j*(bw+3);const y=m.t+ih-md/max*ih,h=md/max*ih;
+      svg.appendChild(mk("rect",{x,y,width:bw,height:h,rx:3,fill:col(a[1])}));
+      const yl=m.t+ih-lo/max*ih,yh=m.t+ih-hi/max*ih,cx=x+bw/2;
+      svg.appendChild(mk("line",{x1:cx,x2:cx,y1:yh,y2:yl,stroke:col("--ink2"),"stroke-width":1.3}));
+      svg.appendChild(mk("line",{x1:cx-4,x2:cx+4,y1:yh,y2:yh,stroke:col("--ink2"),"stroke-width":1.3}));
+      svg.appendChild(mk("line",{x1:cx-4,x2:cx+4,y1:yl,y2:yl,stroke:col("--ink2"),"stroke-width":1.3}));
+      const vt=mk("text",{x:cx,y:yh-4,"text-anchor":"middle",class:"bl"});vt.textContent="$"+md.toFixed(2);svg.appendChild(vt);});
+    const gl=mk("text",{x:gx,y:H-m.b+20,"text-anchor":"middle",class:"gl"});gl.textContent=cell.label;svg.appendChild(gl);});
+}
+function overChart(){
+  const svg=document.getElementById("c_over");while(svg.firstChild)svg.removeChild(svg.firstChild);
+  const W=700,H=240,m={t:14,r:12,b:40,l:44},iw=W-m.l-m.r,ih=H-m.t-m.b,max=0.8;
+  const OV={SUTRA:[.642,.24,2.06],GREP:[.384,.15,.72],BOTH:[.377,.16,.75]};
+  [0,.2,.4,.6,.8].forEach(v=>{const y=m.t+ih-v/max*ih;svg.appendChild(mk("line",{x1:m.l,x2:m.l+iw,y1:y,y2:y,stroke:col("--grid")}));const t=mk("text",{x:m.l-6,y:y+4,"text-anchor":"end",class:"tk"});t.textContent="$"+v.toFixed(1);svg.appendChild(t);});
+  svg.appendChild(mk("line",{x1:m.l,x2:m.l+iw,y1:m.t+ih,y2:m.t+ih,stroke:col("--axis")}));
+  const bw=90;ARMS.forEach((a,j)=>{const[md,lo,hi]=OV[a[0]];const x=m.l+40+j*(bw+60),y=m.t+ih-md/max*ih,h=md/max*ih;
+    svg.appendChild(mk("rect",{x,y,width:bw,height:h,rx:4,fill:col(a[1])}));
+    const yl=m.t+ih-Math.min(lo,max)/max*ih,yh=m.t+ih-Math.min(hi,max)/max*ih,cx=x+bw/2;
+    svg.appendChild(mk("line",{x1:cx,x2:cx,y1:yh,y2:yl,stroke:col("--ink2"),"stroke-width":1.3}));
+    svg.appendChild(mk("line",{x1:cx-5,x2:cx+5,y1:yl,y2:yl,stroke:col("--ink2"),"stroke-width":1.3}));
+    const vt=mk("text",{x:cx,y:y-6,"text-anchor":"middle",class:"bl"});vt.textContent="$"+md.toFixed(3);svg.appendChild(vt);
+    const gl=mk("text",{x:cx,y:H-m.b+22,"text-anchor":"middle",class:"gl"});gl.textContent=a[0]+"_ONLY".replace("BOTH_ONLY","");svg.appendChild(gl);
+    gl.textContent=({SUTRA:"SUTRA_ONLY",GREP:"GREP_ONLY",BOTH:"BOTH"})[a[0]];});
+  const note=mk("text",{x:m.l+iw,y:m.t+10,"text-anchor":"end",class:"tk"});note.textContent="whisker top clipped at $0.8 (SUTRA max $2.06)";svg.appendChild(note);
+}
+function qChart(){
+  const svg=document.getElementById("c_q");while(svg.firstChild)svg.removeChild(svg.firstChild);
+  const W=700,H=250,m={t:14,r:12,b:52,l:34},iw=W-m.l-m.r,ih=H-m.t-m.b,max=4;
+  [0,1,2,3,4].forEach(v=>{const y=m.t+ih-v/max*ih;svg.appendChild(mk("line",{x1:m.l,x2:m.l+iw,y1:y,y2:y,stroke:col("--grid")}));const t=mk("text",{x:m.l-6,y:y+4,"text-anchor":"end",class:"tk"});t.textContent=v;svg.appendChild(t);});
+  svg.appendChild(mk("line",{x1:m.l,x2:m.l+iw,y1:m.t+ih,y2:m.t+ih,stroke:col("--axis")}));
+  const gw=iw/CELLS.length,bw=Math.min(38,(gw-30)/3);
+  CELLS.forEach((cell,i)=>{const gx=m.l+i*gw+gw/2;
+    ARMS.forEach((a,j)=>{const s=cell.score[a[0]];const x=gx-(bw*1.5+3)+j*(bw+3),y=m.t+ih-s/max*ih,h=s/max*ih;
+      svg.appendChild(mk("rect",{x,y,width:bw,height:h,rx:3,fill:col(a[1])}));
+      const vt=mk("text",{x:x+bw/2,y:y-4,"text-anchor":"middle",class:"bl"});vt.textContent=s;svg.appendChild(vt);});
+    const gl=mk("text",{x:gx,y:H-m.b+20,"text-anchor":"middle",class:"gl"});gl.textContent=cell.label;svg.appendChild(gl);});
+}
+// table
+const tb=document.getElementById("tb2");
+CELLS.forEach(cell=>{ARMS.forEach((a,j)=>{const[md,lo,hi]=cell.d[a[0]],[tm,tl,th]=cell.turns[a[0]],s=cell.score[a[0]];
+  const gm=cell.d.GREP[0];const gap=a[0]==="GREP"?"—":((md-gm)/gm*100>=0?"+":"")+Math.round((md-gm)/gm*100)+"%";
+  const tr=document.createElement("tr");
+  tr.innerHTML=`<td>${j===0?cell.label:""}</td><td style="color:var(--${a[1].slice(2)})">${({SUTRA:"SUTRA_ONLY",GREP:"GREP_ONLY",BOTH:"BOTH"})[a[0]]}</td><td>$${md.toFixed(3)} [${lo.toFixed(2)}–${hi.toFixed(2)}]</td><td>${tm} [${tl}–${th}]</td><td>${s}</td><td>${gap}</td>`;
+  tb.appendChild(tr);});});
+function render(){costChart();overChart();qChart();}
+render();
+document.getElementById("tb").onclick=()=>{const r=document.documentElement,c=r.getAttribute("data-theme");r.setAttribute("data-theme",c==="dark"?"light":c==="light"?"dark":(matchMedia("(prefers-color-scheme:dark)").matches?"light":"dark"));setTimeout(render,20);};
+matchMedia("(prefers-color-scheme:dark)").addEventListener("change",()=>{if(!document.documentElement.getAttribute("data-theme"))render();});
+</script>

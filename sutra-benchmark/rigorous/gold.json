@@ -1,0 +1,43 @@
+{
+  "note": "Ground truth authored by the overseer via sutra + reads. semantic_strength: strong = the concept is not named in code in any word-form; weak = the naive symptom keyword is absent but the feature/identifier names the concept.",
+  "frappe": {
+    "FL1": {"class":"lexical","gold_locations":["frappe/utils/scheduler.py:enqueue_events / enqueue_events_for_site","frappe/core/doctype/scheduled_job_type/scheduled_job_type.py:ScheduledJobType.enqueue (~73)"],
+      "mechanism":"Scheduler tick -> enqueue_events_for_all_sites -> enqueue_events_for_site -> enqueue_events iterates Scheduled Job Type docs (filtered stopped=0) -> ScheduledJobType.enqueue, which enqueues an RQ job only if is_event_due() and not is_job_in_queue().",
+      "must_contain":["scheduler tick -> ScheduledJobType.enqueue path","at least ONE silent-skip point: is_scheduler_inactive (maintenance/pause_scheduler) OR schedule_jobs_based_on_activity dormant-site skip OR stopped=0 filter OR is_job_in_queue dedup (logged only) OR bad-cron caught+logged"]},
+    "FL2": {"class":"lexical","gold_locations":["frappe/model/document.py:Document.has_permission:653-665","frappe/permissions.py:has_permission:80-224"],
+      "mechanism":"Document.has_permission returns True immediately if self.flags.ignore_permissions is truthy, else delegates to frappe.permissions.has_permission (role perms + user/share/owner perms).",
+      "must_contain":["frappe/permissions.py has_permission as the real check","bypass via ignore_permissions flag (Document.has_permission short-circuits)"]},
+    "FL3": {"class":"lexical","gold_locations":["frappe/rate_limiter.py:rate_limit decorator:104-174","frappe/rate_limiter.py:RateLimiter (respond/update)"],
+      "mechanism":"@rate_limit decorator wraps an endpoint; RateLimiter tracks a per-key request count in redis within a window; over the limit it raises/responds 429.",
+      "must_contain":["frappe/rate_limiter.py rate_limit/RateLimiter","redis-backed counter within a time window","over-limit rejection (429 / raise)"]},
+    "FS1": {"class":"semantic","semantic_strength":"strong","registered_kw":"optimistic(0)","gold_locations":["frappe/model/document.py:Document.check_if_latest:1336-1365"],
+      "mechanism":"On update, check_if_latest compares the in-memory `modified` timestamp against the DB `modified`; if they differ the doc was changed after it was read, and it raises frappe.TimestampMismatchError ('Document has been modified after you have opened it').",
+      "must_contain":["check_if_latest comparing modified timestamps","raises TimestampMismatchError (or frappe conflict error) on mismatch"]},
+    "FS2": {"class":"semantic","semantic_strength":"weak (code uses 'at_front_when_starved' / 'starved')","registered_kw":"starve(0, but 'starved' present)","gold_locations":["frappe/utils/background_jobs.py:enqueue:79 (queue param)","frappe/utils/background_jobs.py:get_queues_timeout:54 / get_queue:541"],
+      "mechanism":"Jobs are routed to named queues short/default/long (enqueue(queue=...)); each has its own timeout and its own worker(s), so a flood of long jobs sits on the long queue and does not block short-queue workers. Additionally at_front_when_starved inserts LIFO when a queue looks starved.",
+      "must_contain":["separate short/default/long queues so slow jobs don't block fast ones","(bonus) at_front_when_starved LIFO"]},
+    "FS3": {"class":"semantic","semantic_strength":"strong (bleed=0; 'isolation'=6 unrelated)","registered_kw":"bleed(0)","gold_locations":["frappe/utils/redis_wrapper.py:RedisWrapper.make_key:52-62","set_value/get_value:64-112 call make_key"],
+      "mechanism":"Every cache key is prefixed by the site's db_name in make_key (unless shared=True), so keys are namespaced per site; a worker serving many sites can't read site A's cached value during a site B request because the key includes the site's db_name.",
+      "must_contain":["make_key prefixes cache keys with the site db_name","per-site key namespacing prevents cross-site reads"]}
+  },
+  "dify": {
+    "DL1": {"class":"lexical","gold_locations":["api/core/rag/rerank/rerank_model.py:RerankModelRunner.run:21-70","fetch_text_rerank:72-108"],
+      "mechanism":"run() calls the rerank model, filters results by score >= score_threshold (drops below-threshold), sorts descending, and truncates to top_n.",
+      "must_contain":["rerank in rerank_model.py","score_threshold filter dropping below-threshold results","top_n / top-k truncation"]},
+    "DL2": {"class":"lexical","gold_locations":["api/services/quota_service.py:QuotaService:96-233 (reserve/consume)","api/services/errors/app.py:QuotaExceededError","called from api/services/app_generate_service.py before generation"],
+      "mechanism":"Before running a model call, QuotaService.reserve/consume reserves billing quota via BillingService; if exceeded it raises QuotaExceededError (surfaced as InvokeRateLimitError), blocking the call.",
+      "must_contain":["QuotaService reserve/consume before the model call","QuotaExceededError raised when over quota"]},
+    "DL3": {"class":"lexical","gold_locations":["VariablePool.convert_template (external graphon package, graphon==0.6.0)","in-repo call sites: api/core/workflow/workflow_entry.py / human_input_adapter.py"],
+      "mechanism":"{{#node.field#}} refs are matched by the variable pattern and resolved by VariablePool.convert_template, which now lives in the external graphon dependency (not vendored). Unresolved refs are kept as raw selector text / raise 'variable not found' at some call sites.",
+      "must_contain":["convert_template / VariablePool resolves {{#node.field#}}","the resolver lives in the external graphon package (not in the repo)","unresolved-ref behavior (kept raw / ValueError)"]},
+    "DS1": {"class":"semantic","semantic_strength":"weak (concept named 'rate_limit')","registered_kw":"hog(0)","gold_locations":["api/core/app/features/rate_limiting/rate_limit.py:RateLimit.__init__:30-48 + enter/exit"],
+      "mechanism":"Per-app (client_id) max_active_requests: RateLimit.enter checks the Redis hash length (hlen) of active requests; if >= max_active_requests it raises AppInvokeQuotaExceededError; exit hdel decrements; RateLimitGenerator.close releases on stream end.",
+      "must_contain":["per-app active-request cap via RateLimit.enter (Redis hlen vs max_active_requests)","exit/close decrements the counter"]},
+    "DS2": {"class":"semantic","semantic_strength":"strong (runaway=1; token is APP_MAX_EXECUTION_TIME)","registered_kw":"runaway(1)","gold_locations":["api/core/app/apps/base_app_queue_manager.py:AppQueueManager.listen (~55-88) + stop_listen:89-95","APP_MAX_EXECUTION_TIME config"],
+      "mechanism":"AppQueueManager.listen polls with a timeout bounded by APP_MAX_EXECUTION_TIME; once elapsed time exceeds it, it force-publishes a QueueStopEvent (stopped_by USER_MANUAL) regardless of whether generation finished, truncating the run.",
+      "must_contain":["APP_MAX_EXECUTION_TIME elapsed -> force QueueStopEvent in the queue manager","the stop is emitted as an event (QueueStopEvent) that ends the run"]},
+    "DS3": {"class":"semantic","semantic_strength":"weak (code uses 'retry'/'error')","registered_kw":"poison(0)","gold_locations":["api/core/indexing_runner.py:IndexingRunner._handle_indexing_error:57-66","api/tasks/retry_document_indexing_task.py:23"],
+      "mechanism":"On an indexing exception, _handle_indexing_error sets the document's indexing_status to 'error' (with the error + stopped_at), so it ends up visibly failed. Re-indexing is user-triggered via retry_document_indexing_task, which guards against concurrent/double retries (raises ValueError if already retrying) rather than auto-retrying endlessly.",
+      "must_contain":["_handle_indexing_error sets document status = error (visible failure)","retries are user-triggered/guarded, not endless auto-retry"]}
+  }
+}

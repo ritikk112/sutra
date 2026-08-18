@@ -1,0 +1,2054 @@
+{
+  "dify|DL1|BOTH": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.48,
+      "min": 0.3744,
+      "max": 0.5653,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.32,
+      "min": 0.2496,
+      "max": 0.3769,
+      "n": 3
+    },
+    "fresh": {
+      "median": 20269,
+      "min": 15886,
+      "max": 22134,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 591871,
+      "min": 306442,
+      "max": 721250,
+      "n": 3
+    },
+    "turns": {
+      "median": 20,
+      "min": 13,
+      "max": 26,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 12,
+      "min": 8,
+      "max": 14,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 4,
+      "min": 3,
+      "max": 6,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.48,
+      0.3744,
+      0.5653
+    ]
+  },
+  "dify|DL1|GREP_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.3865,
+      "min": 0.3747,
+      "max": 0.4045,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.2576,
+      "min": 0.2498,
+      "max": 0.2696,
+      "n": 3
+    },
+    "fresh": {
+      "median": 20682,
+      "min": 19706,
+      "max": 21192,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 357441,
+      "min": 309801,
+      "max": 372016,
+      "n": 3
+    },
+    "turns": {
+      "median": 15,
+      "min": 14,
+      "max": 16,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 10,
+      "min": 9,
+      "max": 10,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 3,
+      "min": 3,
+      "max": 4,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.3865,
+      0.4045,
+      0.3747
+    ]
+  },
+  "dify|DL1|SUTRA_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.6767,
+      "min": 0.4947,
+      "max": 0.7039,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.4511,
+      "min": 0.3298,
+      "max": 0.4692,
+      "n": 3
+    },
+    "fresh": {
+      "median": 15592,
+      "min": 14212,
+      "max": 15797,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 793435,
+      "min": 520989,
+      "max": 867820,
+      "n": 3
+    },
+    "turns": {
+      "median": 26,
+      "min": 19,
+      "max": 27,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 13,
+      "min": 10,
+      "max": 14,
+      "n": 3
+    },
+    "sutra": {
+      "median": 4,
+      "min": 3,
+      "max": 5,
+      "n": 3
+    },
+    "grep": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.4947,
+      0.6767,
+      0.7039
+    ]
+  },
+  "dify|DL2|BOTH": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.5074,
+      "min": 0.4365,
+      "max": 0.5637,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.3383,
+      "min": 0.291,
+      "max": 0.3758,
+      "n": 3
+    },
+    "fresh": {
+      "median": 21556,
+      "min": 21257,
+      "max": 21817,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 562339,
+      "min": 431729,
+      "max": 577271,
+      "n": 3
+    },
+    "turns": {
+      "median": 21,
+      "min": 18,
+      "max": 22,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 13,
+      "min": 11,
+      "max": 14,
+      "n": 3
+    },
+    "sutra": {
+      "median": 1,
+      "min": 1,
+      "max": 2,
+      "n": 3
+    },
+    "grep": {
+      "median": 7,
+      "min": 5,
+      "max": 7,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.5637,
+      0.4365,
+      0.5074
+    ]
+  },
+  "dify|DL2|GREP_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.4278,
+      "min": 0.3814,
+      "max": 0.4665,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.2852,
+      "min": 0.2543,
+      "max": 0.311,
+      "n": 3
+    },
+    "fresh": {
+      "median": 19361,
+      "min": 15963,
+      "max": 22385,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 480998,
+      "min": 469431,
+      "max": 491761,
+      "n": 3
+    },
+    "turns": {
+      "median": 19,
+      "min": 18,
+      "max": 19,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 11,
+      "min": 10,
+      "max": 12,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 6,
+      "min": 5,
+      "max": 9,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.4278,
+      0.3814,
+      0.4665
+    ]
+  },
+  "dify|DL2|SUTRA_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.6753,
+      "min": 0.4123,
+      "max": 1.0029,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.4502,
+      "min": 0.2749,
+      "max": 0.6686,
+      "n": 3
+    },
+    "fresh": {
+      "median": 16434,
+      "min": 15806,
+      "max": 17391,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 689261,
+      "min": 472806,
+      "max": 973873,
+      "n": 3
+    },
+    "turns": {
+      "median": 22,
+      "min": 18,
+      "max": 23,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 14,
+      "min": 11,
+      "max": 14,
+      "n": 3
+    },
+    "sutra": {
+      "median": 9,
+      "min": 7,
+      "max": 10,
+      "n": 3
+    },
+    "grep": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.4123,
+      1.0029,
+      0.6753
+    ]
+  },
+  "dify|DL3|BOTH": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.5897,
+      "min": 0.4619,
+      "max": 0.7056,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.3931,
+      "min": 0.3079,
+      "max": 0.4704,
+      "n": 3
+    },
+    "fresh": {
+      "median": 23266,
+      "min": 20971,
+      "max": 23589,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 811268,
+      "min": 577927,
+      "max": 863530,
+      "n": 3
+    },
+    "turns": {
+      "median": 31,
+      "min": 27,
+      "max": 34,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 17,
+      "min": 17,
+      "max": 21,
+      "n": 3
+    },
+    "sutra": {
+      "median": 1,
+      "min": 0,
+      "max": 2,
+      "n": 3
+    },
+    "grep": {
+      "median": 14,
+      "min": 13,
+      "max": 15,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.4619,
+      0.7056,
+      0.5897
+    ]
+  },
+  "dify|DL3|GREP_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.6079,
+      "min": 0.4861,
+      "max": 0.6913,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.4053,
+      "min": 0.3241,
+      "max": 0.4609,
+      "n": 3
+    },
+    "fresh": {
+      "median": 25016,
+      "min": 23206,
+      "max": 25791,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 790925,
+      "min": 700142,
+      "max": 898541,
+      "n": 3
+    },
+    "turns": {
+      "median": 34,
+      "min": 30,
+      "max": 36,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 21,
+      "min": 19,
+      "max": 23,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 18,
+      "min": 18,
+      "max": 22,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.4861,
+      0.6079,
+      0.6913
+    ]
+  },
+  "dify|DL3|SUTRA_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 2.0623,
+      "min": 1.7762,
+      "max": 2.2009,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 1.3749,
+      "min": 1.1841,
+      "max": 1.4673,
+      "n": 3
+    },
+    "fresh": {
+      "median": 22816,
+      "min": 21727,
+      "max": 24475,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 3508880,
+      "min": 2770403,
+      "max": 3596196,
+      "n": 3
+    },
+    "turns": {
+      "median": 69,
+      "min": 53,
+      "max": 69,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 34,
+      "min": 29,
+      "max": 37,
+      "n": 3
+    },
+    "sutra": {
+      "median": 24,
+      "min": 18,
+      "max": 26,
+      "n": 3
+    },
+    "grep": {
+      "median": 0,
+      "min": 0,
+      "max": 2,
+      "n": 3
+    },
+    "violations": 1,
+    "per_trial_cost_std": [
+      2.2009,
+      2.0623,
+      1.7762
+    ]
+  },
+  "dify|DS1|BOTH": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.2582,
+      "min": 0.2075,
+      "max": 0.2681,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.1721,
+      "min": 0.1383,
+      "max": 0.1788,
+      "n": 3
+    },
+    "fresh": {
+      "median": 13874,
+      "min": 12842,
+      "max": 19209,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 196358,
+      "min": 176817,
+      "max": 214899,
+      "n": 3
+    },
+    "turns": {
+      "median": 10,
+      "min": 9,
+      "max": 10,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 5,
+      "min": 5,
+      "max": 6,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 2,
+      "min": 1,
+      "max": 2,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.2582,
+      0.2681,
+      0.2075
+    ]
+  },
+  "dify|DS1|GREP_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.2649,
+      "min": 0.2066,
+      "max": 0.3039,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.1766,
+      "min": 0.1378,
+      "max": 0.2026,
+      "n": 3
+    },
+    "fresh": {
+      "median": 19514,
+      "min": 17899,
+      "max": 20106,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 222414,
+      "min": 201054,
+      "max": 253135,
+      "n": 3
+    },
+    "turns": {
+      "median": 11,
+      "min": 10,
+      "max": 12,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 7,
+      "min": 6,
+      "max": 7,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 3,
+      "min": 2,
+      "max": 5,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.2066,
+      0.3039,
+      0.2649
+    ]
+  },
+  "dify|DS1|SUTRA_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.2774,
+      "min": 0.2399,
+      "max": 0.3458,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.1849,
+      "min": 0.1599,
+      "max": 0.2305,
+      "n": 3
+    },
+    "fresh": {
+      "median": 13534,
+      "min": 13533,
+      "max": 14743,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 312694,
+      "min": 305392,
+      "max": 340126,
+      "n": 3
+    },
+    "turns": {
+      "median": 13,
+      "min": 13,
+      "max": 14,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 8,
+      "min": 8,
+      "max": 8,
+      "n": 3
+    },
+    "sutra": {
+      "median": 2,
+      "min": 2,
+      "max": 2,
+      "n": 3
+    },
+    "grep": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.2774,
+      0.3458,
+      0.2399
+    ]
+  },
+  "dify|DS2|BOTH": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.6859,
+      "min": 0.5896,
+      "max": 0.7495,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.4572,
+      "min": 0.3931,
+      "max": 0.4996,
+      "n": 3
+    },
+    "fresh": {
+      "median": 19599,
+      "min": 14800,
+      "max": 19914,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 1132259,
+      "min": 975659,
+      "max": 1216302,
+      "n": 3
+    },
+    "turns": {
+      "median": 36,
+      "min": 33,
+      "max": 41,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 21,
+      "min": 20,
+      "max": 23,
+      "n": 3
+    },
+    "sutra": {
+      "median": 2,
+      "min": 1,
+      "max": 4,
+      "n": 3
+    },
+    "grep": {
+      "median": 14,
+      "min": 10,
+      "max": 16,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.7495,
+      0.5896,
+      0.6859
+    ]
+  },
+  "dify|DS2|GREP_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.4596,
+      "min": 0.4103,
+      "max": 0.5143,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.3064,
+      "min": 0.2735,
+      "max": 0.3428,
+      "n": 3
+    },
+    "fresh": {
+      "median": 20137,
+      "min": 19890,
+      "max": 20662,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 701634,
+      "min": 462460,
+      "max": 886526,
+      "n": 3
+    },
+    "turns": {
+      "median": 29,
+      "min": 21,
+      "max": 36,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 19,
+      "min": 14,
+      "max": 23,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 12,
+      "min": 7,
+      "max": 16,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.4103,
+      0.4596,
+      0.5143
+    ]
+  },
+  "dify|DS2|SUTRA_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 1.7924,
+      "min": 0.872,
+      "max": 1.9366,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 1.1949,
+      "min": 0.5813,
+      "max": 1.2911,
+      "n": 3
+    },
+    "fresh": {
+      "median": 16578,
+      "min": 16424,
+      "max": 17103,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 3134629,
+      "min": 1151129,
+      "max": 3395315,
+      "n": 3
+    },
+    "turns": {
+      "median": 55,
+      "min": 29,
+      "max": 55,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 34,
+      "min": 17,
+      "max": 34,
+      "n": 3
+    },
+    "sutra": {
+      "median": 22,
+      "min": 13,
+      "max": 25,
+      "n": 3
+    },
+    "grep": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.872,
+      1.9366,
+      1.7924
+    ]
+  },
+  "dify|DS3|BOTH": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.2806,
+      "min": 0.2645,
+      "max": 0.2967,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.1871,
+      "min": 0.1763,
+      "max": 0.1978,
+      "n": 3
+    },
+    "fresh": {
+      "median": 18968,
+      "min": 17600,
+      "max": 24762,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 266463,
+      "min": 264238,
+      "max": 270098,
+      "n": 3
+    },
+    "turns": {
+      "median": 13,
+      "min": 13,
+      "max": 13,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 8,
+      "min": 8,
+      "max": 8,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 3,
+      "min": 3,
+      "max": 6,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.2967,
+      0.2806,
+      0.2645
+    ]
+  },
+  "dify|DS3|GREP_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.3091,
+      "min": 0.1524,
+      "max": 0.3379,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.206,
+      "min": 0.1016,
+      "max": 0.2252,
+      "n": 3
+    },
+    "fresh": {
+      "median": 13886,
+      "min": 10988,
+      "max": 19789,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 290210,
+      "min": 215963,
+      "max": 350908,
+      "n": 3
+    },
+    "turns": {
+      "median": 13,
+      "min": 11,
+      "max": 15,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 8,
+      "min": 6,
+      "max": 9,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 3,
+      "min": 2,
+      "max": 3,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.3379,
+      0.1524,
+      0.3091
+    ]
+  },
+  "dify|DS3|SUTRA_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.3367,
+      "min": 0.3201,
+      "max": 0.4883,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.2245,
+      "min": 0.2134,
+      "max": 0.3255,
+      "n": 3
+    },
+    "fresh": {
+      "median": 13191,
+      "min": 12892,
+      "max": 13351,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 394516,
+      "min": 360506,
+      "max": 428433,
+      "n": 3
+    },
+    "turns": {
+      "median": 15,
+      "min": 14,
+      "max": 16,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 10,
+      "min": 9,
+      "max": 10,
+      "n": 3
+    },
+    "sutra": {
+      "median": 4,
+      "min": 3,
+      "max": 5,
+      "n": 3
+    },
+    "grep": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.3201,
+      0.4883,
+      0.3367
+    ]
+  },
+  "frappe|FL1|BOTH": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.4004,
+      "min": 0.3802,
+      "max": 0.5042,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.2669,
+      "min": 0.2535,
+      "max": 0.3361,
+      "n": 3
+    },
+    "fresh": {
+      "median": 17468,
+      "min": 15360,
+      "max": 21430,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 406460,
+      "min": 392180,
+      "max": 471583,
+      "n": 3
+    },
+    "turns": {
+      "median": 15,
+      "min": 15,
+      "max": 19,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 8,
+      "min": 8,
+      "max": 12,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 3,
+      "min": 2,
+      "max": 4,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.4004,
+      0.5042,
+      0.3802
+    ]
+  },
+  "frappe|FL1|GREP_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.6506,
+      "min": 0.4614,
+      "max": 0.715,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.4337,
+      "min": 0.3076,
+      "max": 0.4767,
+      "n": 3
+    },
+    "fresh": {
+      "median": 27343,
+      "min": 16961,
+      "max": 30450,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 595089,
+      "min": 397333,
+      "max": 781989,
+      "n": 3
+    },
+    "turns": {
+      "median": 21,
+      "min": 15,
+      "max": 26,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 11,
+      "min": 8,
+      "max": 15,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 10,
+      "min": 4,
+      "max": 11,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.6506,
+      0.4614,
+      0.715
+    ]
+  },
+  "frappe|FL1|SUTRA_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.7346,
+      "min": 0.6079,
+      "max": 0.769,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.4897,
+      "min": 0.4053,
+      "max": 0.5127,
+      "n": 3
+    },
+    "fresh": {
+      "median": 22557,
+      "min": 19647,
+      "max": 26728,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 511785,
+      "min": 394740,
+      "max": 554485,
+      "n": 3
+    },
+    "turns": {
+      "median": 18,
+      "min": 15,
+      "max": 20,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 9,
+      "min": 8,
+      "max": 11,
+      "n": 3
+    },
+    "sutra": {
+      "median": 3,
+      "min": 2,
+      "max": 5,
+      "n": 3
+    },
+    "grep": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.769,
+      0.7346,
+      0.6079
+    ]
+  },
+  "frappe|FL2|BOTH": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.452,
+      "min": 0.4188,
+      "max": 0.5596,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.3014,
+      "min": 0.2792,
+      "max": 0.3731,
+      "n": 3
+    },
+    "fresh": {
+      "median": 21912,
+      "min": 20339,
+      "max": 23408,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 588705,
+      "min": 576638,
+      "max": 690261,
+      "n": 3
+    },
+    "turns": {
+      "median": 23,
+      "min": 22,
+      "max": 28,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 13,
+      "min": 13,
+      "max": 20,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 7,
+      "min": 5,
+      "max": 9,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.5596,
+      0.452,
+      0.4188
+    ]
+  },
+  "frappe|FL2|GREP_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.6025,
+      "min": 0.4568,
+      "max": 0.6674,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.4017,
+      "min": 0.3045,
+      "max": 0.4449,
+      "n": 3
+    },
+    "fresh": {
+      "median": 22902,
+      "min": 21935,
+      "max": 24096,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 798253,
+      "min": 496693,
+      "max": 1005633,
+      "n": 3
+    },
+    "turns": {
+      "median": 29,
+      "min": 19,
+      "max": 34,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 18,
+      "min": 12,
+      "max": 20,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 10,
+      "min": 6,
+      "max": 10,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.4568,
+      0.6674,
+      0.6025
+    ]
+  },
+  "frappe|FL2|SUTRA_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.7446,
+      "min": 0.4413,
+      "max": 1.0201,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.4964,
+      "min": 0.2942,
+      "max": 0.68,
+      "n": 3
+    },
+    "fresh": {
+      "median": 22542,
+      "min": 14964,
+      "max": 25709,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 989482,
+      "min": 420109,
+      "max": 1075986,
+      "n": 3
+    },
+    "turns": {
+      "median": 29,
+      "min": 16,
+      "max": 32,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 16,
+      "min": 9,
+      "max": 18,
+      "n": 3
+    },
+    "sutra": {
+      "median": 6,
+      "min": 2,
+      "max": 10,
+      "n": 3
+    },
+    "grep": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.7446,
+      1.0201,
+      0.4413
+    ]
+  },
+  "frappe|FL3|BOTH": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.2828,
+      "min": 0.2583,
+      "max": 0.348,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.1885,
+      "min": 0.1722,
+      "max": 0.232,
+      "n": 3
+    },
+    "fresh": {
+      "median": 15368,
+      "min": 14703,
+      "max": 16079,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 361740,
+      "min": 229954,
+      "max": 511281,
+      "n": 3
+    },
+    "turns": {
+      "median": 17,
+      "min": 11,
+      "max": 22,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 11,
+      "min": 6,
+      "max": 13,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 3,
+      "min": 2,
+      "max": 5,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.2828,
+      0.348,
+      0.2583
+    ]
+  },
+  "frappe|FL3|GREP_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.293,
+      "min": 0.2687,
+      "max": 0.3392,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.1953,
+      "min": 0.1791,
+      "max": 0.2261,
+      "n": 3
+    },
+    "fresh": {
+      "median": 19212,
+      "min": 15131,
+      "max": 20160,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 316813,
+      "min": 286608,
+      "max": 452618,
+      "n": 3
+    },
+    "turns": {
+      "median": 15,
+      "min": 12,
+      "max": 21,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 9,
+      "min": 8,
+      "max": 14,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 5,
+      "min": 5,
+      "max": 12,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.3392,
+      0.2687,
+      0.293
+    ]
+  },
+  "frappe|FL3|SUTRA_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 1.8654,
+      "min": 0.7623,
+      "max": 2.3376,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 1.2436,
+      "min": 0.5082,
+      "max": 1.5584,
+      "n": 3
+    },
+    "fresh": {
+      "median": 30890,
+      "min": 20101,
+      "max": 34661,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 3073865,
+      "min": 1256655,
+      "max": 4878217,
+      "n": 3
+    },
+    "turns": {
+      "median": 71,
+      "min": 39,
+      "max": 90,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 41,
+      "min": 22,
+      "max": 49,
+      "n": 3
+    },
+    "sutra": {
+      "median": 17,
+      "min": 13,
+      "max": 22,
+      "n": 3
+    },
+    "grep": {
+      "median": 0,
+      "min": 0,
+      "max": 1,
+      "n": 3
+    },
+    "violations": 1,
+    "per_trial_cost_std": [
+      2.3376,
+      0.7623,
+      1.8654
+    ]
+  },
+  "frappe|FS1|BOTH": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.1992,
+      "min": 0.1558,
+      "max": 0.287,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.1328,
+      "min": 0.1039,
+      "max": 0.1913,
+      "n": 3
+    },
+    "fresh": {
+      "median": 13555,
+      "min": 12749,
+      "max": 19812,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 283699,
+      "min": 201217,
+      "max": 326754,
+      "n": 3
+    },
+    "turns": {
+      "median": 15,
+      "min": 11,
+      "max": 17,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 9,
+      "min": 6,
+      "max": 11,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 5,
+      "min": 2,
+      "max": 5,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.1992,
+      0.1558,
+      0.287
+    ]
+  },
+  "frappe|FS1|GREP_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.2597,
+      "min": 0.1498,
+      "max": 0.2677,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.1731,
+      "min": 0.0999,
+      "max": 0.1784,
+      "n": 3
+    },
+    "fresh": {
+      "median": 14761,
+      "min": 12534,
+      "max": 19191,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 262450,
+      "min": 184537,
+      "max": 385039,
+      "n": 3
+    },
+    "turns": {
+      "median": 14,
+      "min": 10,
+      "max": 20,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 9,
+      "min": 6,
+      "max": 11,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 3,
+      "min": 2,
+      "max": 6,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.2597,
+      0.1498,
+      0.2677
+    ]
+  },
+  "frappe|FS1|SUTRA_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.4929,
+      "min": 0.3732,
+      "max": 0.5074,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.3286,
+      "min": 0.2488,
+      "max": 0.3382,
+      "n": 3
+    },
+    "fresh": {
+      "median": 16335,
+      "min": 14828,
+      "max": 16459,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 566972,
+      "min": 507521,
+      "max": 668583,
+      "n": 3
+    },
+    "turns": {
+      "median": 22,
+      "min": 19,
+      "max": 25,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 11,
+      "min": 10,
+      "max": 13,
+      "n": 3
+    },
+    "sutra": {
+      "median": 4,
+      "min": 3,
+      "max": 4,
+      "n": 3
+    },
+    "grep": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.5074,
+      0.4929,
+      0.3732
+    ]
+  },
+  "frappe|FS2|BOTH": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.3281,
+      "min": 0.2844,
+      "max": 0.384,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.2188,
+      "min": 0.1896,
+      "max": 0.256,
+      "n": 3
+    },
+    "fresh": {
+      "median": 20024,
+      "min": 18876,
+      "max": 21113,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 430771,
+      "min": 350595,
+      "max": 434593,
+      "n": 3
+    },
+    "turns": {
+      "median": 19,
+      "min": 17,
+      "max": 20,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 12,
+      "min": 11,
+      "max": 12,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 6,
+      "min": 4,
+      "max": 8,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.384,
+      0.3281,
+      0.2844
+    ]
+  },
+  "frappe|FS2|GREP_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.3627,
+      "min": 0.3063,
+      "max": 0.4372,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.2418,
+      "min": 0.2042,
+      "max": 0.2915,
+      "n": 3
+    },
+    "fresh": {
+      "median": 15177,
+      "min": 14647,
+      "max": 21404,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 529796,
+      "min": 346997,
+      "max": 563086,
+      "n": 3
+    },
+    "turns": {
+      "median": 23,
+      "min": 16,
+      "max": 24,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 14,
+      "min": 9,
+      "max": 15,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 6,
+      "min": 6,
+      "max": 6,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.4372,
+      0.3063,
+      0.3627
+    ]
+  },
+  "frappe|FS2|SUTRA_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.3789,
+      "min": 0.3473,
+      "max": 0.4219,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.2526,
+      "min": 0.2316,
+      "max": 0.2813,
+      "n": 3
+    },
+    "fresh": {
+      "median": 15038,
+      "min": 14898,
+      "max": 15263,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 384903,
+      "min": 333672,
+      "max": 584787,
+      "n": 3
+    },
+    "turns": {
+      "median": 15,
+      "min": 14,
+      "max": 22,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 8,
+      "min": 7,
+      "max": 13,
+      "n": 3
+    },
+    "sutra": {
+      "median": 3,
+      "min": 2,
+      "max": 3,
+      "n": 3
+    },
+    "grep": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.4219,
+      0.3473,
+      0.3789
+    ]
+  },
+  "frappe|FS3|BOTH": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.2328,
+      "min": 0.1652,
+      "max": 0.3206,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.1552,
+      "min": 0.1101,
+      "max": 0.2137,
+      "n": 3
+    },
+    "fresh": {
+      "median": 19185,
+      "min": 12756,
+      "max": 20082,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 235640,
+      "min": 189555,
+      "max": 441801,
+      "n": 3
+    },
+    "turns": {
+      "median": 12,
+      "min": 10,
+      "max": 21,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 6,
+      "min": 5,
+      "max": 14,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 3,
+      "min": 3,
+      "max": 8,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.2328,
+      0.3206,
+      0.1652
+    ]
+  },
+  "frappe|FS3|GREP_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.3453,
+      "min": 0.2302,
+      "max": 0.3912,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.2302,
+      "min": 0.1535,
+      "max": 0.2608,
+      "n": 3
+    },
+    "fresh": {
+      "median": 19015,
+      "min": 14035,
+      "max": 19882,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 401845,
+      "min": 236054,
+      "max": 471066,
+      "n": 3
+    },
+    "turns": {
+      "median": 17,
+      "min": 12,
+      "max": 18,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 9,
+      "min": 6,
+      "max": 10,
+      "n": 3
+    },
+    "sutra": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "n": 3
+    },
+    "grep": {
+      "median": 5,
+      "min": 4,
+      "max": 5,
+      "n": 3
+    },
+    "violations": 0,
+    "per_trial_cost_std": [
+      0.2302,
+      0.3912,
+      0.3453
+    ]
+  },
+  "frappe|FS3|SUTRA_ONLY": {
+    "trials": 3,
+    "cost_std": {
+      "median": 0.2495,
+      "min": 0.2148,
+      "max": 0.8524,
+      "n": 3
+    },
+    "cost_intro": {
+      "median": 0.1664,
+      "min": 0.1432,
+      "max": 0.5682,
+      "n": 3
+    },
+    "fresh": {
+      "median": 14740,
+      "min": 14547,
+      "max": 17315,
+      "n": 3
+    },
+    "total_ctx": {
+      "median": 324638,
+      "min": 265954,
+      "max": 730194,
+      "n": 3
+    },
+    "turns": {
+      "median": 14,
+      "min": 12,
+      "max": 27,
+      "n": 3
+    },
+    "toolcalls": {
+      "median": 7,
+      "min": 6,
+      "max": 14,
+      "n": 3
+    },
+    "sutra": {
+      "median": 3,
+      "min": 2,
+      "max": 7,
+      "n": 3
+    },
+    "grep": {
+      "median": 0,
+      "min": 0,
+      "max": 1,
+      "n": 3
+    },
+    "violations": 1,
+    "per_trial_cost_std": [
+      0.8524,
+      0.2495,
+      0.2148
+    ]
+  }
+}

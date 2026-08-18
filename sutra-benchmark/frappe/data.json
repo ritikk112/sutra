@@ -1,0 +1,59 @@
+{
+  "meta": {
+    "date": "2026-07-08",
+    "codebase_under_test": "frappe/frappe at commit 1eeb4a5 (shallow checkout in scratchpad, aligned to indexed commit)",
+    "repo_scale": {"symbols": 13436, "embeddings": 11157},
+    "model": "claude-sonnet (both agents, identical tier)",
+    "tasks": 5,
+    "task_type": "vague tracing + debugging tickets",
+    "source_note": "The only on-disk frappe/frappe source was inside an off-limits 'first-bench' directory; a fresh shallow clone of the exact indexed commit was made in the session scratchpad for the grep-only agent. Neither agent accessed first-bench (verified from transcripts).",
+    "validity": "Agent B made zero sutra_* calls (20 Bash + 23 Read); Agent A made 14 sutra tool calls (12 search + 1 get_symbol + 1 get_callees). Both produced deep, correct findings; quality comparable."
+  },
+  "tickets": [
+    "T1 — trace Document.save() through validation/hooks to DB write; where a hook silently skips a change",
+    "T2 — trace list-query permission / row-level access checks",
+    "T3 — trace frappe.enqueue -> worker execution; where a job silently drops",
+    "T4 — trace HTTP request routing to whitelisted method; where auth/CSRF is enforced",
+    "T5 — trace email queue -> SMTP dispatch; where a queued email gets stuck"
+  ],
+  "agents": {
+    "with_sutra": {
+      "label": "WITH Sutra",
+      "subagent_tokens": 89533,
+      "tool_uses": 35,
+      "duration_ms": 170292,
+      "assistant_turns": 49,
+      "fresh_tokens": 46569,
+      "input_tokens": 42286,
+      "output_tokens": 4283,
+      "cache_read": 2457939,
+      "cache_creation": 438144,
+      "total_context": 2942652,
+      "tool_breakdown": {"sutra_search": 12, "sutra_get_symbol": 1, "sutra_get_callees": 1, "Read": 20, "ToolSearch": 1}
+    },
+    "without_sutra": {
+      "label": "WITHOUT Sutra",
+      "subagent_tokens": 71629,
+      "tool_uses": 43,
+      "duration_ms": 247045,
+      "assistant_turns": 70,
+      "fresh_tokens": 29872,
+      "input_tokens": 20312,
+      "output_tokens": 9560,
+      "cache_read": 3258047,
+      "cache_creation": 99303,
+      "total_context": 3387222,
+      "tool_breakdown": {"Bash (grep/find/cat)": 20, "Read": 23}
+    }
+  },
+  "sutra_effect_pct": {
+    "note": "negative = Sutra used less/fewer than the grep-only baseline",
+    "reported_tokens": 25.0,
+    "fresh_tokens": 55.9,
+    "total_context": -13.1,
+    "tool_calls": -18.6,
+    "assistant_turns": -30.0,
+    "files_read": -13.0,
+    "wall_clock": -31.1
+  }
+}

@@ -1,0 +1,268 @@
+<meta charset="utf-8">
+<title>Sutra Benchmark #2 — dify (75k symbols)</title>
+<style>
+  :root{
+    --surface-1:#fcfcfb; --plane:#f9f9f7;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+    --with:#2a78d6; --without:#eb6834;
+    --small:#2a78d6; --big:#eb6834;
+    --good:#006300; --bad:#c0392b; --card:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --surface-1:#1a1a19; --plane:#0d0d0d;
+      --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+      --with:#3987e5; --without:#d95926; --small:#3987e5; --big:#d95926;
+      --good:#0ca30c; --bad:#e66767; --card:#161615;
+    }
+  }
+  :root[data-theme="dark"]{
+    --surface-1:#1a1a19; --plane:#0d0d0d;
+    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+    --with:#3987e5; --without:#d95926; --small:#3987e5; --big:#d95926;
+    --good:#0ca30c; --bad:#e66767; --card:#161615;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--plane); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px; margin:0 auto; padding:32px 20px 80px}
+  header{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap}
+  h1{font-size:1.7rem; margin:0 0 4px; letter-spacing:-0.02em}
+  .sub{color:var(--ink-2); font-size:.95rem; margin:0}
+  .meta{color:var(--muted); font-size:.8rem; margin-top:6px}
+  .theme-btn{background:var(--card); color:var(--ink-2); border:1px solid var(--border); border-radius:8px; padding:7px 12px; font:inherit; font-size:.82rem; cursor:pointer}
+  .theme-btn:hover{color:var(--ink)}
+  section{margin-top:34px}
+  h2{font-size:1.05rem; margin:0 0 2px; letter-spacing:-0.01em}
+  .note{color:var(--ink-2); font-size:.86rem; margin:0 0 16px; max-width:74ch}
+  .callout{background:var(--card); border:1px solid var(--border); border-left:3px solid var(--with); border-radius:10px; padding:14px 16px; margin-top:16px; font-size:.9rem; color:var(--ink-2); max-width:78ch}
+  .callout b{color:var(--ink)}
+  .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin-top:22px}
+  .tile{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 18px 16px}
+  .tile .k{font-size:2.05rem; font-weight:650; letter-spacing:-0.03em; line-height:1.05}
+  .tile .k.good{color:var(--good)} .tile .k.bad{color:var(--bad)}
+  .tile .lbl{font-size:.82rem; color:var(--ink-2); margin-top:6px}
+  .tile .foot{font-size:.74rem; color:var(--muted); margin-top:8px}
+  .card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px 16px 8px}
+  .legend{display:flex; gap:18px; align-items:center; font-size:.82rem; color:var(--ink-2); margin:2px 0 6px 4px; flex-wrap:wrap}
+  .legend .sw{display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px}
+  .chart-scroll{overflow-x:auto}
+  svg{display:block; max-width:100%; height:auto}
+  .tick{fill:var(--muted); font-size:11px}
+  .axlabel{fill:var(--ink-2); font-size:12px}
+  .barval{fill:var(--ink); font-size:11.5px; font-weight:600; font-variant-numeric:tabular-nums}
+  .grp{fill:var(--ink-2); font-size:12px}
+  table{border-collapse:collapse; width:100%; font-size:.84rem; margin-top:8px}
+  th,td{text-align:right; padding:8px 10px; border-bottom:1px solid var(--grid); font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left; font-variant-numeric:normal}
+  thead th{color:var(--ink-2); font-weight:600; border-bottom:1px solid var(--axis)}
+  td.save{color:var(--good); font-weight:600}
+  td.cost{color:var(--bad); font-weight:600}
+  .caveats{font-size:.84rem; color:var(--ink-2); max-width:82ch}
+  .caveats li{margin:6px 0}
+  .tooltip{position:fixed; pointer-events:none; opacity:0; transition:opacity .08s; background:var(--ink); color:var(--surface-1); font-size:.78rem; padding:6px 9px; border-radius:7px; white-space:nowrap; z-index:9; transform:translate(-50%,-130%); font-variant-numeric:tabular-nums}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Sutra Benchmark #2 — dify <span style="color:var(--muted);font-weight:400">(75k symbols)</span></h1>
+      <p class="sub">Same A/B, 40× bigger repo. The token story flips — the round-trip story gets stronger.</p>
+      <p class="meta">2026-07-08 · langgenius/dify @ d67123e · 74,825 symbols · model: claude-sonnet (both) · 5 tickets · checkout aligned to indexed commit</p>
+    </div>
+    <button class="theme-btn" id="themeBtn">◐ Theme</button>
+  </header>
+
+  <div class="tiles">
+    <div class="tile"><div class="k good">−47%</div><div class="lbl">fewer <b>tool calls</b> — half the round-trips</div><div class="foot">40 vs 75 · turns 56 vs 109</div></div>
+    <div class="tile"><div class="k good">−46%</div><div class="lbl"><b>faster</b> wall-clock — 2.3 min vs 7.2 min</div><div class="foot">flipped from +10% slower on the small repo</div></div>
+    <div class="tile"><div class="k bad">+28%</div><div class="lbl">more <b>fresh tokens</b> — the honest tradeoff</div><div class="foot">dense search payloads vs terse grep output</div></div>
+    <div class="tile"><div class="k good">=</div><div class="lbl"><b>equal quality</b> — same class of real bugs found</div><div class="foot">each side even found one the other missed</div></div>
+  </div>
+
+  <div class="callout">
+    <b>The finding, stated plainly:</b> on a 75k-symbol repo Sutra used <b>more</b> tokens per run — its
+    <code>sutra_search</code> results are token-dense, while grep output is compact. But it reached equally deep answers in
+    <b>~half the tool calls, half the turns, half the wall-clock, and 43% less total context</b>. On a big codebase Sutra's win
+    moves from "fewer tokens" to "far fewer round-trips."
+  </div>
+
+  <section>
+    <h2>Sutra's effect on dify, by metric</h2>
+    <p class="note">Blue = Sutra used <b>less</b> (win); orange = Sutra used <b>more</b> (cost). The loop metrics — calls, turns, context, time — all swing hard in Sutra's favor; only the token metrics go the other way.</p>
+    <div class="card"><div class="chart-scroll"><svg id="c_effect" viewBox="0 0 660 340" role="img" aria-label="Sutra effect by metric on dify"></svg></div></div>
+  </section>
+
+  <section>
+    <h2>The agentic loop — where Sutra wins big</h2>
+    <p class="note">Grep-only needed 75 calls across 109 turns to triangulate by hand; Sutra got there in 40 calls / 56 turns. Fewer turns means far less cumulative context re-processed (right axis is in millions of tokens).</p>
+    <div class="card">
+      <div class="legend"><span><span class="sw" style="background:var(--with)"></span>WITH Sutra</span><span><span class="sw" style="background:var(--without)"></span>WITHOUT Sutra</span></div>
+      <div class="chart-scroll"><svg id="c_loop" viewBox="0 0 660 300" role="img" aria-label="Loop metrics"></svg></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The token tradeoff — where grep wins</h2>
+    <p class="note">The honest counter-point. Sutra's semantic-search payloads cost more fresh tokens than terse grep matches. Report both lenses; don't cherry-pick.</p>
+    <div class="card">
+      <div class="legend"><span><span class="sw" style="background:var(--with)"></span>WITH Sutra</span><span><span class="sw" style="background:var(--without)"></span>WITHOUT Sutra</span></div>
+      <div class="chart-scroll"><svg id="c_tokens" viewBox="0 0 660 290" role="img" aria-label="Token comparison"></svg></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Scaling: small repo (1.9k) → dify (75k)</h2>
+    <p class="note">Sutra's effect (% vs grep baseline) on each repo. The signal in the round-trip metrics is <b>monotonic and grows with repo size</b> — tool-call and turn savings more than double, and wall-clock flips from a penalty to a big win. Only the token axis changes sign.</p>
+    <div class="card">
+      <div class="legend"><span><span class="sw" style="background:var(--small)"></span>sutra repo · 1.9k symbols</span><span><span class="sw" style="background:var(--big)"></span>dify · 75k symbols</span></div>
+      <div class="chart-scroll"><svg id="c_scale" viewBox="0 0 660 360" role="img" aria-label="Scaling comparison"></svg></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>All measured figures (dify)</h2>
+    <table>
+      <thead><tr><th>Metric</th><th>WITH Sutra</th><th>WITHOUT Sutra</th><th>Δ</th><th>Sutra effect</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Caveats</h2>
+    <ul class="caveats">
+      <li><b>n = 1 per repo</b> — directional, not statistical; agent behavior is stochastic.</li>
+      <li><b>Equal-quality is qualitative</b> — both answers were independently correct and deep; the grep agent found a NaN-zip embedding bug the index agent didn't, and vice-versa. No separate grader scored them.</li>
+      <li><b>Reported vs fresh tokens</b> — <code>subagent_tokens</code> weights cache opaquely; treat the two token lenses as distinct, not contradictory.</li>
+      <li><b>Total context is cache-dominated</b> — it best captures "total work," but is the least directly comparable metric across runs.</li>
+      <li><b>Checkout aligned</b> — the on-disk dify was fetched/checked-out to the exact indexed commit (d67123e) before running, so both agents saw identical code.</li>
+    </ul>
+  </section>
+</div>
+
+<div class="tooltip" id="tt"></div>
+
+<script>
+const DIFY={ with:{reported:126881,fresh:66739,total:4507149,tools:40,turns:56,reads:13,dur:232.6},
+            without:{reported:115465,fresh:51929,total:7978895,tools:75,turns:109,reads:19,dur:429.6} };
+const C=getComputedStyle(document.documentElement); const col=n=>C.getPropertyValue(n).trim();
+const tt=document.getElementById('tt');
+const showTip=(e,h)=>{tt.innerHTML=h;tt.style.left=e.clientX+'px';tt.style.top=e.clientY+'px';tt.style.opacity=1;};
+const hideTip=()=>tt.style.opacity=0;
+const fmt=n=>n.toLocaleString('en-US');
+const NS='http://www.w3.org/2000/svg';
+const mk=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+// grouped vertical bars, optional per-group max (small multiples within one panel share axis)
+function groupedBars(id, groups, opts){
+  const svg=document.getElementById(id); while(svg.firstChild)svg.removeChild(svg.firstChild);
+  const W=660,H=opts.H||300,m={t:16,r:14,b:48,l:60},iw=W-m.l-m.r,ih=H-m.t-m.b;
+  opts.ticks.forEach(tv=>{const y=m.t+ih-(tv/opts.max)*ih;
+    svg.appendChild(mk('line',{x1:m.l,x2:m.l+iw,y1:y,y2:y,stroke:col('--grid'),'stroke-width':1}));
+    const tx=mk('text',{x:m.l-8,y:y+4,'text-anchor':'end',class:'tick'});tx.textContent=opts.tickfmt(tv);svg.appendChild(tx);});
+  svg.appendChild(mk('line',{x1:m.l,x2:m.l+iw,y1:m.t+ih,y2:m.t+ih,stroke:col('--axis'),'stroke-width':1}));
+  const gw=iw/groups.length, barW=Math.min(48,(gw-28)/2);
+  groups.forEach((g,i)=>{const gx=m.l+i*gw+gw/2;
+    [['with',col('--with')],['without',col('--without')]].forEach((p,j)=>{
+      const val=g.vals[p[0]], h=(val/opts.max)*ih, x=gx-(barW+2)+j*(barW+2), y=m.t+ih-h;
+      const r=mk('rect',{x,y,width:barW,height:Math.max(h,0.5),rx:4,ry:4,fill:p[1]}); r.style.cursor='pointer';
+      r.addEventListener('mousemove',e=>showTip(e,`<b>${g.label}</b> · ${p[0]==='with'?'WITH':'WITHOUT'} Sutra<br>${opts.tipfmt(val)}`));
+      r.addEventListener('mouseleave',hideTip); svg.appendChild(r);
+      const vt=mk('text',{x:x+barW/2,y:y-6,'text-anchor':'middle',class:'barval'});vt.textContent=opts.barfmt(val);svg.appendChild(vt);});
+    const gl=mk('text',{x:gx,y:H-m.b+22,'text-anchor':'middle',class:'grp'});gl.textContent=g.label;svg.appendChild(gl);});
+  if(opts.ylabel){const yl=mk('text',{x:-(m.t+ih/2),y:15,'text-anchor':'middle',class:'axlabel',transform:'rotate(-90)'});yl.textContent=opts.ylabel;svg.appendChild(yl);}
+}
+
+// signed horizontal bars: one value per row, blue if <=0 (less/win), orange if >0 (more/cost)
+function effectBars(id, rows){
+  const svg=document.getElementById(id); while(svg.firstChild)svg.removeChild(svg.firstChild);
+  const W=660,H=340,m={t:14,r:20,b:34,l:132},iw=W-m.l-m.r,ih=H-m.t-m.b,maxAbs=60;
+  const zero=m.l+iw/2, sc=v=>(v/(maxAbs*2))*iw;
+  [-40,-20,0,20,40].forEach(tv=>{const x=zero+sc(tv);
+    svg.appendChild(mk('line',{x1:x,x2:x,y1:m.t,y2:m.t+ih,stroke:tv===0?col('--axis'):col('--grid'),'stroke-width':tv===0?1.5:1}));
+    const tx=mk('text',{x,y:m.t+ih+20,'text-anchor':'middle',class:'tick'});tx.textContent=(tv>0?'+':'')+tv+'%';svg.appendChild(tx);});
+  const rh=ih/rows.length, bh=Math.min(20,rh-14);
+  rows.forEach((r,i)=>{const cy=m.t+i*rh+rh/2, w=Math.abs(sc(r.pct)), x=r.pct>=0?zero:zero-w;
+    const c=r.pct<=0?col('--with'):col('--without');
+    const rect=mk('rect',{x,y:cy-bh/2,width:Math.max(w,0.5),height:bh,rx:4,ry:4,fill:c}); rect.style.cursor='pointer';
+    rect.addEventListener('mousemove',e=>showTip(e,`<b>${r.label}</b><br>Sutra used ${r.pct<=0?'':'+'}${r.pct}% ${r.pct<=0?'less':'more'}<br>${r.detail}`));
+    rect.addEventListener('mouseleave',hideTip); svg.appendChild(rect);
+    const lab=mk('text',{x:m.l-10,y:cy+4,'text-anchor':'end',class:'grp'});lab.textContent=r.label;svg.appendChild(lab);
+    const vt=mk('text',{x:r.pct>=0?x+w+7:x-7,y:cy+4,'text-anchor':r.pct>=0?'start':'end',class:'barval'});
+    vt.textContent=(r.pct>0?'+':'')+r.pct.toFixed(1)+'%'; vt.setAttribute('fill',r.pct<=0?col('--good'):col('--bad')); svg.appendChild(vt);});
+}
+
+// scaling: two signed bars per row (small repo, dify), colored by repo
+function scalingBars(id, rows){
+  const svg=document.getElementById(id); while(svg.firstChild)svg.removeChild(svg.firstChild);
+  const W=660,H=360,m={t:14,r:22,b:34,l:132},iw=W-m.l-m.r,ih=H-m.t-m.b,maxAbs=60;
+  const zero=m.l+iw/2, sc=v=>(v/(maxAbs*2))*iw;
+  [-40,-20,0,20,40].forEach(tv=>{const x=zero+sc(tv);
+    svg.appendChild(mk('line',{x1:x,x2:x,y1:m.t,y2:m.t+ih,stroke:tv===0?col('--axis'):col('--grid'),'stroke-width':tv===0?1.5:1}));
+    const tx=mk('text',{x,y:m.t+ih+20,'text-anchor':'middle',class:'tick'});tx.textContent=(tv>0?'+':'')+tv+'%';svg.appendChild(tx);});
+  const rh=ih/rows.length, bh=Math.min(11,(rh-16)/2);
+  rows.forEach((r,i)=>{const base=m.t+i*rh+rh/2;
+    [['small',r.small,col('--small'),-1],['dify',r.dify,col('--big'),1]].forEach(p=>{
+      const val=p[1], cy=base+p[3]*(bh/2+1.5), w=Math.abs(sc(val)), x=val>=0?zero:zero-w;
+      const rect=mk('rect',{x,y:cy-bh/2,width:Math.max(w,0.5),height:bh,rx:3,ry:3,fill:p[2]}); rect.style.cursor='pointer';
+      rect.addEventListener('mousemove',e=>showTip(e,`<b>${r.label}</b> · ${p[0]==='small'?'sutra 1.9k':'dify 75k'}<br>${val>0?'+':''}${val}%`));
+      rect.addEventListener('mouseleave',hideTip); svg.appendChild(rect);
+      const vt=mk('text',{x:val>=0?x+w+6:x-6,y:cy+3.5,'text-anchor':val>=0?'start':'end',class:'barval',style:'font-size:10px'});
+      vt.textContent=(val>0?'+':'')+val+'%'; vt.setAttribute('fill',col('--ink-2')); svg.appendChild(vt);});
+    const lab=mk('text',{x:m.l-10,y:base+4,'text-anchor':'end',class:'grp'});lab.textContent=r.label;svg.appendChild(lab);});
+}
+
+function render(){
+  effectBars('c_effect',[
+    {label:'Tool calls', pct:-46.7, detail:'40 vs 75'},
+    {label:'Assistant turns', pct:-48.6, detail:'56 vs 109'},
+    {label:'Wall-clock', pct:-45.9, detail:'233s vs 430s'},
+    {label:'Total context', pct:-43.5, detail:'4.5M vs 8.0M'},
+    {label:'Files read', pct:-31.6, detail:'13 vs 19'},
+    {label:'Reported tokens', pct:9.9, detail:'126.9k vs 115.5k'},
+    {label:'Fresh tokens', pct:28.5, detail:'66.7k vs 51.9k'},
+  ]);
+  groupedBars('c_loop',[
+    {label:'Tool calls', vals:{with:DIFY.with.tools, without:DIFY.without.tools}},
+    {label:'Assistant turns', vals:{with:DIFY.with.turns, without:DIFY.without.turns}},
+    {label:'Total context (M)', vals:{with:DIFY.with.total/1e6, without:DIFY.without.total/1e6}},
+    {label:'Wall-clock (min)', vals:{with:DIFY.with.dur/60, without:DIFY.without.dur/60}},
+  ],{max:120, ticks:[0,30,60,90,120], tickfmt:v=>v, barfmt:v=>v>=1000?v:(v%1?v.toFixed(1):v),
+     tipfmt:v=>v>=1000?fmt(v):v.toFixed(2), ylabel:'count / M-tokens / min'});
+  groupedBars('c_tokens',[
+    {label:'Fresh tokens', vals:{with:DIFY.with.fresh, without:DIFY.without.fresh}},
+    {label:'Reported tokens', vals:{with:DIFY.with.reported, without:DIFY.without.reported}},
+  ],{H:290, max:140000, ticks:[0,35000,70000,105000,140000], tickfmt:v=>v/1000+'k',
+     barfmt:v=>(v/1000).toFixed(1)+'k', tipfmt:v=>fmt(v)+' tokens', ylabel:'tokens'});
+  scalingBars('c_scale',[
+    {label:'Tool calls', small:-21.4, dify:-46.7},
+    {label:'Assistant turns', small:-17.9, dify:-48.6},
+    {label:'Total context', small:-24.2, dify:-43.5},
+    {label:'Wall-clock', small:10.1, dify:-45.9},
+    {label:'Reported tokens', small:-7.6, dify:9.9},
+    {label:'Fresh tokens', small:-54.4, dify:28.5},
+  ]);
+}
+
+const rows=[
+  ['Reported tokens (subagent_tokens)',126881,115465,'+9.9% more',true],
+  ['Fresh tokens (input+output, non-cache)',66739,51929,'+28.5% more',true],
+  ['Total context processed (incl. cache)',4507149,7978895,'−43.5%',false],
+  ['Tool calls',40,75,'−46.7%',false],
+  ['Assistant turns',56,109,'−48.6%',false],
+  ['Files read',13,19,'−31.6%',false],
+  ['Wall-clock (s)',232.6,429.6,'−45.9%',false],
+];
+const tb=document.getElementById('tbody');
+rows.forEach(r=>{const d=r[1]-r[2];const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${r[0]}</td><td>${fmt(r[1])}</td><td>${fmt(r[2])}</td><td>${d>0?'+':''}${fmt(d)}</td><td class="${r[4]?'cost':'save'}">${r[3]}</td>`;
+  tb.appendChild(tr);});
+
+render();
+document.getElementById('themeBtn').addEventListener('click',()=>{const root=document.documentElement;const cur=root.getAttribute('data-theme');
+  root.setAttribute('data-theme', cur==='dark'?'light':cur==='light'?'dark':(matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+  setTimeout(render,20);});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(!document.documentElement.getAttribute('data-theme'))render();});
+</script>

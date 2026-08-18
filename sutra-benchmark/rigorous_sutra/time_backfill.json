@@ -1,0 +1,28 @@
+{
+ "SUTRA_ONLY": {
+  "median": 56.0,
+  "min": 37.7,
+  "max": 143.8,
+  "n": 36
+ },
+ "GREP_ONLY": {
+  "median": 37.7,
+  "min": 26.3,
+  "max": 90.3,
+  "n": 36
+ },
+ "BOTH": {
+  "median": 38.3,
+  "min": 22.4,
+  "max": 77.0,
+  "n": 36
+ },
+ "by_class": {
+  "lexical|SUTRA_ONLY": 49.0,
+  "lexical|GREP_ONLY": 36.1,
+  "lexical|BOTH": 33.7,
+  "semantic|SUTRA_ONLY": 62.2,
+  "semantic|GREP_ONLY": 43.0,
+  "semantic|BOTH": 43.3
+ }
+}
