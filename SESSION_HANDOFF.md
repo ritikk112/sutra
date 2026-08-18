@@ -29,13 +29,14 @@ sutra; all numbers are article source material.
 
 ## Pending work (in order)
 
-1. **Task 6 mini agent wave** — the MCP server in the OLD session ran
-   pre-slimming code; in a fresh session it auto-starts on HEAD. Run a
-   small 2-arm wave (e.g. the 6 battle-test tickets, haiku, 1 trial,
-   NEUTRAL template — verbatim prompts in the old sessions' transcripts
-   or BATTLE_TEST.md protocol) and check sutra-arm context growth
-   (cache-write tokens) is now within ~10% of control.
-   Analyzer: `benchmarks/battle_test/analyze_ab_transcripts.py`.
+1. ~~Task 6 mini agent wave~~ **DONE 2026-08-19**: two 12-trial waves
+   on the fresh server (battle-test + FT tickets). Cache-write gap
+   +3.3% mean / +1.5% paired geomean (was +30% median pre-slim);
+   fastapi tickets went from ratio ~1.4+ to 0.99; localization
+   retained (2 vs 4). Results in RETRIEVAL_GAPS_TASKS.md §Results
+   Task 6; SUTRA_VS_CONTROL.md cost section marked superseded;
+   `benchmarks/battle_test/ab_efficiency.json` now holds the 24
+   post-slim trial rows.
 2. **Harder-ticket vs-control rerun** — see the protocol note in
    RETRIEVAL_GAPS_TASKS.md (correctness ceiling: 54/54 both arms).
    Workflow script to reuse: session workflows dir,

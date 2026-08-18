@@ -274,13 +274,34 @@ them with all fixes: sutra set now PERFECT (r@5 1.000, zero 0, all
 modes; was soft .833/MRR .731); fastapi soft .583→.667 r@5, MRR
 .263→.368. CI wiring skipped (needs model download; documented here).
 
-**Task 6 — payload slimming (code DONE; live mini-wave pending).**
-Measured: `signature` was 115K of a 126K two-query payload (fastapi's
-Annotated[...Doc()] style). Search hits now carry a 200-char collapsed
-signature summary (full one on sutra_get_symbol). Worst-case payload
-94K→7.3K (−92%). The 2-arm mini wave to confirm context-growth parity
-needs a server restart (stdio server still runs pre-fix code this
-session) — run it at the start of the next session.
+**Task 6 — payload slimming (DONE; mini-wave acceptance PASSED
+2026-08-19).** Measured: `signature` was 115K of a 126K two-query
+payload (fastapi's Annotated[...Doc()] style). Search hits now carry a
+200-char collapsed signature summary (full one on sutra_get_symbol).
+Worst-case payload 94K→7.3K (−92%).
+
+Live acceptance (fresh session, server on 2a1f368): two 12-trial waves
+(battle-test tickets FK/RQ/PY + fastapi FT1–FT6, 2 arms × 1 haiku
+trial, byte-identical NEUTRAL template, analyzer extended to sum
+cache_creation_input_tokens):
+
+- **Context-growth parity achieved.** Combined 12 tickets: sutra-arm
+  cache-write mean 85.1k vs control 82.4k (**+3.3%**), paired
+  per-ticket geomean **+1.5%** — inside the ~10% acceptance bar. On
+  the fastapi tickets, where the pre-slim gap was concentrated
+  (per-ticket ratios 1.45–1.73), the paired geomean went from ~1.4+ to
+  **0.99**; sutra-arm absolute cache-write fell on every FT ticket
+  (worst case FT3 160.9k→79.8k, −50%).
+- **Localization advantage retained**: median calls-to-gold 2 (sutra)
+  vs 4 (control) across the 24 trials; sutra ≤ control on 11 of 12
+  tickets (FT6 the exception, 2 vs 1). All 24 trials localized.
+- Adoption 12/12 sutra-arm trials (mean 8.4 index calls/trial);
+  control contamination 0.0.
+- Data: `benchmarks/battle_test/ab_efficiency.json` (24 post-slim
+  trial rows); transcripts in session workflow dirs wf_d124da28 /
+  wf_18ccdf15. Cost conclusion for the article: the "cost wash" from
+  SUTRA_VS_CONTROL.md is now stale — with slimmed payloads sutra
+  halves calls-to-localization at parity context growth.
 
 ## Explicitly out of scope for this sheet
 

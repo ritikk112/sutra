@@ -71,6 +71,15 @@ signatures, provenance for 10–15 hits per call, plus the one-time
 ToolSearch schema load). Net cost lands within noise (−2%), wall-clock
 within noise.
 
+> **Superseded 2026-08-19.** After the signature-summary slimming
+> (commit 2a1f368), a 24-trial re-run of the 12 flask/requests/pydantic
+> /fastapi tickets on the live server measured sutra-arm cache-write at
+> **+3.3% mean / +1.5% paired geomean** vs control (was +30% median),
+> with the localization advantage intact (median 2 vs 4 calls-to-gold).
+> On the fastapi tickets, where the gap was concentrated, sutra-arm
+> context growth fell up to 50% in absolute terms. Details:
+> RETRIEVAL_GAPS_TASKS.md §Results, Task 6.
+
 ## Verdict (for the article, stated plainly)
 
 1. **Correctness on solvable tasks: no effect.** With haiku on
@@ -86,6 +95,9 @@ within noise.
 3. **Cost today: neutral.** Faster localization is currently cancelled
    out by verbose result payloads. This is fixable (see follow-up
    tasks) — payload slimming would likely turn the draw into a win.
+   *(Update 2026-08-19: slimming shipped and re-measured — context
+   growth is now at parity (+3.3%) with the localization win retained;
+   see the superseded note above.)*
 4. **Where the value should show but wasn't tested here:** tasks hard
    enough that mis-localization causes wrong answers (multi-hop bug
    hunts, cross-repo questions, corpora ≫3k symbols), and
