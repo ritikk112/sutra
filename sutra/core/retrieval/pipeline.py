@@ -17,6 +17,12 @@ from sutra.core.retrieval.types import SearchResult
 from sutra.core.vector_store.in_memory import InMemoryVectorStore
 
 DEFAULT_CANDIDATES_PER_CHANNEL = 50
+
+# Measured on the 36-query battle-test set (benchmarks/battle_test/): a 1.5x
+# vector weight with rrf_k=20 recovers vector-only hits (data symbols, thin-
+# text golds) that unweighted RRF's agreement scoring buried, at flat
+# recall@5/MRR.  {} restores classic unweighted RRF.
+DEFAULT_CHANNEL_WEIGHTS = {"vector": 1.5}
 # Reranker input width: top of the expanded list, not the raw channels.
 DEFAULT_RERANK_CANDIDATES = 50
 
@@ -69,6 +75,9 @@ class RetrievalPipeline:
         # Boost for hints derived from the behavioral-VERB fallback (weaker
         # evidence than an explicit kind noun).  None = same as kind_boost.
         kind_boost_verb: Optional[float] = None,
+        # Per-channel RRF weights; unlisted channels → 1.0.  None = the
+        # measured default (vector 1.5); pass {} for classic unweighted RRF.
+        channel_weights: Optional[dict[str, float]] = None,
     ) -> None:
         if kind_mode not in ("hard", "soft", "off"):
             raise ValueError(
@@ -90,6 +99,9 @@ class RetrievalPipeline:
         self._kind_mode = kind_mode
         self._kind_boost = kind_boost
         self._kind_boost_verb = kind_boost_verb
+        self._channel_weights = (
+            DEFAULT_CHANNEL_WEIGHTS if channel_weights is None else channel_weights
+        )
 
     @property
     def snapshot(self) -> ArtifactSnapshot:
@@ -118,7 +130,9 @@ class RetrievalPipeline:
             for ch in self._channels
         }
 
-        fused = rrf_fuse(per_channel, k=self._rrf_k)
+        fused = rrf_fuse(
+            per_channel, k=self._rrf_k, channel_weights=self._channel_weights
+        )
         if self._kind_mode == "soft":
             fused = boost_kinds(
                 fused, parsed, self._snapshot.symbols, self._kind_boost,

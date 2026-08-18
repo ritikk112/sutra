@@ -1,0 +1,807 @@
+{
+ "config": {
+  "modes": "hard,off,soft",
+  "no_prefix": false,
+  "verb_boost": null,
+  "dense_only": false,
+  "rrf_k": 20,
+  "vector_weight": 1.5,
+  "out": "grid_k20w15.json",
+  "quiet_queries": false
+ },
+ "pallets/flask": {
+  "cases": [
+   {
+    "id": "FL-A1",
+    "bucket": "A",
+    "query": "How does Flask load application settings from a Python file on disk?",
+    "golds": [
+     "sutra python pallets/flask src/flask/config.py Config#from_pyfile()."
+    ],
+    "kind_hint": [
+     "variable"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": 5,
+     "soft": 5
+    }
+   },
+   {
+    "id": "FL-A2",
+    "bucket": "A",
+    "query": "How do you turn a class-based view into a plain view function you can pass to add_url_rule?",
+    "golds": [
+     "sutra python pallets/flask src/flask/views.py View#as_view()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": 6,
+     "off": 6,
+     "soft": 6
+    }
+   },
+   {
+    "id": "FL-A3",
+    "bucket": "A",
+    "query": "Where does Flask keep the shared type aliases used for response and header values across its modules?",
+    "golds": [
+     "sutra python pallets/flask src/flask/typing.py src/flask/typing/"
+    ],
+    "kind_hint": [
+     "class"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "module"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": null,
+     "soft": null
+    }
+   },
+   {
+    "id": "FL-B1",
+    "bucket": "B",
+    "query": "How does Flask make sure request-scoped cleanup code still runs even when the view raised an exception during dispatch?",
+    "golds": [
+     "sutra python pallets/flask src/flask/app.py Flask#do_teardown_request()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": 7,
+     "off": 7,
+     "soft": 7
+    }
+   },
+   {
+    "id": "FL-B2",
+    "bucket": "B",
+    "query": "How can code register something to run and tweak the response right after the current request finishes, without affecting other requests?",
+    "golds": [
+     "sutra python pallets/flask src/flask/ctx.py after_this_request()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 2,
+     "off": 2,
+     "soft": 2
+    }
+   },
+   {
+    "id": "FL-B3",
+    "bucket": "B",
+    "query": "How does Flask turn the signed cookie sent by the browser back into the session dictionary at the start of a request, falling back to an empty session if the signature is invalid?",
+    "golds": [
+     "sutra python pallets/flask src/flask/sessions.py SecureCookieSessionInterface#open_session()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": 9,
+     "off": null,
+     "soft": null
+    }
+   },
+   {
+    "id": "FL-B4",
+    "bucket": "B",
+    "query": "What allows work started in a new thread from inside a view to keep seeing the same request and app data that were active in that view, since new threads don't automatically pick this up?",
+    "golds": [
+     "sutra python pallets/flask src/flask/ctx.py copy_current_request_context()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 2,
+     "soft": 1
+    }
+   },
+   {
+    "id": "FL-B5",
+    "bucket": "B",
+    "query": "How does Flask serve a single uploaded file from inside a directory while blocking a client-supplied filename from escaping outside that directory?",
+    "golds": [
+     "sutra python pallets/flask src/flask/helpers.py send_from_directory()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "FL-C1",
+    "bucket": "C",
+    "query": "What is the method that reads configuration values from environment variables sharing a common prefix?",
+    "golds": [
+     "sutra python pallets/flask src/flask/config.py Config#from_prefixed_env()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "FL-C2",
+    "bucket": "C",
+    "query": "What is the class that holds the temporary registration state used while a blueprint is being attached to an application?",
+    "golds": [
+     "sutra python pallets/flask src/flask/sansio/blueprints.py BlueprintSetupState#"
+    ],
+    "kind_hint": [
+     "class"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "class"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "FL-C3",
+    "bucket": "C",
+    "query": "What is the function that converts a view's return value into a proper response object you can then attach headers to?",
+    "golds": [
+     "sutra python pallets/flask src/flask/helpers.py make_response()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "FL-C4",
+    "bucket": "C",
+    "query": "What is the method that determines the correct exception class and status code to use when handling a given error identifier?",
+    "golds": [
+     "sutra python pallets/flask src/flask/sansio/scaffold.py Scaffold#_get_exc_class_and_code()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   }
+  ],
+  "modes": {
+   "hard": {
+    "recall@5": 0.5833333333333334,
+    "recall@10": 0.8333333333333334,
+    "mrr": 0.5767195767195767,
+    "zero_recall": 2
+   },
+   "off": {
+    "recall@5": 0.6666666666666666,
+    "recall@10": 0.8333333333333334,
+    "mrr": 0.5424603174603174,
+    "zero_recall": 2
+   },
+   "soft": {
+    "recall@5": 0.6666666666666666,
+    "recall@10": 0.8333333333333334,
+    "mrr": 0.5841269841269842,
+    "zero_recall": 2
+   }
+  }
+ },
+ "psf/requests": {
+  "cases": [
+   {
+    "id": "RQ-A1",
+    "bucket": "A",
+    "query": "the full list of event names that hooks are allowed to target when someone registers one",
+    "golds": [
+     "sutra python psf/requests src/requests/hooks.py HOOKS."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "variable"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": 8,
+     "soft": 10
+    }
+   },
+   {
+    "id": "RQ-A2",
+    "bucket": "A",
+    "query": "how per-request environment settings like proxies and SSL verification get merged with session-level defaults before a request is sent",
+    "golds": [
+     "sutra python psf/requests src/requests/sessions.py Session#merge_environment_settings()."
+    ],
+    "kind_hint": [
+     "variable"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "RQ-A3",
+    "bucket": "A",
+    "query": "the fixed set of HTTP status code types that requests automatically follows as redirects without extra handling",
+    "golds": [
+     "sutra python psf/requests src/requests/models.py REDIRECT_STATI."
+    ],
+    "kind_hint": [
+     "class"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "variable"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": 8,
+     "soft": 9
+    }
+   },
+   {
+    "id": "RQ-B1",
+    "bucket": "B",
+    "query": "how requests decides whether to strip a request body's Authorization header when following a redirect to a different host, keeping it only for same-host hops",
+    "golds": [
+     "sutra python psf/requests src/requests/sessions.py SessionRedirectMixin#should_strip_auth()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "RQ-B2",
+    "bucket": "B",
+    "query": "how the next redirect location gets pulled out of a response's headers before the session follows it further",
+    "golds": [
+     "sutra python psf/requests src/requests/sessions.py SessionRedirectMixin#get_redirect_target()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "RQ-B3",
+    "bucket": "B",
+    "query": "how requests works out the total size of a request body that could be a plain string, a file-like object, or a buffer, without fully reading it",
+    "golds": [
+     "sutra python psf/requests src/requests/utils.py super_len()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": 10,
+     "soft": 9
+    }
+   },
+   {
+    "id": "RQ-B4",
+    "bucket": "B",
+    "query": "the trick requests uses to write a file to disk safely so a crash midway won't leave a corrupted partial file in its place",
+    "golds": [
+     "sutra python psf/requests src/requests/utils.py atomic_open()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 4,
+     "off": 3,
+     "soft": 3
+    }
+   },
+   {
+    "id": "RQ-B5",
+    "bucket": "B",
+    "query": "how a target URL gets checked against the NO_PROXY environment list to decide whether proxying should be skipped entirely",
+    "golds": [
+     "sutra python psf/requests src/requests/utils.py should_bypass_proxies()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "RQ-C1",
+    "bucket": "C",
+    "query": "the function that re-quotes a URI so illegal characters get percent-encoded while already-escaped sequences are preserved",
+    "golds": [
+     "sutra python psf/requests src/requests/utils.py requote_uri()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "RQ-C2",
+    "bucket": "C",
+    "query": "the class that stores HTTP response headers in a way that treats header names case-insensitively",
+    "golds": [
+     "sutra python psf/requests src/requests/structures.py CaseInsensitiveDict#"
+    ],
+    "kind_hint": [
+     "class"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "class"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "RQ-C3",
+    "bucket": "C",
+    "query": "the method that walks a chain of redirect responses and yields each intermediate response or request as the session follows them",
+    "golds": [
+     "sutra python psf/requests src/requests/sessions.py SessionRedirectMixin#resolve_redirects()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": 2,
+     "off": 2,
+     "soft": 2
+    }
+   },
+   {
+    "id": "RQ-C4",
+    "bucket": "C",
+    "query": "the function that prepends a URL scheme like http when the given URL doesn't already specify one",
+    "golds": [
+     "sutra python psf/requests src/requests/utils.py prepend_scheme_if_needed()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   }
+  ],
+  "modes": {
+   "hard": {
+    "recall@5": 0.6666666666666666,
+    "recall@10": 0.6666666666666666,
+    "mrr": 0.5625,
+    "zero_recall": 4
+   },
+   "off": {
+    "recall@5": 0.75,
+    "recall@10": 1.0,
+    "mrr": 0.6819444444444445,
+    "zero_recall": 0
+   },
+   "soft": {
+    "recall@5": 0.75,
+    "recall@10": 1.0,
+    "mrr": 0.6796296296296296,
+    "zero_recall": 0
+   }
+  }
+ },
+ "pydantic/pydantic": {
+  "cases": [
+   {
+    "id": "PD-A1",
+    "bucket": "A",
+    "query": "What actually turns a Python annotation into the pydantic-core validation schema used at runtime?",
+    "golds": [
+     "sutra python pydantic/pydantic pydantic/_internal/_generate_schema.py GenerateSchema#generate_schema()."
+    ],
+    "kind_hint": [
+     "class"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": null,
+     "soft": null
+    }
+   },
+   {
+    "id": "PD-A2",
+    "bucket": "A",
+    "query": "How do I define an integer type in pydantic that must fall within a certain numeric range?",
+    "golds": [
+     "sutra python pydantic/pydantic pydantic/types.py conint()."
+    ],
+    "kind_hint": [
+     "class"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": 3,
+     "soft": 6
+    }
+   },
+   {
+    "id": "PD-A3",
+    "bucket": "A",
+    "query": "Inside a custom __get_pydantic_core_schema__, what object do you invoke as the handler to delegate to the next step in the chain?",
+    "golds": [
+     "sutra python pydantic/pydantic pydantic/annotated_handlers.py GetCoreSchemaHandler#"
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "class"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": 7,
+     "soft": null
+    }
+   },
+   {
+    "id": "PD-B1",
+    "bucket": "B",
+    "query": "What logic turns a Python-style snake_case attribute name into the camelCase form used for JSON keys?",
+    "golds": [
+     "sutra python pydantic/pydantic pydantic/alias_generators.py to_camel()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "PD-B2",
+    "bucket": "B",
+    "query": "How does pydantic decide which member of a union to validate against using a shared tag field found on the input data?",
+    "golds": [
+     "sutra python pydantic/pydantic pydantic/_internal/_discriminated_union.py apply_discriminator()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "verb",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": null,
+     "soft": null
+    }
+   },
+   {
+    "id": "PD-B3",
+    "bucket": "B",
+    "query": "What happens when you ask for a duplicate of a model instance with certain field values overridden?",
+    "golds": [
+     "sutra python pydantic/pydantic pydantic/main.py BaseModel#model_copy()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": 4,
+     "off": 4,
+     "soft": 4
+    }
+   },
+   {
+    "id": "PD-B4",
+    "bucket": "B",
+    "query": "What finishes preparing a newly defined model after its fields and configuration have been collected, wiring up validation and serialization machinery?",
+    "golds": [
+     "sutra python pydantic/pydantic pydantic/_internal/_model_construction.py complete_model_class()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "PD-B5",
+    "bucket": "B",
+    "query": "What raises an error if you try to reassign an attribute value on an instance whose model has been configured as immutable?",
+    "golds": [
+     "sutra python pydantic/pydantic pydantic/main.py _check_frozen()."
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": null,
+     "off": null,
+     "soft": null
+    }
+   },
+   {
+    "id": "PD-C1",
+    "bucket": "C",
+    "query": "What's the function that converts a PascalCase or camelCase string into snake_case?",
+    "golds": [
+     "sutra python pydantic/pydantic pydantic/alias_generators.py to_snake()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "function"
+    ],
+    "ranks": {
+     "hard": 2,
+     "off": 2,
+     "soft": 2
+    }
+   },
+   {
+    "id": "PD-C2",
+    "bucket": "C",
+    "query": "What's the class responsible for generating a JSON Schema document from pydantic's internal core schema representation?",
+    "golds": [
+     "sutra python pydantic/pydantic pydantic/json_schema.py GenerateJsonSchema#"
+    ],
+    "kind_hint": [
+     "class"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "class"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "PD-C3",
+    "bucket": "C",
+    "query": "What's the method that builds a model instance directly from trusted field values without running any validation?",
+    "golds": [
+     "sutra python pydantic/pydantic pydantic/main.py BaseModel#model_construct()."
+    ],
+    "kind_hint": [
+     "function",
+     "method"
+    ],
+    "hint_source": "noun",
+    "gold_kinds": [
+     "method"
+    ],
+    "ranks": {
+     "hard": 1,
+     "off": 1,
+     "soft": 1
+    }
+   },
+   {
+    "id": "PD-C4",
+    "bucket": "C",
+    "query": "Which module holds the snake_case, camelCase, and PascalCase naming convention converters?",
+    "golds": [
+     "sutra python pydantic/pydantic pydantic/alias_generators.py pydantic/alias_generators/"
+    ],
+    "kind_hint": null,
+    "hint_source": null,
+    "gold_kinds": [
+     "module"
+    ],
+    "ranks": {
+     "hard": 7,
+     "off": 7,
+     "soft": 7
+    }
+   }
+  ],
+  "modes": {
+   "hard": {
+    "recall@5": 0.5,
+    "recall@10": 0.5833333333333334,
+    "mrr": 0.4077380952380953,
+    "zero_recall": 5
+   },
+   "off": {
+    "recall@5": 0.5833333333333334,
+    "recall@10": 0.75,
+    "mrr": 0.4474206349206349,
+    "zero_recall": 3
+   },
+   "soft": {
+    "recall@5": 0.5,
+    "recall@10": 0.6666666666666666,
+    "mrr": 0.42162698412698413,
+    "zero_recall": 4
+   }
+  }
+ }
+}

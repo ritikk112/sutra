@@ -102,6 +102,39 @@ class TestRrfFusion:
     def test_empty_channels(self) -> None:
         assert rrf_fuse({"vector": [], "bm25": []}) == []
 
+    def test_channel_weights_scale_contributions(self) -> None:
+        # vector weighted 2.0: its rank-1-only doc (2/(60+1)) must now beat a
+        # doc two unweighted channels agree on at rank 2 (1/62 + 1/62).
+        channels = {
+            "vector": [_r("vec_top", 0.9)],
+            "bm25": [_r("lex_top", 9.0), _r("agreed", 4.0)],
+            "moniker": [_r("lex_top", 1.0), _r("agreed", 0.8)],
+        }
+        plain = rrf_fuse(channels)
+        assert plain[0].moniker != "vec_top"   # unweighted: agreement wins
+        weighted = rrf_fuse(channels, channel_weights={"vector": 3.0})
+        assert weighted[0].moniker == "vec_top"
+
+    def test_pipeline_defaults_to_weighted_vector(self, snapshot) -> None:
+        # Measured default: vector 1.5 at rrf_k=20 (benchmarks/battle_test/).
+        pipe = RetrievalPipeline(snapshot, FixtureEmbedder())
+        assert pipe._channel_weights == {"vector": 1.5}
+        assert pipe._rrf_k == 20
+        # {} opts back into classic unweighted RRF.
+        plain = RetrievalPipeline(snapshot, FixtureEmbedder(), channel_weights={})
+        assert plain._channel_weights == {}
+
+    def test_unit_weights_change_nothing(self) -> None:
+        channels = {
+            "vector": [_r("a", 0.9), _r("b", 0.5)],
+            "bm25": [_r("b", 9.0), _r("c", 4.0)],
+        }
+        plain = rrf_fuse(channels)
+        weighted = rrf_fuse(channels, channel_weights={"vector": 1.0, "bm25": 1.0})
+        assert [(r.moniker, r.score) for r in plain] == [
+            (r.moniker, r.score) for r in weighted
+        ]
+
 
 # ---------------------------------------------------------------------------
 # Moniker channel
