@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import fnmatch
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Iterator, Optional, Sequence
 
 from sutra.core.artifact.atomic_writer import AtomicArtifactWriter
 from sutra.core.artifact.sink import ArtifactSink
@@ -143,6 +144,10 @@ class Indexer:
         gitignore_filter: Optional[GitignoreFilter] = None,
         resolver: Optional["Resolver"] = None,
         artifact_sink: Optional[ArtifactSink] = None,
+        # Repo-relative fnmatch patterns to skip (config: indexing.exclude_globs).
+        # For example/doc trees that are valid code but retrieval noise
+        # ("docs_src/*", "examples/*") — fnmatch '*' crosses '/'.
+        exclude_globs: Sequence[str] = (),
     ) -> None:
         self.adapters = adapters
         self.exporter = exporter
@@ -152,6 +157,7 @@ class Indexer:
         self.gitignore_filter = gitignore_filter
         self.resolver = resolver
         self.artifact_sink = artifact_sink or AtomicArtifactWriter()
+        self.exclude_globs = tuple(exclude_globs)
 
     # ------------------------------------------------------------------
     # Public API
@@ -397,8 +403,14 @@ class Indexer:
                 if any(filename.startswith(pre) for pre in _EXCLUDED_PREFIXES):
                     continue
                 abs_path = Path(dirpath) / filename
-                if self.gitignore_filter is not None:
+                if self.gitignore_filter is not None or self.exclude_globs:
                     rel = str(abs_path.relative_to(root)).replace("\\", "/")
-                    if self.gitignore_filter.should_ignore(rel):
+                    if self.gitignore_filter is not None and (
+                        self.gitignore_filter.should_ignore(rel)
+                    ):
+                        continue
+                    if any(
+                        fnmatch.fnmatch(rel, pat) for pat in self.exclude_globs
+                    ):
                         continue
                 yield abs_path

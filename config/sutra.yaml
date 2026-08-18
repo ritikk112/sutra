@@ -1,6 +1,14 @@
 # Sutra configuration file.
 # Copy this file and adjust for your environment.
 
+# indexing:
+#   # Repo-relative fnmatch patterns pruned from indexing, for example/doc
+#   # trees that are valid code but retrieval noise. '*' crosses '/'.
+#   # (Test files are always excluded; this is for project-specific dirs.)
+#   exclude_globs:
+#     - docs_src/*
+#     - examples/*
+
 embedder:
   # provider: openai | local | fixture
   #   openai  — calls the OpenAI Embeddings API, OR any OpenAI-compatible
