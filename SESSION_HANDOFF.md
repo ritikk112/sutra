@@ -37,10 +37,14 @@ sutra; all numbers are article source material.
    Task 6; SUTRA_VS_CONTROL.md cost section marked superseded;
    `benchmarks/battle_test/ab_efficiency.json` now holds the 24
    post-slim trial rows.
-2. **Harder-ticket vs-control rerun** — see the protocol note in
-   RETRIEVAL_GAPS_TASKS.md (correctness ceiling: 54/54 both arms).
-   Workflow script to reuse: session workflows dir,
-   `sutra-vs-control-benchmark` (also summarized in SUTRA_VS_CONTROL.md).
+2. ~~Harder-ticket vs-control rerun~~ **RESOLVED 2026-08-19: suite
+   failed its own difficulty gate — and that's the finding.** 16
+   sonnet-authored hard tickets (cross-file/grep-trap, verified golds:
+   `benchmarks/battle_test/hard_tickets.json`); grep-only haiku pilot
+   scored 14 correct / 2 partial / 0 wrong (87.5% > 80% bar), so no
+   main run. Correctness ceiling is robust at this tier; sutra's value
+   is navigation efficiency. Details in RETRIEVAL_GAPS_TASKS.md
+   protocol-note outcome.
 3. Decide: default-exclude docs_src-style dirs for fastapi in the
    served artifact (re-index with the config) — +.083 MRR measured.
 4. P16 booth/outreach/gin re-run — still blocked (repos on Linux box).

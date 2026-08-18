@@ -1,0 +1,284 @@
+{
+ "tickets": [
+  {
+   "title": "Yield-dependency teardown timing relative to response delivery",
+   "text": "In FastAPI, a dependency function that uses `yield` runs its post-yield (teardown) code at one of two possible points in the request lifecycle: either right after the path operation function finishes but before anything is written to the client, or only after the entire response has finished being sent. There is a declarative way to pick which of these two timings a given yield-dependency uses, and a validation error is raised at dependency-graph-build time if a dependency that must close early is combined with a sub-dependency that is only allowed to close late (an inconsistent nesting). Explain: (1) where the two different teardown timings are implemented at the ASGI-app level for both regular HTTP routes and WebSocket routes, (2) how a dependency's declared or inferred timing bucket is computed and used to route it into one of the two teardown contexts when dependencies are solved, and (3) what exception type guards against the invalid combination, and where in the code that check happens.",
+   "gold": "FastAPI's `request_response()` and `websocket_session()` wrappers in fastapi/routing.py (lines ~121-186) open two nested `AsyncExitStack`s per request: an outer one stored on `scope['fastapi_inner_astack']` that stays open until after the response has been awaited/sent, and an inner one stored on `scope['fastapi_function_astack']` that is closed as soon as the endpoint function returns, before the response is sent. `Depends(..., scope=...)` (fastapi/param_functions.py, param `scope: Literal['function','request']|None`) lets a caller choose which stack a yield-dependency's teardown runs in; `Dependant.scope` carries this onto fastapi/dependencies/models.py's `Dependant` dataclass, and `_get_computed_scope()` (dependencies/models.py) defaults an explicit-`None` scope to `'request'` when the callable is a generator/async-generator. In `solve_dependencies()` (fastapi/dependencies/utils.py, ~line 662-671), when a sub-dependant is a generator callable, its computed scope selects `function_astack` (if `scope=='function'`) or `request_astack` (otherwise) as the `AsyncExitStack` its context manager is entered on via `_solve_generator()`. The consistency check lives in `get_dependant()` in fastapi/dependencies/utils.py (~lines 302-317): while building the dependant tree, if a generator dependant whose own computed scope is `'request'` has a sub-dependency declared with `scope='function'`, it raises `DependencyScopeError` (defined in fastapi/exceptions.py, ~line 167) because the outer 'request'-scoped dependency would still be open after its 'function'-scoped child has already torn down.",
+   "gold_markers": [
+    "fastapi_function_astack",
+    "fastapi_inner_astack",
+    "_get_computed_scope",
+    "DependencyScopeError",
+    "solve_dependencies"
+   ],
+   "grep_trap": "Grepping 'yield' or 'teardown' surfaces docs_src tutorial examples and the generic AsyncExitStack usage but not the two-stack split; grepping 'scope' collides with OAuth2 'scopes' (a completely different, much more common concept in the same files: SecurityScopes, own_oauth_scopes), so a keyword search tends to converge on OAuth2 scope code instead of the request/function dependency-teardown-timing mechanism. The actual wiring point (request_response/websocket_session opening two nested AsyncExitStacks) is in routing.py far from param_functions.py where the scope literal is documented, and the validation error is raised during dependant-tree construction in dependencies/utils.py, not near where the stacks are used.",
+   "hops": 4,
+   "id": "HF1",
+   "repo": "fastapi/fastapi",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/fastapi",
+   "lens": "crossfile"
+  },
+  {
+   "title": "Automatic streaming-response format for generator path operations",
+   "text": "If a path operation's handler function is written as a generator (using `yield` repeatedly instead of returning once) and is given a return type annotation describing the type of each yielded item, FastAPI can automatically serve the response as a stream without the developer specifying anything about it, and the exact wire format depends only on whether a particular response class was set. Trace the mechanism end to end: how is the per-item type pulled out of the generator's return type annotation, how does FastAPI decide between the two different streaming wire formats available by default, what media type and per-item byte-encoding does each of them use on the wire, and what happens differently to an item's encoding when it is an instance of a special marker type meant to carry an explicit event id/name for one of the two formats versus an ordinary object?",
+   "gold": "In fastapi/dependencies/utils.py, `get_stream_item_type()` (~lines 261-268) inspects a return annotation like `AsyncGenerator[Item, None]`/`Iterator[Item]` etc. against `_STREAM_ORIGINS` and returns the first type argument (the per-item type). In fastapi/routing.py's `_prepare_response_content`/route-setup code (~lines 1071-1123), a generator-callable route (`_is_gen_callable`/`_is_async_gen_callable`) has `route.is_sse_stream` set when `response_class` is (a subclass of) `EventSourceResponse`, and `route.is_json_stream` set when `response_class` was left as the `DefaultPlaceholder` (i.e. not explicitly set) - only one of the two is used to build `route.stream_item_field` from the extracted item type, skipping it when the item type is `ServerSentEvent` itself. At request time, inside `get_request_handler`'s inner `app()` in routing.py (~lines 520-682), `is_sse_stream` drives a path that serializes each yielded item with `_serialize_sse_item`/`format_sse_event` (from fastapi/sse.py) into `text/event-stream` bytes via a `StreamingResponse` with media_type `text/event-stream` - and when the yielded item is a `ServerSentEvent` (fastapi/sse.py), its `event`/`id`/`retry`/`raw_data`/`comment` fields are used directly to build the wire event instead of putting the whole object through JSON+`data:` wrapping. `is_json_stream` instead drives `_serialize_item` (`_serialize_data(item) + b'\\n'`) producing newline-delimited JSON with media_type `application/jsonl`.",
+   "gold_markers": [
+    "get_stream_item_type",
+    "is_sse_stream",
+    "is_json_stream",
+    "EventSourceResponse",
+    "application/jsonl"
+   ],
+   "grep_trap": "Grepping 'stream' or 'generator' hits many unrelated generator-dependency and StreamingResponse usages in dependencies/utils.py and routing.py; grepping 'SSE' only finds fastapi/sse.py, which only defines the marker classes and low-level event-line formatting, not the decision logic (which response_class was or wasn't explicitly set, and how that maps to is_sse_stream vs is_json_stream) that actually lives in routing.py's route-building and request-handling code, nor the return-annotation item-type extraction that lives in dependencies/utils.py.",
+   "hops": 3,
+   "id": "HF2",
+   "repo": "fastapi/fastapi",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/fastapi",
+   "lens": "crossfile"
+  },
+  {
+   "title": "Merging OAuth2 scopes from nested dependencies into one OpenAPI security requirement",
+   "text": "A path operation can end up requiring OAuth2 access indirectly: its handler depends on some dependency A, which itself depends on another dependency B that is actually the OAuth2 scheme and which was asked for a certain list of scopes; meanwhile the handler (or another sub-dependency) might also ask that same OAuth2 scheme for a different list of scopes directly. When the interactive API docs are generated, these end up combined into a single security requirement entry for that one underlying scheme, listing the union of scopes requested anywhere in the dependency tree. Describe the mechanism: how does FastAPI recognize, while walking a nested dependency tree, that a particular dependency callable is actually a security scheme rather than an ordinary function; how are the different scope lists requested at different points/depths in that tree accumulated and attached to that dependency; and where/how are entries for the same underlying scheme, requested with different scopes in different places, folded into one merged requirement in the generated schema?",
+   "gold": "Recognition happens in fastapi/dependencies/models.py's `_is_security_scheme()` (~lines 123-127), which unwraps the dependency callable and checks `isinstance(unwrapped, SecurityBase)` (`SecurityBase` defined in fastapi/security/base.py, subclassed by e.g. `OAuth2`/`OAuth2PasswordBearer` in fastapi/security/oauth2.py, each carrying a `.scheme_name` and `.model`). Scope accumulation happens twice, structurally similarly, in two different files for two different purposes: while building the dependant tree, `get_dependant()` in fastapi/dependencies/utils.py (~lines 290, 318-330) threads `parent_oauth_scopes + own_oauth_scopes` down into each sub-dependant (from `Security(..., scopes=[...])`), and `_get_oauth_scopes()` in fastapi/dependencies/models.py (~lines 71-79) later reads a dependant's own+inherited scopes back out (deduplicated, order-preserving). For OpenAPI generation, `_get_openapi_dependency_data()` in fastapi/openapi/utils.py (~lines 99-129) walks `route.dependant`'s tree accumulating `oauth_scopes` per branch and collecting `(dependant, oauth_scopes)` pairs into `security_dependencies` whenever `_is_security_scheme()` is true for a non-root dependant. Finally `_get_openapi_security_definitions()` in fastapi/openapi/utils.py (~lines 132-156) groups those pairs by `security_scheme.scheme_name` in `operation_security_dict`, merging (deduplicating) scope lists requested for the same scheme name at different points in the tree into one `{name: scopes}` entry in the operation's `security` list.",
+   "gold_markers": [
+    "_is_security_scheme",
+    "_get_openapi_dependency_data",
+    "_get_openapi_security_definitions",
+    "SecurityBase",
+    "scheme_name"
+   ],
+   "grep_trap": "Grepping 'scopes' or 'OAuth2' surfaces dozens of hits across security/oauth2.py's SecurityScopes/OAuth2 classes and docs_src examples, none of which show the merge step; the actual merge-by-scheme-name logic lives in openapi/utils.py under names with no 'oauth' or 'scope' substring recognizable from the ticket wording (_get_openapi_security_definitions groups by security_scheme.scheme_name, using jsonable_encoder on security_scheme.model), and the 'is this dependency actually a security scheme' check is a small isinstance test buried in dependencies/models.py rather than in openapi/utils.py or security/oauth2.py where a keyword search would naturally look first.",
+   "hops": 3,
+   "id": "HF3",
+   "repo": "fastapi/fastapi",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/fastapi",
+   "lens": "crossfile"
+  },
+  {
+   "title": "WebSocket parameter-validation failures do not produce an HTTP 422",
+   "text": "When query/path/header/cookie or dependency validation fails for a normal HTTP path operation, the client receives a 422 response with a JSON body describing the errors. Describe what happens instead when the equivalent kind of validation failure occurs while resolving the parameters of a WebSocket path operation (e.g. a required query parameter used for the WebSocket handshake fails validation): what distinct exception type is raised in that case and where exactly is it raised, and what does FastAPI's built-in default handling for that exception type actually do to the WebSocket connection (including the specific close code and where the human-readable error detail ends up) instead of returning an HTTP response?",
+   "gold": "In fastapi/routing.py's `get_websocket_app()` (~lines 769-796), when `solve_dependencies()` returns any errors for a WebSocket route's dependant, it raises `WebSocketRequestValidationError` (defined in fastapi/exceptions.py, ~line 224, a `ValidationException` subclass distinct from the HTTP-only `RequestValidationError`) instead of the flow HTTP routes use. FastAPI registers a default handler for this exception type in `FastAPI.__init__()` in fastapi/applications.py (~lines 1004-1012): `self.exception_handlers.setdefault(WebSocketRequestValidationError, websocket_request_validation_exception_handler)`. That handler, `websocket_request_validation_exception_handler()` in fastapi/exception_handlers.py (~lines 29-34), does not return an HTTP `Response` at all - it calls `await websocket.close(code=WS_1008_POLICY_VIOLATION, reason=jsonable_encoder(exc.errors()))`, closing the socket with WebSocket close code 1008 ('Policy Violation') and putting the JSON-encoded validation errors into the close frame's `reason` field rather than a response body.",
+   "gold_markers": [
+    "WebSocketRequestValidationError",
+    "get_websocket_app",
+    "WS_1008_POLICY_VIOLATION",
+    "websocket_request_validation_exception_handler"
+   ],
+   "grep_trap": "Grepping '422' only finds the HTTP-side request_validation_exception_handler in exception_handlers.py, giving no hint that a WebSocket route takes a completely different code path; grepping 'WebSocket' floods with unrelated WebSocket class/type-hint noise across routing.py, websockets.py and security code. Confirming the full mechanism requires connecting where the exception is raised (deep inside get_websocket_app in routing.py, not near any '422' text), where the distinct exception class is declared (exceptions.py), and where its default handler is registered as opposed to defined (applications.py's FastAPI.__init__ vs exception_handlers.py) - three separate files a single grep on any one term won't jointly surface.",
+   "hops": 4,
+   "id": "HF4",
+   "repo": "fastapi/fastapi",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/fastapi",
+   "lens": "crossfile"
+  },
+  {
+   "title": "Response object returned directly vs. injected Response parameter",
+   "text": "In a FastAPI path operation, a handler can accept a framework-provided response object as a parameter and mutate it (e.g. add a header, set a cookie, or change the status code) before the function returns its actual payload. Suppose an endpoint does this mutation, but then returns a fully-formed response object of its own (for example a redirect or a custom response) instead of returning plain data (a dict, a Pydantic model, etc.). Will the header/cookie/status-code changes made to the injected response object show up in what the client actually receives? Trace the exact code path that turns a handler's return value into the outgoing HTTP response and explain precisely which return-value shape causes the injected response object's headers/status to be merged in, and which shape causes them to be silently dropped.",
+   "gold": "In fastapi/routing.py, get_request_handler's inner app() function (around lines 706-748) calls `raw_response = await run_endpoint_function(...)` and then branches on `isinstance(raw_response, Response)`. If the handler returned a Response instance directly, the code only copies over `background` (`raw_response.background = solved_result.background_tasks`) and sets `response = raw_response` as-is \u2014 it never touches `solved_result.response.headers` or `solved_result.response.status_code`, so any mutation made through the injected `response: Response` dependency parameter (headers, cookies, status_code) is discarded. If instead the handler returned plain data (not a Response instance), the code builds `response_args` from `_build_response_args(status_code=status_code, solved_result=solved_result)` (which reads `solved_result.response.status_code`), constructs the response via `actual_response_class(content, **response_args)`, and then explicitly runs `response.headers.raw.extend(solved_result.response.headers.raw)` \u2014 so in that branch the injected object's headers and status ARE merged in. `solved_result.response` is the same Response object created in dependencies/utils.py's solve_dependencies (default `Response()` unless a Response was injected/found) and passed to the endpoint when it declares a `response: Response` parameter.",
+   "gold_markers": [
+    "isinstance(raw_response, Response)",
+    "response.headers.raw.extend",
+    "solved_result.response",
+    "_build_response_args"
+   ],
+   "grep_trap": "Grepping 'response.headers' or 'set_cookie' or 'Response' floods results across docs_src/response_headers, docs_src/response_cookies, docs_src/response_directly, tests/test_security_*, and hundreds of Annotated[...] docstring lines throughout routing.py's huge parameter definitions \u2014 none of which reveal that the merge is conditional on the return-value type. The actual branch is two nearly-identical-looking blocks ~40 lines apart inside one long function, distinguished only by one isinstance check and the presence/absence of a single `.extend()` call.",
+   "hops": 2,
+   "id": "HF5",
+   "repo": "fastapi/fastapi",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/fastapi",
+   "lens": "greptrap"
+  },
+  {
+   "title": "Whole-body parsing mode when mixing an uploaded file with other body fields",
+   "text": "Consider a path operation whose function signature declares more than one body-carrying parameter: one parameter that receives an uploaded file, and another parameter that is a plain body field (not itself a file). Neither parameter uses an explicit embed override. When a request comes in, does the framework read the incoming request as JSON or as form data in order to populate the non-file parameter? Identify the function that combines multiple body parameters into a single internal representation, state the exact rule it uses to choose that representation's type when the parameters are a mix of kinds, and identify the separate spot where that choice is then used to decide between calling the request's form-parsing method versus its JSON-parsing method.",
+   "gold": "fastapi/dependencies/utils.py's `_get_body_field` (around lines 1000-1043) merges all of a route's body params into one combined ModelField. It picks the combined field's `field_info` class with priority: `if any(isinstance(f.field_info, params.File) for f in body_params): BodyFieldInfo = params.File`, `elif any(... params.Form ...): BodyFieldInfo = params.Form`, `else: BodyFieldInfo = params.Body`. So a single File parameter anywhere among the body params forces the *entire* combined body field to be treated as File-typed, even though other body params were declared as ordinary (JSON) Body fields. That combined field is stored as `route.body_field`. Separately, in fastapi/routing.py's `get_request_handler` (line 395), `is_body_form = body_field and isinstance(body_field.field_info, params.Form)` is computed; since `class File(Form)` in fastapi/params.py (line 663) makes File a subclass of Form, this isinstance check is True, and later in the request-handling code the body is read via `await request.form()` rather than `await request.json()`. Consequence: the plain (non-file) body parameter is actually parsed from multipart form data, not JSON, once any sibling body parameter is a file upload.",
+   "gold_markers": [
+    "_get_body_field",
+    "is_body_form",
+    "params.File",
+    "class File(Form)"
+   ],
+   "grep_trap": "Grepping 'multipart' or 'File' or 'Form' surfaces mostly python-multipart install-error strings, docs_src/request_files and docs_src/request_forms_and_files examples, and the huge Annotated[...Doc()] parameter blocks in routing.py's route-registration methods (add_api_route, get, post, etc., each repeating dozens of doc-string lines) \u2014 none of which state the 'any File wins' promotion rule or the downstream isinstance-of-Form check that decides form() vs json() parsing.",
+   "hops": 3,
+   "id": "HF6",
+   "repo": "fastapi/fastapi",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/fastapi",
+   "lens": "greptrap"
+  },
+  {
+   "title": "Effect of response filtering options when no response model exists",
+   "text": "FastAPI path operations can pass options that filter which fields of the returned object get serialized (for example, excluding fields that were never explicitly set, or excluding fields left at their default value). Suppose a path operation has no declared response model and its endpoint function has no return type annotation. If such filtering options are still passed at route-registration time, do they have any observable effect on the JSON actually sent to the client? Trace how the framework decides, per route, whether a validated/typed response field exists, and show what the response-serialization function does differently when that field is absent versus present, with respect to those filtering options.",
+   "gold": "In fastapi/dependencies/utils.py, `get_typed_return_annotation` (lines 239-248) returns `None` when the endpoint's return annotation is `inspect.Signature.empty` (i.e., no return type hint). In fastapi/routing.py, when building the route (around lines 1081-1114), if `response_model` is a DefaultPlaceholder, the code computes `return_annotation = get_typed_return_annotation(endpoint)`; when that is None and no streaming item type applies, `response_model = return_annotation` ends up None, so `route.response_model` is falsy and the code takes the `else: route.response_field = None` branch \u2014 no ModelField is created. Later, `serialize_response` (fastapi/routing.py, lines 301-341) is called with `field=response_field`; its `if field:` branch is the only place that applies `include`, `exclude`, `by_alias`, `exclude_unset`, `exclude_defaults`, `exclude_none` (it calls `field.serialize(...)` with all of them). The `else` branch, taken when `field` is None, does only `return jsonable_encoder(response_content)` \u2014 completely ignoring all of those filtering arguments. So with no response_model and no return annotation, options like exclude-unset/exclude-defaults/include/exclude/by_alias have zero effect on the emitted JSON.",
+   "gold_markers": [
+    "get_typed_return_annotation",
+    "serialize_response",
+    "route.response_field = None",
+    "jsonable_encoder(response_content)"
+   ],
+   "grep_trap": "Grepping 'exclude_unset' or 'response_model' hits hundreds of Annotated[...Doc(...)] parameter docstrings repeated across every route-registration method in routing.py (get/post/put/... each ~150 lines of doc text) plus docs_src/response_model and docs/*/response-model translations in a dozen languages \u2014 the actual short-circuit ('field is falsy -> skip all the exclude/include kwargs entirely') is a two-line else-branch that none of those hits point to, and requires separately confirming that a missing return annotation is what makes the field None in the first place.",
+   "hops": 3,
+   "id": "HF7",
+   "repo": "fastapi/fastapi",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/fastapi",
+   "lens": "greptrap"
+  },
+  {
+   "title": "Whether a shared sub-dependency runs once or twice when scopes differ",
+   "text": "Within one path operation's dependency tree, the same dependency-providing callable can be referenced from two different places \u2014 for instance, once as an ordinary sub-dependency with no special scope information, and once as part of a security-scheme dependency that carries a list of OAuth2 scopes. For a single incoming request, is that callable's body executed once (with the second reference reusing the first result) or twice (once per reference)? Identify the exact tuple/key the framework computes per dependency to decide reuse, name every component that goes into it, and state under what condition regarding scopes two references to the *same* callable end up with different keys (and therefore both execute).",
+   "gold": "fastapi/dependencies/models.py's `_get_cache_key` (lines 82-96) computes the reuse key as a 3-tuple: `(dependant.call, scopes_for_cache, _get_computed_scope(dependant=dependant) or \"\")`, where `scopes_for_cache` is `tuple(sorted(set(_get_oauth_scopes(dependant=dependant))))` but ONLY if `_uses_scopes(dependant=dependant, cache=...)` is True, otherwise `()`. `_uses_scopes` (lines 99-120) returns True if the dependant has `own_oauth_scopes`, has a `security_scopes_param_name`, or its unwrapped call is a security scheme instance (`_is_security_scheme`); it also recurses into sub-dependencies. In fastapi/dependencies/utils.py's `solve_dependencies` (lines 656-680), this key is computed per sub_dependant as `sub_dependant_cache_key = _get_cache_key(...)`, and the result is only reused (`solved = dependency_cache[sub_dependant_cache_key]`) when `sub_dependant.use_cache` is True AND that exact key is already present in `dependency_cache`. So two references to the identical callable produce different cache keys \u2014 and therefore both get executed independently \u2014 whenever one reference carries OAuth2 scopes (via Security(..., scopes=[...])) and the other does not (or they carry different scope lists), because `scopes_for_cache` differs between the two even though `dependant.call` is the same object.",
+   "gold_markers": [
+    "_get_cache_key",
+    "_uses_scopes",
+    "dependency_cache",
+    "scopes_for_cache"
+   ],
+   "grep_trap": "Grepping 'cache' or 'use_cache' does lead into dependencies/utils.py and dependencies/models.py, but 'dependency' and 'Depends' and 'Security' each return thousands of hits across docs_src/dependencies, docs_src/security, and every Annotated[...] Depends()-based parameter across the whole codebase, burying the two small, plainly-named helper functions that actually decide reuse. The subtlety that scopes (not just the callable identity) are folded into the key, and that a mismatch between callers using vs. not using scopes silently defeats caching, is stated nowhere near the obvious keyword hits.",
+   "hops": 2,
+   "id": "HF8",
+   "repo": "fastapi/fastapi",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/fastapi",
+   "lens": "greptrap"
+  },
+  {
+   "title": "Third-party plugin hooks around validation calls",
+   "text": "Pydantic supports third-party packages that hook into validation and get notified when validate_python/validate_json/validate_strings is called on a model, including before the call, on success, on error, and on exception. Trace how a model's compiled validator ends up wrapped with these notification callbacks: (1) how does pydantic discover such third-party packages without the user importing them explicitly, (2) what object type does a model's `__pydantic_validator__` become when at least one such package is present versus when none are, and (3) if a package implements only some of the four notification callbacks (leaving others as inherited no-ops from a base protocol class), how does pydantic avoid calling the inherited stubs? Name the specific mechanism used to detect an unimplemented (inherited) callback.",
+   "gold": "Discovery: pydantic/plugin/_loader.py `get_plugins()` scans `importlib.metadata.distributions()` for entry points whose group equals `PYDANTIC_ENTRY_POINT_GROUP = 'pydantic'` and loads each entry_point.value, caching results in module-level `_plugins`; a `_loading_plugins` guard flag prevents infinite recursion if a plugin itself imports pydantic, and `PYDANTIC_DISABLE_PLUGINS` env var can disable this. Wrapping: pydantic/plugin/_schema_validator.py `create_schema_validator()` calls `get_plugins()`; if any plugins are returned it constructs a `PluggableSchemaValidator` instead of a bare `pydantic_core.SchemaValidator`. `PluggableSchemaValidator.__init__` calls each plugin's `new_schema_validator(...)` to get per-event handler objects, then builds `validate_python`/`validate_json`/`validate_strings` via `build_wrapper()`, which calls each handler's `on_enter` before the underlying call and `on_success`/`on_error`/`on_exception` after, depending on outcome. Unimplemented-detection: `filter_handlers(handler_cls, method_name)` checks `handler.__module__ == 'pydantic.plugin'` \u2014 if a plugin's handler method is not overridden, `getattr` returns the method inherited from the protocol class defined in `pydantic/plugin/__init__.py` (module `pydantic.plugin`), and that inherited method is filtered out of the wrapper's call list rather than invoked. Call site tying it to model construction: pydantic/_internal/_model_construction.py calls `create_schema_validator(...)` (around line 651) to set `cls.__pydantic_validator__` after building a model's core schema; type_adapter.py and _internal/_dataclasses.py and _internal/_validate_call.py call the same function for TypeAdapter/dataclasses/validate_call.",
+   "gold_markers": [
+    "get_plugins",
+    "PluggableSchemaValidator",
+    "filter_handlers",
+    "_loader.py",
+    "create_schema_validator"
+   ],
+   "grep_trap": "Grepping 'plugin' finds pydantic/plugin/__init__.py's protocol definitions immediately, but that file only defines interfaces/types \u2014 it never explains discovery (entry_points scanning) or the __module__-comparison trick used to skip un-overridden handler methods, both of which live in _loader.py and _schema_validator.py respectively. A solver stopping at __init__.py will describe the protocol shape but miss the actual discovery and filtering mechanism.",
+   "hops": 3,
+   "id": "HP1",
+   "repo": "pydantic/pydantic",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/pydantic",
+   "lens": "crossfile"
+  },
+  {
+   "title": "Deferred error for models with unresolved forward references",
+   "text": "Suppose a BaseModel subclass references another type by name (e.g., a string/forward annotation) that is not yet defined anywhere in scope when the class body finishes executing. Accessing that model's schema/validator/serializer attributes doesn't necessarily raise immediately at class-definition time in every case, and later touching those attributes can trigger an automatic second attempt to resolve everything before finally giving up with a clear error message telling the user to call a rebuild method. Explain the object(s) pydantic substitutes in place of the real compiled schema/validator/serializer while things are unresolved, how attribute access on them triggers a fresh resolution attempt rather than immediately raising, and which function is responsible for installing these substitute objects onto the class when schema building fails partway through.",
+   "gold": "pydantic/_internal/_mock_val_ser.py defines `MockCoreSchema` (a Mapping subclass) and `MockValSer` (a generic wrapping SchemaValidator or SchemaSerializer). Both store an `_attempt_rebuild` callback; `MockCoreSchema.__getitem__/__len__/__iter__` call `_get_built()` which invokes `_attempt_rebuild()` on demand, and `MockValSer.__getattr__` similarly calls `_attempt_rebuild()` before raising `PydanticUserError` (code 'class-not-fully-defined') if rebuild returns None. `set_model_mocks(cls, undefined_name=None)` in the same file installs these on `cls.__pydantic_core_schema__`, `cls.__pydantic_validator__`, and `cls.__pydantic_serializer__`, with `attempt_rebuild_fn` closures that call `cls.model_rebuild(raise_errors=False, _parent_namespace_depth=5)` and then return the freshly built attribute. It is invoked from pydantic/_internal/_model_construction.py (e.g. around lines 249, 611, 632, 640) whenever `complete_model_class`/schema building catches a `PydanticUndefinedAnnotation` or otherwise fails to fully build the core schema. The public entry point a user calls to force resolution, `BaseModel.model_rebuild()`, is defined in pydantic/main.py and is what the mock objects' `_attempt_rebuild` closures invoke internally. An analogous pair (`set_type_adapter_mocks`) exists for `TypeAdapter` and is called from pydantic/type_adapter.py.",
+   "gold_markers": [
+    "MockValSer",
+    "MockCoreSchema",
+    "set_model_mocks",
+    "_mock_val_ser.py",
+    "model_rebuild"
+   ],
+   "grep_trap": "Grepping for 'forward ref' or 'ForwardRef' leads to typing/annotation resolution code (_typing_extra.py, _namespace_utils.py) which explains how names are looked up, but not the lazy-retry-on-attribute-access object substitution, which lives in the separately-named _mock_val_ser.py and is wired in from deep inside _model_construction.py's exception handling rather than anywhere named 'forward' or 'undefined'.",
+   "hops": 3,
+   "id": "HP2",
+   "repo": "pydantic/pydantic",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/pydantic",
+   "lens": "crossfile"
+  },
+  {
+   "title": "Self-referential generic models without infinite recursion",
+   "text": "Consider a generic Pydantic model parametrized with Generic[T] whose own field type refers back to the same parametrization of itself (e.g. a field typed as an optional instance of the model applied to the same type argument, enabling a linked-list-like recursive structure). Building the core validation schema for such a class needs to stop recursing into itself once it notices it's being asked to build the exact same parametrized type again while already in the middle of building it, and instead insert a placeholder that gets resolved into a proper self-reference in the final compiled schema. Identify the mechanism that detects the repeat parametrization during class creation (what kind of thread/task-local state it keeps and where a parametrized generic model class is created), the placeholder object type it hands back, and where in schema generation that placeholder is turned into an actual reference into the schema's definitions.",
+   "gold": "Repeat-detection uses a `ContextVar` named `_generic_recursion_cache` in pydantic/_internal/_generics.py, wrapped by the context manager `generic_recursion_self_type(origin, args)`: it computes a `type_ref` via `_type_refs.model_type_ref(origin, args_override=args)` and, if that ref was already added to the ContextVar's set (i.e. we're already in the middle of building that same parametrization), yields a `PydanticRecursiveRef(type_ref=type_ref)` placeholder instead of recursing further; otherwise it adds the ref, yields None, and removes it afterward. This context manager is entered from `BaseModel.__class_getitem__` in pydantic/main.py (around the generic-parametrization logic), which is the code path that creates a new parametrized generic model class and returns the cached placeholder (`maybe_self_type`) immediately if one is produced. `PydanticRecursiveRef` itself is a small class defined in pydantic/_internal/_forward_ref.py. During core schema generation, pydantic/_internal/_generate_schema.py checks `isinstance(obj, PydanticRecursiveRef)` (around line 1104) and converts it into `core_schema.definition_reference_schema(schema_ref=obj.type_ref)`, i.e. a reference into the compiled schema's own `$defs`-equivalent rather than a fresh recursive build.",
+   "gold_markers": [
+    "generic_recursion_self_type",
+    "_generic_recursion_cache",
+    "PydanticRecursiveRef",
+    "definition_reference_schema",
+    "__class_getitem__"
+   ],
+   "grep_trap": "Grepping 'recursive' or 'recursion' mostly surfaces docs/tests about recursive models generally, and grepping 'Generic' lands in _internal/_generics.py's large body of typevar-substitution helper code, none of which is named after 'self type' or 'ContextVar'. The actual cycle-breaking trick is a small ContextVar-based context manager buried among unrelated generic-caching helpers, and the placeholder class it returns lives in a differently-named, single-purpose file (_forward_ref.py) that a keyword search on 'generic' would not reach.",
+   "hops": 4,
+   "id": "HP3",
+   "repo": "pydantic/pydantic",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/pydantic",
+   "lens": "crossfile"
+  },
+  {
+   "title": "Distinguishing same-named classes in a generated JSON schema",
+   "text": "If two unrelated Pydantic models (or dataclasses/TypedDicts) that live in different modules happen to share the exact same class name, and both end up referenced within the same generated JSON Schema document, pydantic must give their `$defs` entries distinct keys instead of one silently overwriting the other. Explain where the information that lets pydantic tell these two same-named classes apart originates (i.e., what identifying string gets attached to a class the moment its schema is built, before any JSON-schema-specific code runs), and then explain the separate logic that later parses that string and appends a disambiguating suffix (with a counter) only when it detects an actual name collision, so that the common, non-colliding case still gets the short, clean key.",
+   "gold": "The identifying string originates in pydantic/_internal/_type_refs.py: functions like `model_type_ref()` (for BaseModel subclasses) and `class_type_ref()` (for dataclasses/TypedDicts/NamedTuples) build a ref string of the form `f'{module_name}.{qualname}:{id(type_)}'` (plus a generic-args suffix from `_args_ref`). This ref is used as the `ref` key of the pydantic-core schema for that class \u2014 set e.g. in pydantic/_internal/_generate_schema.py's `_model_schema()` method (`model_ref = _type_refs.model_type_ref(cls)`, around line 815) and similarly for typed dicts/namedtuples/dataclasses elsewhere in that file. Later, JSON Schema generation in pydantic/json_schema.py's `GenerateJsonSchema.get_defs_ref(core_mode_ref)` (around line 2329) parses that same `module.qualname:id` ref string, strips the `:id` suffix to get `module_qualname` and a short `name` (last-component only), and uses `self._collision_counter`/`self._collision_index` dicts to detect when the same short `module_qualname` has already been used for a different id \u2014 only then does it append an `__{occurrence_index}` suffix (e.g. `MyModel__2`) to disambiguate; the non-colliding case gets the plain short name.",
+   "gold_markers": [
+    "model_type_ref",
+    "get_defs_ref",
+    "_collision_counter",
+    "_type_refs.py",
+    "class_type_ref"
+   ],
+   "grep_trap": "Grepping '$defs' or 'json_schema' lands squarely in json_schema.py's get_defs_ref and its collision-counter logic, but that code only explains the second half \u2014 it treats the incoming core_mode_ref string as already-given data. The actual source of the module/qualname/id identity used to detect collisions is computed far earlier and in a differently-named file (_internal/_type_refs.py) that a search rooted on 'schema' or 'defs' vocabulary is unlikely to surface, since that file's public functions are named after 'type_ref', not 'schema' or 'json'.",
+   "hops": 3,
+   "id": "HP4",
+   "repo": "pydantic/pydantic",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/pydantic",
+   "lens": "crossfile"
+  },
+  {
+   "title": "Partial per-field alias customization vs. model-wide alias generator",
+   "text": "Consider a BaseModel subclass that sets a model-level config function which auto-derives every field's wire name from the Python attribute name. Now give exactly one field a hand-written override for only how it is looked up in the *input* during construction, leaving the field's other aliasing behavior unspecified. Give a second field no override at all (it just uses whatever the model-level function produces). Give a third field a fully hand-written override covering both directions (input lookup and output key) explicitly. When you build an instance and dump it with alias-based keys, the first field's output key is NOT the name you might expect from its one hand-written override -- it comes from the model-level function instead, even though the field's input lookup still honors your override. Explain exactly why the first field's output key gets silently overwritten while the third field's does not, and identify the exact function and file that makes this per-field, per-direction decision, plus the earlier point in the codebase where a field built through the normal constructor call implicitly fills in its own missing directional aliases (which is why fully-specified fields are immune to the override).",
+   "gold": "The mechanism lives in two files in pydantic/. (1) pydantic/fields.py, the `Field(...)` function (around lines 1349-1353): when a caller supplies `alias=` or `validation_alias=` but omits the other alias-direction keywords, the function pre-fills the missing ones from whatever *was* given (`if serialization_alias in (_Unset, None) and isinstance(alias, str): serialization_alias = alias`; `if validation_alias in (_Unset, None): validation_alias = alias`) -- but only from `alias`, never from `validation_alias`. So a field created with only `validation_alias=` set ends up with `alias=None` and `serialization_alias=None` on its FieldInfo. (2) pydantic/_internal/_fields.py, function `_apply_alias_generator_to_field_info` (lines 173-220), called from `update_field_from_config`. It only skips the alias generator entirely when `alias`, `validation_alias`, AND `serialization_alias` are all already non-None (i.e. `alias_priority` is 2 and all three are set) -- see the guard at lines 186-192. If any one of the three is still None, it proceeds to run the alias generator, and then (lines 214-220) fills in ONLY the still-None slots from the generated values: `if field_info.alias is None: field_info.alias = alias`, `if field_info.serialization_alias is None: field_info.serialization_alias = ...`, `if field_info.validation_alias is None: field_info.validation_alias = ...`. So a field that set only `validation_alias=` keeps its explicit validation_alias, but its `alias` and `serialization_alias` (and hence its dump-by-alias output key) get silently overwritten by the model's alias_generator, while a field that set both `alias` (or both directions explicitly) is left untouched because Field() already back-filled all three slots before the generator ever ran.",
+   "gold_markers": [
+    "_apply_alias_generator_to_field_info",
+    "alias_priority",
+    "_internal/_fields.py",
+    "update_field_from_config"
+   ],
+   "grep_trap": "Grepping 'alias_generator' returns ~54 hits across 9 files (config.py docstrings, main.py, _config.py, tests, deprecated modules) none of which is the deciding function by name. Grepping 'validation_alias' or 'serialization_alias' returns dozens of unrelated type-annotation occurrences (every overload signature of Field() repeats them). The actual decision hinges on the *interaction* between a default-filling step in fields.py's Field() and a separate None-check-based backfill in _internal/_fields.py; neither file's name nor the function name appears in obvious keyword searches for 'alias override' or 'alias priority silently'.",
+   "hops": 2,
+   "id": "HP5",
+   "repo": "pydantic/pydantic",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/pydantic",
+   "lens": "greptrap"
+  },
+  {
+   "title": "Enum-to-value coercion that only sometimes applies to a field's default",
+   "text": "A model is configured so that, on validation, any field typed as an Enum member is replaced by the enum's plain underlying value rather than keeping the Enum instance. Two fields of that type exist: one is always supplied explicitly by the caller (so it always goes through validation) and the other is left at its class-defined default and only sometimes explicitly supplied. When you construct instances by only setting the first field, the second field's attribute on the resulting object is still a live Enum instance -- not the plain value -- until you also pass a certain field-level (or model-level) switch that has nothing to do with enums by name. Explain which code decides, per field, whether the value-extraction happens, why it depends on the input actually being run through validation (rather than on the value's type), and name the additional flag that must be enabled to close this gap for fields left at their default.",
+   "gold": "In pydantic/_internal/_generate_schema.py, `GenerateSchema._enum_schema` (around lines 509-533) builds the enum's core schema and, only `if self._config_wrapper.use_enum_values:` (line 528), wraps it in an AFTER validator: `core_schema.no_info_after_validator_function(attrgetter('value'), enum_schema, serialization=value_ser_type)` (lines 529-531). An after-validator only executes when the value actually passes through the field's validation schema. Separately, `wrap_default` in the same file (lines 2682-2704) wraps a field's schema in `core_schema.with_default_schema(schema, default=field_info.default, validate_default=field_info.validate_default)` (or the default_factory variant). pydantic-core's default mechanism only runs the inner schema (and therefore the attrgetter('value') after-validator) against the default value when `validate_default` is True; otherwise it substitutes the raw default (still an Enum instance) without validating it. `validate_default` itself comes from the `validate_default` config setting or a field's `Field(validate_default=True)`, which has nothing to do with the enum-unwrapping config by name. This is also documented as a known caveat in pydantic/config.py's `use_enum_values` docstring (~lines 226-234).",
+   "gold_markers": [
+    "_enum_schema",
+    "attrgetter",
+    "wrap_default",
+    "use_enum_values",
+    "validate_default"
+   ],
+   "grep_trap": "The behavior-defining term 'use_enum_values' only appears in 8 places total in the non-v1 source, but the ticket text deliberately avoids that literal name, so a naive search for 'enum' returns 35 files (tests, JSON schema generation for enums, v1 compat, deprecated code) with no single obvious hit, and a search for 'default' returns hundreds of matches across the whole schema-generation module unrelated to this specific interaction between an after-validator and with_default_schema's validate_default flag.",
+   "hops": 2,
+   "id": "HP6",
+   "repo": "pydantic/pydantic",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/pydantic",
+   "lens": "greptrap"
+  },
+  {
+   "title": "A deprecated population-by-name switch that stops doing anything",
+   "text": "pydantic has an older, now-deprecated model config knob for allowing a field to be populated by its plain attribute name in addition to its alias, and a newer pair of config knobs that separately control population-by-alias and population-by-name. If a model sets ONLY the old knob to True, it behaves as expected (population by name works). But if a model sets the old knob to True AND ALSO explicitly sets the newer 'populate by name' knob to False, the newer setting silently wins -- population by name stops working entirely, with no warning, no error, and no visible sign that the old knob was ignored. Find the exact code that decides whether the old knob's value gets applied, and explain the precise condition under which it is skipped.",
+   "gold": "In pydantic/_internal/_config.py, `ConfigWrapper.core_config` (used when building the pydantic-core config for a model). Around lines 212-217, there is a backwards-compatibility patch: `if (populate_by_name := config.get('populate_by_name')) is not None: if config.get('validate_by_name') is None: config['validate_by_alias'] = True; config['validate_by_name'] = populate_by_name`. This patch is applied ONLY when `validate_by_name` has not been explicitly set by the user (`is None`). If the user has explicitly set `validate_by_name=False` (the newer knob), the deprecated `populate_by_name=True` setting is silently ignored, and the model falls through to the separate patch at lines 219-222 (`if config.get('validate_by_alias') is False and config.get('validate_by_name') is None: config['validate_by_name'] = True`) or simply keeps `validate_by_name=False` as explicitly given. `core_config` is invoked from pydantic/_internal/_model_construction.py (around line 635, `core_config = config_wrapper.core_config(title=cls.__name__)`) during class creation, so the silently-dropped setting takes effect at model-build time with no runtime warning.",
+   "gold_markers": [
+    "core_config",
+    "_config.py",
+    "validate_by_name",
+    "populate_by_name"
+   ],
+   "grep_trap": "Searching for 'populate_by_name' turns up its declaration, its deprecation docstring in config.py, and dozens of test usages, none of which show the silent-override condition. Searching for 'validate_by_name' returns ~50 hits spread across config.py's ConfigDict docstrings, _internal/_config.py's key-mapping table, and _model_construction.py -- the actual guard clause that causes the silent drop is a small conditional buried among unrelated default-value declarations and config-key alias tables in the same file.",
+   "hops": 2,
+   "id": "HP7",
+   "repo": "pydantic/pydantic",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/pydantic",
+   "lens": "greptrap"
+  },
+  {
+   "title": "A per-field immutability marker that doesn't make instances hashable",
+   "text": "In pydantic, marking a single field as unable to be reassigned after construction (while validate_assignment is enabled) correctly raises an error if you try to change that one field later -- other, unmarked fields on the same instance can still be reassigned freely. Despite this enforcement working correctly at the single-field level, instances of such a model remain unhashable (calling hash() on them raises 'unhashable type') unless a *different*, model-wide switch is also turned on -- even though nothing about the per-field marker itself was ignored. Explain why the enforcement of the per-field marker and the decision to auto-generate a __hash__ method are handled by two separate, disconnected code paths, and identify exactly which one only looks at the model-wide switch while ignoring individual fields' markers.",
+   "gold": "Enforcement of a per-field immutability marker is wired into the pydantic-core schema per field: in pydantic/_internal/_generate_schema.py, `_generate_md_field_schema` (model fields, ~lines 1227-1243) and `_generate_dc_field_schema` (dataclass fields, ~lines 1245-1265) both pass `frozen=field_info.frozen` into `core_schema.model_field(...)` / `core_schema.dataclass_field(...)`; pydantic-core enforces this per field during assignment validation, independent of any model-wide setting. Auto-generation of `__hash__`, however, is decided entirely separately in pydantic/_internal/_model_construction.py: in `ModelMetaclass.__new__` (~line 260-261), `if config_wrapper.frozen and '__hash__' not in namespace: set_default_hash_func(cls, bases)` -- this checks only the model-level `config_wrapper.frozen` flag (the ConfigDict-level `frozen=True` setting), never iterating over `field_info.frozen` on individual fields. `set_default_hash_func` (~lines 499-509) and `make_hash_func` (~lines 512-523) are only invoked from that one call site. So a model with zero fields marked frozen but `model_config=ConfigDict(frozen=True)` gets an auto-generated `__hash__`, while a model with every field individually marked `Field(frozen=True)` but no model-level `frozen=True` gets no `__hash__` at all and stays unhashable.",
+   "gold_markers": [
+    "set_default_hash_func",
+    "config_wrapper.frozen",
+    "field_info.frozen",
+    "_model_construction.py"
+   ],
+   "grep_trap": "'frozen' appears 129 times across the non-v1 source (frozenset schemas, frozen dataclasses, frozen config docs, frozen field validation errors, tests), so a keyword search surfaces mostly unrelated frozenset/frozen-dataclass machinery. The two decision points that matter -- the per-field `frozen=field_info.frozen` wiring in schema generation and the model-level-only check in `set_default_hash_func` -- are in different files and neither mentions 'hash' near 'frozen' in a way a single grep for either term alone would connect.",
+   "hops": 2,
+   "id": "HP8",
+   "repo": "pydantic/pydantic",
+   "path": "/Users/ritikshukla/Desktop/claude-dir/pydantic",
+   "lens": "greptrap"
+  }
+ ]
+}

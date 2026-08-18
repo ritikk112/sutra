@@ -1,0 +1,88 @@
+{
+ "rows": [
+  {
+   "id": "HF1",
+   "verdict": "correct",
+   "evidence": "Report identifies request_response()/websocket_session() dual AsyncExitStacks (fastapi_inner_astack/fastapi_function_astack) in routing.py, Depends(scope=...) and _get_computed_scope() in models.py, the scope-based stack routing in solve_dependencies()/utils.py, and DependencyScopeError raised in get_dependant() (utils.py ~304-317) defined in exceptions.py \u2014 matching the ground-truth mechanism's key files and symbols."
+  },
+  {
+   "id": "HF2",
+   "verdict": "correct",
+   "evidence": "Report correctly identifies get_stream_item_type/get_typed_return_annotation in dependencies/utils.py, the is_sse_stream/is_json_stream decision logic in routing.py based on response_class (EventSourceResponse vs DefaultPlaceholder), the media types (text/event-stream vs application/jsonl), the ServerSentEvent isinstance check dispatching to format_sse_event with explicit event/id/retry fields vs plain objects wrapped only in data:, and the exclusion of ServerSentEvent itself from stream_item_type \u2014 matching the ground truth mechanism with correct file/symbol references."
+  },
+  {
+   "id": "HF3",
+   "verdict": "correct",
+   "evidence": "Report identifies _is_security_scheme() (models.py ~123-127) checking isinstance(unwrapped, SecurityBase), get_dependant() (utils.py ~290,318-330) threading parent+own oauth_scopes, _get_oauth_scopes() (models.py ~71-79) dedup order-preserving readback, _get_openapi_dependency_data() (openapi/utils.py ~99-129) walking dependant tree collecting (dependant, oauth_scopes) pairs, and _get_openapi_security_definitions() (openapi/utils.py ~132-156) grouping by security_scheme.scheme_name into operation_security_dict \u2014 matching all ground-truth symbols, files, line ranges, and the described mechanism."
+  },
+  {
+   "id": "HF4",
+   "verdict": "correct",
+   "evidence": "Report correctly identifies WebSocketRequestValidationError raised in get_websocket_app() (routing.py), registered in FastAPI.__init__ (applications.py), handled by websocket_request_validation_exception_handler in exception_handlers.py, which closes the socket with WS_1008_POLICY_VIOLATION and puts jsonable_encoder(exc.errors()) in the reason field."
+  },
+  {
+   "id": "HF5",
+   "verdict": "correct",
+   "evidence": "The report correctly identifies get_request_handler's isinstance(raw_response, Response) branch in fastapi/routing.py, notes that the Response-branch only copies background_tasks (dropping header/status mutations) while the plain-data branch builds response_args via _build_response_args and merges headers via response.headers.raw.extend(solved_result.response.headers.raw), matching the ground-truth mechanism."
+  },
+  {
+   "id": "HF6",
+   "verdict": "correct",
+   "evidence": "Report correctly identifies _get_body_field's priority rule (File > Form > Body) creating body_field, and routing.py's get_request_handler line 395 is_body_form check using isinstance(body_field.field_info, params.Form), plus the File-subclasses-Form inheritance explaining why form parsing is triggered."
+  },
+  {
+   "id": "HF7",
+   "verdict": "correct",
+   "evidence": "Report correctly identifies get_typed_return_annotation returning None on empty annotation, routing.py's response_field=None branch, and serialize_response's if field/else jsonable_encoder(response_content) distinction, matching the ground truth exactly."
+  },
+  {
+   "id": "HF8",
+   "verdict": "correct",
+   "evidence": "Report correctly identifies _get_cache_key (models.py:82-96) as the 3-tuple (dependant.call, scopes_for_cache, computed_scope), correctly ties scopes_for_cache to _uses_scopes (99-120), and correctly traces solve_dependencies cache lookup in utils.py:656-680, matching the ground truth mechanism precisely including the differing-scope condition."
+  },
+  {
+   "id": "HP1",
+   "verdict": "correct",
+   "evidence": "Report correctly identifies get_plugins() entry-point discovery in _loader.py, PluggableSchemaValidator vs bare SchemaValidator branching in create_schema_validator, and the filter_handlers __module__ == 'pydantic.plugin' check as the unimplemented-callback detection mechanism, matching the ground truth on all three points."
+  },
+  {
+   "id": "HP2",
+   "verdict": "correct",
+   "evidence": "Report correctly identifies MockCoreSchema/MockValSer in _mock_val_ser.py, their __getitem__/__len__/__iter__ (_get_built) and __getattr__ triggering _attempt_rebuild, set_model_mocks() as the installer, its call sites in _model_construction.py, and BaseModel.model_rebuild() in main.py as the resolution entry point \u2014 matching all ground-truth elements."
+  },
+  {
+   "id": "HP3",
+   "verdict": "correct",
+   "evidence": "Report correctly names all ground-truth symbols: ContextVar _generic_recursion_cache and generic_recursion_self_type in _generics.py, PydanticRecursiveRef in _forward_ref.py, entry via BaseModel.__class_getitem__ in main.py, and the isinstance(obj, PydanticRecursiveRef) -> definition_reference_schema(schema_ref=obj.type_ref) conversion in _generate_schema.py, describing the connections accurately."
+  },
+  {
+   "id": "HP4",
+   "verdict": "correct",
+   "evidence": "Report identifies _type_refs.py's class_type_ref/model_type_ref building 'module.qualname:id(type_)' refs attached via ref= in _generate_schema.py, and json_schema.py get_defs_ref() using _collision_counter/_collision_index to append __{occurrence_index} suffix only on collision, matching the ground truth mechanism closely with correct line numbers and function names."
+  },
+  {
+   "id": "HP5",
+   "verdict": "partial",
+   "evidence": "The report correctly identifies _apply_alias_generator_to_field_info in pydantic/_internal/_fields.py as the core per-field/per-direction decision function, but for the 'earlier point' it cites FieldInfo.__init__ (line 259, alias_priority logic) rather than the ground-truth's Field() function in pydantic/fields.py (~lines 1349-1353) that back-fills missing alias directions from `alias` only when alias/validation_alias is supplied \u2014 a different and unidentified mechanism."
+  },
+  {
+   "id": "HP6",
+   "verdict": "correct",
+   "evidence": "Report identifies _enum_schema's use_enum_values-gated attrgetter('value') after-validator, wrap_default/with_default_schema's validate_default parameter controlling whether defaults get validated, and correctly names validate_default as the closing flag, plus cites the config.py docstring caveat\u2014matching the ground truth mechanism precisely."
+  },
+  {
+   "id": "HP7",
+   "verdict": "correct",
+   "evidence": "Report identifies ConfigWrapper.core_config in pydantic/_internal/_config.py lines 212-217 with the exact condition `config.get('validate_by_name') is None` gating the backwards-compat patch, and correctly cites the call site in _model_construction.py:635, matching the ground truth."
+  },
+  {
+   "id": "HP8",
+   "verdict": "partial",
+   "evidence": "The report correctly pinpoints the hash-generation side (_model_construction.py, config_wrapper.frozen check ignoring per-field markers, matching ground truth's ModelMetaclass.__new__/set_default_hash_func), but for the per-field enforcement side it never mentions _generate_schema.py's _generate_md_field_schema/_generate_dc_field_schema or the core_schema frozen=field_info.frozen wiring into pydantic-core \u2014 instead it fabricates a different mechanism (a Python-level _check_frozen function in main.py), missing the actual ground-truth explanation for why the two paths are structurally disconnected."
+  }
+ ],
+ "qualified": [
+  "HP5",
+  "HP8"
+ ]
+}

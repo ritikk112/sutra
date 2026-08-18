@@ -223,6 +223,23 @@ harder suite.
 4. Report the correctness delta (either direction) with per-ticket
    pairs; a suite qualifies only if the control arm scores <80%.
 
+**Outcome (executed 2026-08-19): the suite did NOT qualify — and that
+is the finding.** 16 candidate tickets were authored by sonnet agents
+that read pydantic/fastapi source through two adversarial lenses
+(cross-file mechanisms ≥3 hops; grep-trap vocabulary), every gold
+marker grep-verified against the clones
+(`benchmarks/battle_test/hard_tickets.json`). The 1-trial grep-only
+haiku pilot graded **14/16 correct, 2/16 partial (HP5, HP8), 0 wrong**
+(`hard_ticket_pilot.json`) — control correctness 87.5%, above the 80%
+qualification bar, so the 2-arm main run was not run. Conclusion for
+the article: the correctness ceiling is robust, not an artifact of
+easy tickets — haiku+grep solves even deliberately hardened cross-file
+grep-trap tickets on 3k-symbol corpora. At this task tier sutra's
+measurable value is navigation efficiency (2 vs 4 calls-to-gold at
+parity context growth), not answer correctness. A correctness delta,
+if it exists, lives above this tier (larger corpora, multi-repo
+questions, or weaker/faster models under call budgets).
+
 ## Results (executed 2026-08-19, commits 2a16760..HEAD)
 
 All work TDD'd; suite grew 814 → 840 tests, all green. Eval assets:
