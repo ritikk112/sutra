@@ -21,6 +21,7 @@ embedded in each solver prompt) it computes:
 Usage: python3 analyze.py <transcript_dir> [tickets.json] [-o out.json]
 """
 import json
+import os
 import re
 import sys
 from collections import Counter, defaultdict
@@ -119,6 +120,9 @@ def analyze_file(path: Path, markers_by_ticket: dict):
     start, end = times[0], times[-1]
     wall = (end - start).total_seconds()
     sutra_calls = sum(v for k, v in counts.items() if k and k.startswith("mcp__sutra__"))
+    total_calls = sum(counts.values())
+    budget = int(os.environ.get("AB_BUDGET", "0")) or None
+    over_budget = (total_calls > budget) if budget else None
 
     return {
         "ticket": ticket, "arm": arm, "trial": trial,
@@ -127,7 +131,9 @@ def analyze_file(path: Path, markers_by_ticket: dict):
         "sutra": sutra_calls,
         "bash": counts.get("Bash", 0), "grep": counts.get("Grep", 0),
         "glob": counts.get("Glob", 0), "read": counts.get("Read", 0),
-        "total_tool_calls": sum(counts.values()),
+        "total_tool_calls": total_calls,
+        "over_budget": over_budget,
+        "calls_over": (total_calls - budget) if (budget and total_calls > budget) else 0,
         "first_gold_call": first_gold_call,
         # latency
         "wall_clock_s": round(wall, 1),
@@ -150,8 +156,12 @@ def add_contention(rows):
     comparable across arms if this is balanced between them."""
     spans = [(ts(r["_start"]), ts(r["_end"]), r) for r in rows]
     for s, e, r in spans:
-        overlaps = sum(1 for s2, e2, r2 in spans if r2 is not r and s2 < e and e2 > s)
-        r["overlap_count"] = overlaps
+        r["overlap_count"] = sum(1 for s2, e2, r2 in spans if r2 is not r and s2 < e and e2 > s)
+        # overlap_count is endogenous: a slower agent overlaps more agents simply by
+        # running longer, so it cannot cleanly instrument "was the machine busy".
+        # Concurrency at the START instant does not depend on this agent's duration.
+        r["overlap_at_start"] = sum(1 for s2, e2, r2 in spans
+                                    if r2 is not r and s2 <= s <= e2)
 
 
 def med(xs):
@@ -195,6 +205,7 @@ def main():
         ("output tokens", "output_tokens"),
         ("cache-write tokens", "cache_write_tokens"),
         ("concurrent solvers", "overlap_count"),
+        ("concurrency at start", "overlap_at_start"),
     ]
     for arm in sorted(by_arm):
         rs = by_arm[arm]
@@ -203,6 +214,10 @@ def main():
         for label, key in METRICS:
             print(f"  median {label:<24} {med([r[key] for r in rs])}")
         print(f"  mean sutra calls          {sum(r['sutra'] for r in rs)/len(rs):.2f}")
+        ov = [r for r in rs if r.get("over_budget")]
+        if any(r.get("over_budget") is not None for r in rs):
+            print(f"  BUDGET VIOLATIONS         {len(ov)}/{len(rs)}"
+                  + (f"  (max +{max(r['calls_over'] for r in ov)})" if ov else ""))
 
     print("\nper-ticket median (sutra | control):")
     print(f"  {'ticket':<7} {'calls-to-gold':<15} {'wall clock s':<14} {'t-to-gold s'}")

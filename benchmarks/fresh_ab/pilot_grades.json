@@ -1,0 +1,146 @@
+[
+ {
+  "ticket": "BR1",
+  "arm": "sutra",
+  "cap": 3,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Finds exactly the 4 genuine call sites with correct file:line for each (utils.py:640 recursive; routing.py:481 get_request_handler inner app(); routing.py:783 get_websocket_app inner app(); routing.py:2234 inside _FrontendRouteGroup._solve_dependencies). Correctly names the class _FrontendRouteGroup and describes site 4 as a context-manager method that itself awaits the real function, matching gold. No decoys are misreported as call sites. Verified directly against the source (grep + read of routing.py 2150-2260 and utils.py 620-650)."
+ },
+ {
+  "ticket": "BR1",
+  "arm": "control",
+  "cap": 3,
+  "verdict": "wrong",
+  "false_localization": true,
+  "evidence": "Sites 1 (recursive) and roughly 2/3 (HTTP/WebSocket, no line numbers given) are fine, but site 4 is labeled '`_get_solved_dependency` async generator helper' \u2014 this symbol does not exist anywhere in fastapi/routing.py (confirmed via grep, zero hits). This is a confidently invented/misattributed symbol name for what is actually _FrontendRouteGroup._solve_dependencies, an async contextmanager (not a generator), even though the surrounding detail (request_stack/function_stack) is lifted from the real code. Fabricating a call-site name is a false localization on a genuine call site."
+ },
+ {
+  "ticket": "BR1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "Explicitly states 'I found 3 direct call sites' and omits the recursive self-call inside solve_dependencies (utils.py:640) entirely. The 3 it does report (routing.py:481, 783, 2234) are accurate with correct line numbers, correct code snippets, and it correctly frames site 3 as '_FrontendRouteGroup._solve_dependencies() method'. No false claims, but materially incomplete against a question specifically asking for 'every place' \u2014 missing a genuine call site that matters for how trace_ctx threads through recursion."
+ },
+ {
+  "ticket": "BR1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies all 4 genuine call sites (routing.py x3 + utils.py:640 recursive) with accurate code snippets matching the real source, and correctly frames the third routing.py site as a distinct '_solve_dependencies' context-manager wrapper rather than conflating it with the target function. Line numbers are omitted for the routing.py sites (only utils.py:640 gets a line number), which is a minor precision gap, but no site is misnamed or misattributed."
+ },
+ {
+  "ticket": "BR1",
+  "arm": "sutra",
+  "cap": 12,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Finds all 4 genuine call sites with correct file:line (routing.py:481, 783, 2234; utils.py:640), correct enclosing function/method names (get_request_handler's app(), get_websocket_app's app(), _FrontendRouteGroup._solve_dependencies), and code snippets verified to match the actual source. Explicitly notes the recursive call propagates trace_ctx unchanged, matching gold's reasoning."
+ },
+ {
+  "ticket": "BR1",
+  "arm": "control",
+  "cap": 12,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "Sites 1, 2, and 4 (recursive) are correct with accurate line numbers and code. But site 3 (routing.py:2234) is confidently mislabeled 'Mount nested route handler' / '`Mount._solve_dependencies()`' \u2014 there is no class named Mount in fastapi/routing.py (grep confirms zero matches); the actual enclosing class is `_FrontendRouteGroup`. This is a specific, confidently-asserted wrong symbol/class name for a real call site, even though the line number and code snippet happen to be correct."
+ },
+ {
+  "ticket": "XR2",
+  "arm": "control",
+  "cap": 3,
+  "verdict": "wrong",
+  "false_localization": true,
+  "evidence": "requests section is accurate (default_hooks, dispatch_hook lines 32-48, merge_hooks). But flask section invents nonexistent attribute names '_before_request_funcs' / '_after_request_funcs' with leading underscores \u2014 the real code (flask/src/flask/sansio/scaffold.py:138,152 and app.py) uses 'before_request_funcs'/'after_request_funcs', no underscore \u2014 and gives no specific dispatch function/file (just 'During request handling, Flask iterates...'). Pydantic section confidently describes field_validator/model_validator as the mechanism, missing the actual third-party observer mechanism (PydanticPluginProtocol in pydantic/plugin/__init__.py + pydantic/plugin/_schema_validator.py) entirely \u2014 this answers a different question than the one asked (model-author validation vs third-party plugin observation)."
+ },
+ {
+  "ticket": "XR2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "requests section is precise and verified correct (dispatch_hook, merge_hooks lines 108-123, Session.send call site). Flask registration citation (scaffold.py before_request ~468-492) is correct, but the dispatch claim is materially wrong: it says Flask.full_dispatch_request() (app.py 995-1022) itself 'iterates through registered before-request handlers' \u2014 in the actual code full_dispatch_request merely calls self.preprocess_request(ctx), and it is preprocess_request (app.py:1369-1394) that contains the before_request_funcs loop. Pydantic section confidently names field_validator/functional_validators.py (with specific line numbers) as the mechanism, missing the actual PydanticPluginProtocol/plugin loader mechanism the question was pointing at (a third-party-implemented protocol class, not model-author validators)."
+ },
+ {
+  "ticket": "XR2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "requests section is highly accurate: register_hook at models.py:257 (verified), dispatch_hook at hooks.py:32-48 with correct mechanics described. Flask registration is verified byte-for-byte accurate (scaffold.py:468/495, exact code 'self.before_request_funcs.setdefault(None, []).append(f)'), but the answer explicitly admits it could not find the dispatch point ('Not visible in output, but the dict name structure implies...') rather than guessing confidently, so the flask answer is incomplete on the dispatch requirement. Pydantic is explicitly marked 'Not Investigated' rather than fabricated \u2014 honest but leaves 1 of 3 parts entirely unanswered, and misses the plugin-protocol mechanism the gold identifies."
+ },
+ {
+  "ticket": "XR2",
+  "arm": "sutra",
+  "cap": 12,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "requests and flask sections are both precise and verified accurate: dispatch_hook (hooks.py:32-48), and flask's preprocess_request (app.py:1369-1395) correctly cited with accurate description of self.ensure_sync(before_func)() and short-circuit behavior, matching the actual source exactly. Pydantic section, however, confidently and in detail (functional_validators.py:410-520, _internal/_decorators.py, ModelMetaclass, PydanticDescriptorProxy) describes field_validator/model_validator as the extension mechanism, completely missing the actual third-party PydanticPluginProtocol (pydantic/plugin/__init__.py, pydantic/plugin/_schema_validator.py, pydantic/plugin/_loader.py) that the gold identifies as the answer to 'lets a third-party package observe validation as it happens.'"
+ },
+ {
+  "ticket": "XR2",
+  "arm": "control",
+  "cap": 12,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "requests section accurate and precisely cited, including the correct dispatch call site sessions.py:791 (verified: 'r = dispatch_hook(\"response\", hooks, r, **kwargs)'). Flask section is accurate on registration/dispatch structure and short-circuit behavior. Pydantic section, however, confidently asserts field-level validators/descriptor protocol tied to model definition as the mechanism ('Field validators as Descriptor Protocol'), missing the actual third-party PydanticPluginProtocol mechanism (pydantic/plugin/__init__.py) that the gold and the question ('third-party package observe validation') are pointing to; it also incorrectly claims requests and flask hooks are 'global' while pydantic's are 'per-field', which mischaracterizes the real structural distinction (the real distinguishing feature is protocol-class-implemented-by-a-package vs plain callable lists, not per-field scoping)."
+ },
+ {
+  "ticket": "XR2",
+  "arm": "sutra",
+  "cap": 3,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "requests and flask sections are both extremely precise and verified correct, including accurate line-level citations for dispatch_hook, Session.send, scaffold.py before_request/after_request, and app.py preprocess_request/process_response with correct short-circuit and reverse-order semantics. Pydantic section, however, goes into deep, confident, specific detail (functional_validators.py:410-520, _internal/_decorators.py DecoratorInfos.build():430-489, _decorator_infos_for_class():528-575, PydanticDescriptorProxy) about field_validator as the mechanism, entirely missing the actual gold mechanism \u2014 PydanticPluginProtocol in pydantic/plugin/__init__.py, discovered via entry points in pydantic/plugin/_loader.py, and wired into every validator in pydantic/plugin/_schema_validator.py \u2014 which is specifically what lets an external, third-party package observe validation, unlike field_validator which is authored by the model owner."
+ },
+ {
+  "ticket": "NT5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies ConfigWrapper.for_model in _config.py, quotes the actual loop (`for base in bases: config_new.update(config.copy())`), and explains the dict.update overwrite mechanism accurately, matching gold. Line numbers (153-156) are close to actual (154-158)."
+ },
+ {
+  "ticket": "NT5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "wrong",
+  "false_localization": true,
+  "evidence": "Fabricates a 'depth-first traversal that reverses base class order' which is not what the code does (it's a simple left-to-right loop over the immediate bases tuple). Confidently cites _model_construction.py lines 120, 495, and the inspect_namespace function (lines 397-496) as the relevant code, but these are unrelated to config merging \u2014 the actual merge loop in _config.py's for_model is never identified or quoted."
+ },
+ {
+  "ticket": "NT5",
+  "arm": "sutra",
+  "cap": 12,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Identifies ConfigWrapper.for_model in _config.py (lines 133-174, loop at 156-160, close to actual 133/154-158), quotes the correct loop code, and gives the same accurate step-by-step explanation as gold: StrictMixin's config is set first then overwritten by LooseMixin's via dict.update, called from ModelMetaclass.__new__."
+ },
+ {
+  "ticket": "NT5",
+  "arm": "control",
+  "cap": 12,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies the loop in ConfigWrapper.for_model (_config.py, lines 155-158, matching actual 154-158) and the call site in ModelMetaclass.__new__ (_model_construction.py line 119, exact match). Explanation of sequential override via dict.update matches gold precisely."
+ },
+ {
+  "ticket": "NT5",
+  "arm": "sutra",
+  "cap": 3,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly cites ConfigWrapper.for_model (_config.py lines 133-174, loop at 155-157, matching actual 154-158) with the exact code snippet, and accurately explains that later bases override earlier ones via dict.update, called from ModelMetaclass.__new__."
+ },
+ {
+  "ticket": "NT5",
+  "arm": "control",
+  "cap": 3,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "Gets the outcome right (LooseMixin's extra='allow' overwrites StrictMixin's extra='forbid', later base wins) but mischaracterizes the mechanism as a 'recursive merge' driven by MRO traversal across all ancestor classes; the actual code is a simple, non-recursive loop over the immediate `bases` tuple in ConfigWrapper.for_model. Never cites _config.py or for_model specifically, and never quotes the actual overwriting code, leaving the explanation vague and inaccurate on the how even though the who/what (later base wins) is correct."
+ }
+]
