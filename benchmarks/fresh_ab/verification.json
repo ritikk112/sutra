@@ -1,0 +1,193 @@
+{
+ "results": [
+  {
+   "id": "BR1",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": "pass \u2014 re-derived via whole-repo grep for 'solve_dependencies(' (7 hits): all 4 caller_set entries confirmed genuine (routing.py:481 in get_request_handler's inner app(), routing.py:783 in get_websocket_app's inner app(), routing.py:2234 inside _FrontendRouteGroup._solve_dependencies, utils.py:640 recursive self-call), both decoys confirmed (routing.py:2193 self._solve_dependencies call to the different method, routing.py:2216 def of that different method). No missed call sites.",
+   "notes": "All gold_markers present with exact stated counts (solve_dependencies(=7, get_request_handler=3, get_websocket_app=2, _FrontendRouteGroup=6). Gold text verified against source line-by-line. Excellent ticket.",
+   "too_easy": false
+  },
+  {
+   "id": "BR2",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": "pass \u2014 whole-repo grep for 'select_proxy' gives exactly 7 hits matching gold: 3 real calls in adapters.py (confirmed lines 483/535/583 sit in get_connection_with_tls_context/get_connection/request_url respectively), 1 test call, 2 import-only decoy lines (adapters.py:58, test_utils.py:36). No missed call sites.",
+   "notes": "Clean ticket, gold matches code exactly.",
+   "too_easy": false
+  },
+  {
+   "id": "BR3",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": "pass \u2014 grep confirms set_model_mocks has exactly 6 hits (1 def, 1 import, 4 calls) matching gold's caller_set, and confirmed by reading the surrounding exception-handler code (NameError/PydanticUndefinedAnnotation/InvalidSchemaError) that each call site matches the claimed handler. set_dataclass_mocks sibling confirmed as a separate 5-hit symbol with its own 3 call sites in _dataclasses.py, correctly excluded.",
+   "notes": "Gold text verified exactly against pydantic/_internal/_model_construction.py:230-645.",
+   "too_easy": false
+  },
+  {
+   "id": "BR4",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": "pass \u2014 grep for send_from_directory gives 11 hits matching gold's stated count; confirmed 3 genuine calls (app.py:411 in Flask.send_static_file, blueprints.py:100 in Blueprint.send_static_file, tests/test_helpers.py:89), the werkzeug delegation decoy (helpers.py:582) and both docstring-mention decoys (helpers.py:437, helpers.py:554) all verified by reading source; 3 additional import-only lines exist but are trivially non-calls and not misleading.",
+   "notes": "Minor: marker_hit_counts for get_send_file_max_age is stated as 6 but actual count (even restricted to the 3 primary_paths) is 8 \u2014 cosmetic metadata inaccuracy only, does not affect the correctness of the caller_set or gold answer.",
+   "too_easy": false
+  },
+  {
+   "id": "BR5",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": "pass \u2014 grep for 'get_callers(' gives exactly 7 hits matching marker_hit_counts and gold's caller_set/decoys exactly: 4 genuine calls (server.py:324 in sutra_get_symbol, server.py:344 in sutra_get_callers' own body, tests/test_mcp_loader.py:334 and :353) plus 2 declaration decoys (traversal.py:44 abstract, :87 concrete) and the def sutra_get_callers(...) decoy at server.py:339. No missed call sites. Confirmed answer lives in .py source, not .md.",
+   "notes": "Excellent, tightly-verified ticket \u2014 GraphTraversal/RustworkxTraversal/sutra_get_callers marker counts match once restricted to the 3 stated primary_paths.",
+   "too_easy": false
+  },
+  {
+   "id": "XR1",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "All three mechanisms verified by reading source: pydantic ConfigWrapper.for_model (line 133) merges bases left-to-right then namespace/kwargs, always falls back to an empty ConfigDict (never errors); flask Config seeded once from default_config in App.init/make_config with no re-merge step; sutra from_config returns a concrete FixtureEmbedder() object when config_path is None/missing, confirmed verbatim in factory.py. Cross-repo synthesis genuinely required.",
+   "too_easy": false
+  },
+  {
+   "id": "XR2",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "dispatch_hook's return-value-replacement logic, flask's before_request_funcs/preprocess_request short-circuit-on-non-None behavior, and pydantic's PydanticPluginProtocol.new_schema_validator + entry-point-based _loader.py discovery all verified line-for-line against source. Accurate and non-trivial to answer.",
+   "too_easy": false
+  },
+  {
+   "id": "XR3",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "Verified fastapi's setdefault-based type-keyed exception_handlers dict in applications.py, flask's handle_http_exception vs handle_user_exception two-tier split (read both methods in full, matches gold exactly including the RoutingException/BadRequestKeyError special cases), and requests' inline except-chain translation in adapters.py's send() (MaxRetryError -> RetryError/ProxyError/SSLError/ConnectionError). All accurate.",
+   "too_easy": false
+  },
+  {
+   "id": "XR4",
+   "verdict": "repair",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": false,
+   "notes": "fastapi jsonable_encoder and sutra's single hard-coded isoformat() call (with no generic dispatch) are both verified accurate. However the flask claim is partially wrong: gold states flask/src/flask/json/provider.py's _default(o) handles '(date, uuid.UUID, dataclasses, bytes)' \u2014 reading the actual function (lines 108-121) shows it handles date, decimal.Decimal, uuid.UUID, dataclasses, and objects with __html__ (e.g. Markup) \u2014 it does NOT handle bytes at all (no bytes branch exists anywhere in provider.py). This is a factual error in the gold answer itself, not just in verified_how metadata.",
+   "suggested_fix": "In the gold text, replace '(handling date, uuid.UUID, dataclasses, bytes)' with '(handling date, Decimal, uuid.UUID, dataclasses, and objects with an __html__ method)'. No change needed to gold_markers or primary_paths.",
+   "too_easy": false
+  },
+  {
+   "id": "XR5",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "All four warning mechanisms verified: pydantic's PydanticDeprecationWarning with since/expected_removal fields (warnings.py:22-67), fastapi's FastAPIDeprecationWarning(UserWarning) with the exact docstring rationale quoted (exceptions.py:252), requests' RequestsWarning/FileModeWarning(RequestsWarning, DeprecationWarning) plus confirmed plain DeprecationWarning usage elsewhere in auth.py/adapters.py/utils.py (genuine inconsistency), and flask confirmed to have zero custom warning classes anywhere in src/flask (grep for 'class.*Warning' returns nothing) while using plain DeprecationWarning in app.py/ctx.py/globals.py. Excellent, well-verified.",
+   "too_easy": false
+  },
+  {
+   "id": "GF1",
+   "verdict": "repair",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "Core gold answer (get_signing_serializer, salt/key_derivation/digest_method/serializer class attrs, app.py:253 default wiring) is fully accurate. Minor metadata issue only: marker_hit_counts claims 'cookie-session'=2 but the exact string 'cookie-session' appears exactly once in the whole flask repo (src/flask/sessions.py:291, the salt= assignment) \u2014 verified with unrestricted repo-wide grep, not just the 2 primary_paths.",
+   "suggested_fix": "Correct marker_hit_counts['cookie-session'] from 2 to 1.",
+   "too_easy": false
+  },
+  {
+   "id": "GF2",
+   "verdict": "repair",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "Core gold answer is fully accurate: _check_id_valid at fastapi/sse.py:46-49 raises the exact quoted ValueError on a null byte, wired via AfterValidator(_check_id_valid) on the id field at line 112. However marker_hit_counts and verified_how both misstate ServerSentEvent's occurrence count: claimed 7, but it's actually 4 within fastapi/sse.py alone (the stated primary_path) and 38 repo-wide (tests, routing.py isinstance checks, 4 docs_src tutorial files that construct ServerSentEvent instances). The verified_how text's specific claim 'ServerSentEvent(...) is only constructed via the class definition itself (no other call sites)' is factually false \u2014 there are many other construction call sites (tests/test_sse.py has ~13, docs_src tutorials have ~9). This doesn't affect the correctness of the answer to the actual question asked, but is a false statement embedded in the ticket's own verification record.",
+   "suggested_fix": "Fix marker_hit_counts['ServerSentEvent'] to 4 (scoped to fastapi/sse.py) and remove/correct the false 'no other call sites' claim in verified_how, since ServerSentEvent is constructed in many places outside sse.py (tests, docs_src tutorials).",
+   "too_easy": false
+  },
+  {
+   "id": "GF3",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "Verified directly against requests/pyproject.toml: [project].dependencies contains exactly 'urllib3>=1.26,<3', and [build-system] contains requires=['setuptools>=61.0'] / build-backend='setuptools.build_meta'. All markers appear exactly once as stated. Clean, correctly-scoped GF ticket.",
+   "too_easy": false
+  },
+  {
+   "id": "GF4",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "Verified _PING_INTERVAL: float = 15.0 and KEEPALIVE_COMMENT = b': ping\\n\\n' defined in fastapi/sse.py, imported into routing.py and used at anyio.fail_after(_PING_INTERVAL) (line 596) and send_keepalive.send(KEEPALIVE_COMMENT) (line 600). Exactly matches gold.",
+   "too_easy": false
+  },
+  {
+   "id": "GF5",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "Confirmed cache_write_tokens accumulation (usage.get('cache_creation_input_tokens', 0) or 0) and the median cache-write tokens print line in analyze_ab_transcripts.py exactly as described. Confirmed via git show 2a1f368:... that the mechanism was genuinely absent at that older commit and added in a1fac93/a0ef3b3 \u2014 the index-staleness premise is real, not fabricated. In .py source, not .md.",
+   "too_easy": false
+  },
+  {
+   "id": "NT1",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "Verified SecureCookieSession's CallbackDict-based on_update hook (sessions.py:71-80), the explicit docstring comment noting nested-mutation must be flagged manually, should_set_cookie's exact modified-or-refresh check (sessions.py:233-247), and process_response's call to session_interface.save_session (app.py:1419). Matches gold exactly.",
+   "too_easy": false
+  },
+  {
+   "id": "NT2",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "Verified should_strip_auth (sessions.py:154-183), rebuild_auth (sessions.py:309-330), and DEFAULT_PORTS (utils.py:85). The bug diagnosis and conclusion (going from explicit port 8443 to implicit default port triggers changed_port=True and strips auth) is correct for the scenario. Minor: the gold's summary of should_strip_auth's logic omits an intermediate branch in the actual code ('Handle default port usage corresponding to scheme', lines 173-179, which returns False for same-scheme old-port-in-default-set/new-port-in-default-set cases) \u2014 it isn't wrong, just incomplete, since that branch does not intercept the 8443-to-default-port scenario described. Does not affect correctness of the conclusion.",
+   "too_easy": false
+  },
+  {
+   "id": "NT3",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "Verified dependency_cache dict (utils.py:583,594,615-616), use_cache defaulting to True (line 278), and the cache-key check/reuse at lines 656-661 threaded recursively through solve_dependencies. Matches gold exactly.",
+   "too_easy": false
+  },
+  {
+   "id": "NT4",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "Verified _build_function computes body_hash from only the tree-sitter 'body' field node (python.py:780-800, excludes decorators/def-line/annotations), and incremental_updater.py's changed_monikers/unchanged_monikers split (lines 311-317) plus symbols_to_write (lines 334-339) gates which freshly-extracted symbols actually get persisted. Confirmed in .py source. Matches gold exactly.",
+   "too_easy": false
+  },
+  {
+   "id": "NT5",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "notes": "Verified ConfigWrapper.for_model's `for base in bases: config_new.update(...)` loop (pydantic/_internal/_config.py:133-171) iterates bases in the same left-to-right declaration order that ModelMetaclass.__new__ receives them (confirmed bases is the raw tuple passed to the metaclass, matching class-statement order), so later-listed bases silently overwrite earlier ones via dict.update() \u2014 the opposite of normal MRO precedence. Matches gold exactly; counter-intuitive bug is real and correctly diagnosed.",
+   "too_easy": false
+  }
+ ],
+ "summary": "Verified all 20 tickets by reading source directly in the given repo checkouts (grep for markers/call sites, then reading surrounding code to confirm each gold claim).\n\nOverall quality is very high: 18/20 tickets pass as-is with fully accurate gold text, correct primary_paths, and (for BR tickets) caller_sets that I independently re-derived via whole-repo grep and confirmed to be complete and correct \u2014 no missed call sites, no bogus entries, in any of BR1-BR5.\n\nTwo tickets need repair, both minor:\n- GF1 (flask SecureCookieSessionInterface): marker_hit_counts claims 'cookie-session' appears 2 times but it appears exactly once repo-wide. Core gold answer is fully correct; just fix the count.\n- GF2 (fastapi SSE null-char error): marker_hit_counts claims ServerSentEvent=7 but it's actually 4 in the stated primary_path (fastapi/sse.py) or 38 repo-wide. More notably, the ticket's own verified_how asserts \"ServerSentEvent(...) is only constructed via the class definition itself (no other call sites)\" which is factually false \u2014 it's constructed in tests/test_sse.py (~13 times) and 4 docs_src tutorial files. Core answer to the actual question (_check_id_valid / the null-char ValueError) remains correct and unaffected.\n\nOne ticket has a factual error in the gold text itself (not just metadata):\n- XR4 (fastapi/flask/sutra JSON serialization): gold states flask's `_default()` in json/provider.py handles \"(date, uuid.UUID, dataclasses, bytes)\" \u2014 I read the function directly and it does NOT handle bytes at all; it handles date, Decimal, uuid.UUID, dataclasses, and __html__-bearing objects. Everything else in this ticket (fastapi jsonable_encoder, sutra's single hard-coded isoformat() call with no generic dispatch) is accurate. Suggested fix: correct the parenthetical list in the gold text.\n\nOne additional minor note (not requiring repair, verdict pass):\n- NT2 (requests auth-stripping on redirect): gold's description of should_strip_auth skips over an intermediate \"default port equivalence\" branch that exists in the real code, but this doesn't change the correctness of the stated conclusion for the specific 8443-to-default-port scenario in the ticket.\n\nNo ticket leaks its answer or hints at a search strategy in its text (aside from the GF class, which is grep-favorable by design). No ticket outside the GF class is answerable by a single obvious grep \u2014 all BR/NT/XR tickets require reading surrounding code and/or synthesizing across files or repos. All primary_paths exist and all gold_markers genuinely appear in their stated repos. Sutra-repo tickets (BR5, GF5, NT4) were confirmed to have their answers in .py source, not .md files."
+}
