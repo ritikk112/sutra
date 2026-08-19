@@ -1,0 +1,325 @@
+{
+ "flask": {
+  "ambiguous": [
+   {
+    "name": "dispatch_request",
+    "definitions": 4,
+    "def_sites": [
+     "src/flask/app.py:969",
+     "src/flask/views.py:30",
+     "src/flask/views.py:78",
+     "src/flask/views.py:182"
+    ],
+    "call_hits": 3,
+    "sample_hits": [
+     "src/flask/app.py:995",
+     "src/flask/app.py:1019",
+     "src/flask/app.py:1600"
+    ]
+   },
+   {
+    "name": "wrapper",
+    "definitions": 4,
+    "def_sites": [
+     "src/flask/app.py:87",
+     "src/flask/app.py:99",
+     "src/flask/ctx.py:201",
+     "src/flask/sansio/blueprints.py:240"
+    ],
+    "call_hits": 7,
+    "sample_hits": [
+     "src/flask/app.py:93",
+     "src/flask/app.py:107",
+     "src/flask/cli.py:402",
+     "src/flask/ctx.py:206",
+     "src/flask/helpers.py:124",
+     "src/flask/sansio/blueprints.py:244",
+     "src/flask/sansio/scaffold.py:49"
+    ]
+   }
+  ],
+  "unique": [
+   {
+    "name": "init_db",
+    "definitions": 1,
+    "def_sites": [
+     "examples/tutorial/flaskr/db.py:33"
+    ],
+    "call_hits": 7,
+    "sample_hits": [
+     "docs/appcontext.rst:66",
+     "docs/patterns/sqlalchemy.rst:49",
+     "docs/patterns/sqlalchemy.rst:91",
+     "docs/patterns/sqlite3.rst:147",
+     "docs/tutorial/database.rst:133",
+     "examples/tutorial/flaskr/db.py:44",
+     "src/flask/app.py:1496"
+    ]
+   },
+   {
+    "name": "from_prefixed_env",
+    "definitions": 1,
+    "def_sites": [
+     "src/flask/config.py:126"
+    ],
+    "call_hits": 5,
+    "sample_hits": [
+     "CHANGES.rst:483",
+     "docs/config.rst:597",
+     "docs/lifecycle.rst:25",
+     "docs/patterns/celery.rst:116",
+     "examples/celery/src/task_app/__init__.py:16"
+    ]
+   }
+  ],
+  "size": 497,
+  "prefix": "FL"
+ },
+ "celery": {
+  "ambiguous": [
+   {
+    "name": "convert",
+    "definitions": 10,
+    "def_sites": [
+     "celery/bin/worker.py:27",
+     "celery/bin/worker.py:44",
+     "celery/bin/worker.py:71",
+     "celery/bin/worker.py:80",
+     "celery/bin/base.py:235",
+     "celery/bin/base.py:244"
+    ],
+    "call_hits": 4,
+    "sample_hits": [
+     "celery/app/utils.py:213",
+     "celery/app/utils.py:217",
+     "celery/bin/base.py:320",
+     "celery/bin/worker.py:50"
+    ]
+   },
+   {
+    "name": "register_with_event_loop",
+    "definitions": 8,
+    "def_sites": [
+     "celery/concurrency/asynpool.py:344",
+     "celery/concurrency/asynpool.py:522",
+     "celery/concurrency/prefork.py:135",
+     "celery/concurrency/base.py:94",
+     "celery/worker/worker.py:214",
+     "celery/worker/components.py:177"
+    ],
+    "call_hits": 5,
+    "sample_hits": [
+     "celery/concurrency/asynpool.py:524",
+     "celery/worker/components.py:178",
+     "celery/worker/consumer/consumer.py:557",
+     "celery/worker/loops.py:62",
+     "celery/worker/loops.py:63"
+    ]
+   }
+  ],
+  "unique": [
+   {
+    "name": "in_sighandler",
+    "definitions": 1,
+    "def_sites": [
+     "celery/utils/log.py:63"
+    ],
+    "call_hits": 8,
+    "sample_hits": [
+     "celery/apps/worker.py:302",
+     "celery/apps/worker.py:480",
+     "celery/apps/worker.py:497",
+     "celery/apps/worker.py:507",
+     "celery/apps/worker.py:520",
+     "celery/utils/log.py:39",
+     "celery/utils/log.py:65",
+     "celery/utils/log.py:69"
+    ]
+   },
+   {
+    "name": "loader",
+    "definitions": 1,
+    "def_sites": [
+     "celery/app/base.py:1587"
+    ],
+    "call_hits": 8,
+    "sample_hits": [
+     "celery/app/base.py:357",
+     "celery/app/base.py:436",
+     "celery/apps/beat.py:82",
+     "celery/apps/beat.py:129",
+     "celery/utils/imports.py:113",
+     "docs/history/changelog-1.0.rst:778",
+     "docs/history/whatsnew-3.1.rst:363",
+     "docs/history/whatsnew-4.0.rst:2130"
+    ]
+   }
+  ],
+  "size": 3601,
+  "prefix": "CE"
+ },
+ "django": {
+  "ambiguous": [
+   {
+    "name": "aexists",
+    "definitions": 7,
+    "def_sites": [
+     "django/db/models/query.py:1505",
+     "django/contrib/sessions/backends/signed_cookies.py:59",
+     "django/contrib/sessions/backends/db.py:65",
+     "django/contrib/sessions/backends/cached_db.py:81",
+     "django/contrib/sessions/backends/cache.py:120",
+     "django/contrib/sessions/backends/file.py:192"
+    ],
+    "call_hits": 6,
+    "sample_hits": [
+     "django/contrib/sessions/backends/base.py:207",
+     "django/contrib/sessions/backends/cached_db.py:85",
+     "django/contrib/sessions/backends/db.py:66",
+     "docs/ref/models/querysets.txt:2873",
+     "docs/ref/models/querysets.txt:2875",
+     "docs/topics/http/sessions.txt:795"
+    ]
+   },
+   {
+    "name": "get_new_connection",
+    "definitions": 7,
+    "def_sites": [
+     "django/db/backends/postgresql/base.py:318",
+     "django/db/backends/oracle/base.py:301",
+     "django/db/backends/sqlite3/base.py:204",
+     "django/db/backends/mysql/base.py:254",
+     "django/db/backends/base/base.py:215",
+     "django/contrib/gis/db/backends/postgis/base.py:125"
+    ],
+    "call_hits": 4,
+    "sample_hits": [
+     "django/contrib/gis/db/backends/postgis/base.py:126",
+     "django/contrib/gis/db/backends/spatialite/base.py:41",
+     "django/db/backends/base/base.py:218",
+     "django/db/backends/base/base.py:256"
+    ]
+   }
+  ],
+  "unique": [
+   {
+    "name": "topology_func",
+    "definitions": 1,
+    "def_sites": [
+     "django/contrib/gis/gdal/prototypes/geom.py:32"
+    ],
+    "call_hits": 8,
+    "sample_hits": [
+     "django/contrib/gis/gdal/prototypes/geom.py:151",
+     "django/contrib/gis/gdal/prototypes/geom.py:152",
+     "django/contrib/gis/gdal/prototypes/geom.py:153",
+     "django/contrib/gis/gdal/prototypes/geom.py:154",
+     "django/contrib/gis/gdal/prototypes/geom.py:155",
+     "django/contrib/gis/gdal/prototypes/geom.py:156",
+     "django/contrib/gis/gdal/prototypes/geom.py:157",
+     "django/contrib/gis/gdal/prototypes/geom.py:158"
+    ]
+   },
+   {
+    "name": "user_passes_test",
+    "definitions": 1,
+    "def_sites": [
+     "django/contrib/auth/decorators.py:13"
+    ],
+    "call_hits": 7,
+    "sample_hits": [
+     "django/contrib/admin/views/decorators.py:12",
+     "django/contrib/auth/decorators.py:81",
+     "django/contrib/auth/decorators.py:136",
+     "docs/topics/auth/default.txt:695",
+     "docs/topics/auth/default.txt:707",
+     "docs/topics/auth/default.txt:734",
+     "tests/urlpatterns_reverse/views.py:50"
+    ]
+   }
+  ],
+  "size": 11010,
+  "prefix": "DJ"
+ },
+ "sqlalchemy": {
+  "ambiguous": [
+   {
+    "name": "_accept_with",
+    "definitions": 11,
+    "def_sites": [
+     "lib/sqlalchemy/orm/events.py:103",
+     "lib/sqlalchemy/orm/events.py:265",
+     "lib/sqlalchemy/orm/events.py:806",
+     "lib/sqlalchemy/orm/events.py:1582",
+     "lib/sqlalchemy/orm/events.py:2485",
+     "lib/sqlalchemy/orm/events.py:3277"
+    ],
+    "call_hits": 4,
+    "sample_hits": [
+     "lib/sqlalchemy/engine/events.py:139",
+     "lib/sqlalchemy/event/api.py:30",
+     "lib/sqlalchemy/orm/events.py:193",
+     "lib/sqlalchemy/orm/events.py:1609"
+    ]
+   },
+   {
+    "name": "partitions",
+    "definitions": 8,
+    "def_sites": [
+     "lib/sqlalchemy/engine/result.py:862",
+     "lib/sqlalchemy/engine/result.py:1339",
+     "lib/sqlalchemy/engine/result.py:1440",
+     "lib/sqlalchemy/engine/result.py:1625",
+     "lib/sqlalchemy/ext/asyncio/result.py:188",
+     "lib/sqlalchemy/ext/asyncio/result.py:562"
+    ],
+    "call_hits": 5,
+    "sample_hits": [
+     "doc/build/changelog/migration_14.rst:1358",
+     "doc/build/core/connections.rst:743",
+     "doc/build/orm/queryguide/api.rst:246",
+     "lib/sqlalchemy/ext/asyncio/result.py:198",
+     "test/typing/plain_files/engine/engine_result.py:44"
+    ]
+   }
+  ],
+  "unique": [
+   {
+    "name": "CompileState",
+    "definitions": 1,
+    "def_sites": [
+     "lib/sqlalchemy/sql/base.py:727"
+    ],
+    "call_hits": 8,
+    "sample_hits": [
+     "lib/sqlalchemy/orm/bulk_persistence.py:665",
+     "lib/sqlalchemy/orm/context.py:233",
+     "lib/sqlalchemy/orm/context.py:341",
+     "lib/sqlalchemy/orm/context.py:386",
+     "lib/sqlalchemy/orm/context.py:774",
+     "lib/sqlalchemy/orm/context.py:1082",
+     "lib/sqlalchemy/orm/context.py:1089",
+     "lib/sqlalchemy/sql/base.py:867"
+    ]
+   },
+   {
+    "name": "common_parent",
+    "definitions": 1,
+    "def_sites": [
+     "lib/sqlalchemy/orm/mapper.py:3326"
+    ],
+    "call_hits": 6,
+    "sample_hits": [
+     "lib/sqlalchemy/orm/context.py:2319",
+     "lib/sqlalchemy/orm/context.py:3405",
+     "lib/sqlalchemy/orm/relationships.py:1683",
+     "lib/sqlalchemy/orm/relationships.py:2259",
+     "lib/sqlalchemy/orm/relationships.py:3267",
+     "lib/sqlalchemy/orm/util.py:2139"
+    ]
+   }
+  ],
+  "size": 12830,
+  "prefix": "SA"
+ }
+}

@@ -1,0 +1,51 @@
+[
+ {
+  "repo": "requests",
+  "defs": 321,
+  "resolved": 293,
+  "matchable": 354,
+  "rate_pct": 83
+ },
+ {
+  "repo": "flask",
+  "defs": 497,
+  "resolved": 396,
+  "matchable": 502,
+  "rate_pct": 79
+ },
+ {
+  "repo": "fastapi",
+  "defs": 1063,
+  "resolved": 1029,
+  "matchable": 1302,
+  "rate_pct": 79
+ },
+ {
+  "repo": "pydantic",
+  "defs": 2799,
+  "resolved": 3273,
+  "matchable": 4224,
+  "rate_pct": 77
+ },
+ {
+  "repo": "celery",
+  "defs": 3601,
+  "resolved": 3890,
+  "matchable": 5976,
+  "rate_pct": 65
+ },
+ {
+  "repo": "django",
+  "defs": 11010,
+  "resolved": 14669,
+  "matchable": 23245,
+  "rate_pct": 63
+ },
+ {
+  "repo": "sqlalchemy",
+  "defs": 12830,
+  "resolved": 12015,
+  "matchable": 21335,
+  "rate_pct": 56
+ }
+]

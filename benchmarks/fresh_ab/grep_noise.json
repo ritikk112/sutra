@@ -1,0 +1,98 @@
+[
+ {
+  "repo": "requests",
+  "py_files": 22,
+  "total_defs": 321,
+  "unique_names": 243,
+  "collision_rate": 0.13580246913580246,
+  "defs_with_ambiguous_name": 0.34579439252336447,
+  "max_dupes": 18,
+  "median_hits": 5,
+  "median_files_touched": 3,
+  "p90_hits": 30
+ },
+ {
+  "repo": "flask",
+  "py_files": 34,
+  "total_defs": 497,
+  "unique_names": 343,
+  "collision_rate": 0.18950437317784258,
+  "defs_with_ambiguous_name": 0.44064386317907445,
+  "max_dupes": 22,
+  "median_hits": 7.0,
+  "median_files_touched": 3.0,
+  "p90_hits": 84
+ },
+ {
+  "repo": "sutra",
+  "py_files": 91,
+  "total_defs": 600,
+  "unique_names": 476,
+  "collision_rate": 0.10714285714285714,
+  "defs_with_ambiguous_name": 0.2916666666666667,
+  "max_dupes": 32,
+  "median_hits": 6.0,
+  "median_files_touched": 3.0,
+  "p90_hits": 51
+ },
+ {
+  "repo": "fastapi",
+  "py_files": 70,
+  "total_defs": 727,
+  "unique_names": 545,
+  "collision_rate": 0.13027522935779817,
+  "defs_with_ambiguous_name": 0.34800550206327374,
+  "max_dupes": 43,
+  "median_hits": 4.0,
+  "median_files_touched": 2.0,
+  "p90_hits": 137
+ },
+ {
+  "repo": "pydantic",
+  "py_files": 117,
+  "total_defs": 2802,
+  "unique_names": 1739,
+  "collision_rate": 0.2127659574468085,
+  "defs_with_ambiguous_name": 0.5114204139900071,
+  "max_dupes": 125,
+  "median_hits": 6.0,
+  "median_files_touched": 2.5,
+  "p90_hits": 66
+ },
+ {
+  "repo": "celery",
+  "py_files": 256,
+  "total_defs": 3600,
+  "unique_names": 2331,
+  "collision_rate": 0.18018018018018017,
+  "defs_with_ambiguous_name": 0.4691666666666667,
+  "max_dupes": 179,
+  "median_hits": 7,
+  "median_files_touched": 3,
+  "p90_hits": 74
+ },
+ {
+  "repo": "django",
+  "py_files": 907,
+  "total_defs": 11257,
+  "unique_names": 6141,
+  "collision_rate": 0.1853118384627911,
+  "defs_with_ambiguous_name": 0.5555654259571822,
+  "max_dupes": 730,
+  "median_hits": 6,
+  "median_files_touched": 3,
+  "p90_hits": 74
+ },
+ {
+  "repo": "sqlalchemy",
+  "py_files": 304,
+  "total_defs": 12830,
+  "unique_names": 6158,
+  "collision_rate": 0.25251705099058136,
+  "defs_with_ambiguous_name": 0.6412314886983632,
+  "max_dupes": 631,
+  "median_hits": 6,
+  "median_files_touched": 3,
+  "p90_hits": 169
+ }
+]
