@@ -1,0 +1,462 @@
+<title>The Grep Boundary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+:root{
+  --paper:#EDEFF2; --surface:#FBFBFC; --sunk:#E4E7EB;
+  --ink:#12171D; --ink-2:#3D4853; --muted:#68737F; --rule:#D3D9E0;
+  --sutra:#0F6DBE; --control:#C05A22;
+  --sutra-soft:#0F6DBE22; --control-soft:#C05A2222;
+  --flag:#8A6D1F;
+  --shadow:0 1px 2px rgba(18,23,29,.06), 0 8px 24px rgba(18,23,29,.05);
+  --on-fill:#FFFFFF;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0E1215; --surface:#171B1F; --sunk:#1F252B;
+    --ink:#E5EAEF; --ink-2:#B7C1CB; --muted:#8B96A2; --rule:#2A323A;
+    --sutra:#3592DA; --control:#D07634;
+    --sutra-soft:#3592DA26; --control-soft:#D0763426;
+    --flag:#C8A64A;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.32);
+    --on-fill:#0B0F12;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0E1215; --surface:#171B1F; --sunk:#1F252B;
+  --ink:#E5EAEF; --ink-2:#B7C1CB; --muted:#8B96A2; --rule:#2A323A;
+  --sutra:#3592DA; --control:#D07634;
+  --sutra-soft:#3592DA26; --control-soft:#D0763426;
+  --flag:#C8A64A;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.32);
+  --on-fill:#0B0F12;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
+  font-size:17px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:940px; margin:0 auto; padding:0 24px 96px}
+h1,h2,h3,.ui{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+.mono,td.num,th.num{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-variant-numeric:tabular-nums}
+
+/* ---------- masthead ---------- */
+header.mast{padding:64px 0 34px; border-bottom:1px solid var(--rule)}
+.kicker{
+  font-family:Archivo,sans-serif; font-size:12px; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:0 0 14px
+}
+h1{
+  font-size:clamp(38px,6.4vw,64px); line-height:1.02; font-weight:700;
+  letter-spacing:-.022em; margin:0 0 18px; text-wrap:balance;
+}
+.dek{font-size:clamp(18px,2.2vw,21px); color:var(--ink-2); max-width:64ch; margin:0}
+.meta{
+  display:flex; flex-wrap:wrap; gap:8px 26px; margin-top:26px;
+  font-family:"JetBrains Mono",monospace; font-size:12.5px; color:var(--muted);
+}
+.meta b{color:var(--ink-2); font-weight:600}
+
+/* ---------- hero readout ---------- */
+.hero{
+  margin:40px 0 8px; padding:34px 34px 30px; background:var(--surface);
+  border:1px solid var(--rule); border-radius:3px; box-shadow:var(--shadow);
+  display:grid; grid-template-columns:minmax(0,auto) minmax(0,1fr); gap:38px; align-items:center;
+}
+.hero .figure{text-align:left}
+.hero .big{
+  font-family:Archivo,sans-serif; font-weight:700; font-size:clamp(62px,11vw,104px);
+  line-height:.86; letter-spacing:-.04em; color:var(--control); font-variant-numeric:tabular-nums;
+}
+.hero .big small{font-size:.34em; letter-spacing:0; color:var(--muted); font-weight:600}
+.hero .cap{
+  font-family:Archivo,sans-serif; font-size:12px; font-weight:600; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--muted); margin-top:14px; max-width:22ch; line-height:1.5;
+}
+.hero p{margin:0; font-size:18px; color:var(--ink-2)}
+.hero p strong{color:var(--ink); font-weight:600}
+@media (max-width:660px){ .hero{grid-template-columns:1fr; gap:22px; padding:26px 22px} }
+
+/* ---------- sections ---------- */
+section{margin-top:56px}
+h2{
+  font-size:13px; font-weight:600; letter-spacing:.15em; text-transform:uppercase;
+  color:var(--muted); margin:0 0 6px;
+}
+h2 + .lede{
+  font-family:Archivo,sans-serif; font-size:clamp(24px,3.4vw,31px); font-weight:600;
+  line-height:1.2; letter-spacing:-.015em; margin:0 0 20px; text-wrap:balance; color:var(--ink);
+}
+p{max-width:68ch; margin:0 0 16px}
+.small{font-size:15px; color:var(--ink-2)}
+em.term{font-style:normal; font-family:"JetBrains Mono",monospace; font-size:.9em; color:var(--ink-2)}
+
+/* ---------- chart ---------- */
+figure{margin:24px 0 8px; padding:22px 24px 18px; background:var(--surface);
+  border:1px solid var(--rule); border-radius:3px; overflow-x:auto}
+figcaption{font-size:14px; color:var(--muted); margin-top:16px; padding-top:12px;
+  border-top:1px solid var(--rule); max-width:74ch}
+.figtitle{font-family:Archivo,sans-serif; font-weight:600; font-size:16px; margin:0 0 2px}
+.figsub{font-size:13.5px; color:var(--muted); margin:0 0 18px}
+
+.legend{display:flex; gap:20px; margin:0 0 20px; font-family:Archivo,sans-serif;
+  font-size:13px; font-weight:500; color:var(--ink-2); flex-wrap:wrap}
+.legend span{display:inline-flex; align-items:center; gap:7px}
+.swatch{width:11px; height:11px; border-radius:2px; flex:none}
+.sw-s{background:var(--sutra)} .sw-c{background:var(--control)}
+
+.rows{display:flex; flex-direction:column; gap:16px; min-width:400px}
+.row{display:grid; grid-template-columns:150px minmax(0,1fr); gap:16px; align-items:center}
+.rowlab{font-family:Archivo,sans-serif; font-size:13.5px; font-weight:500; line-height:1.25}
+.rowlab i{display:block; font-style:normal; font-family:"JetBrains Mono",monospace;
+  font-size:11px; color:var(--muted); margin-top:2px}
+.pair{display:flex; flex-direction:column; gap:2px}
+.bar{position:relative; height:19px; background:var(--sunk); border-radius:2px}
+.bar > b{
+  position:absolute; inset:0 auto 0 0; display:block; border-radius:2px 4px 4px 2px;
+  transition:filter .12s ease;
+}
+.bar.s > b{background:var(--sutra)} .bar.c > b{background:var(--control)}
+.bar:hover > b{filter:brightness(1.12) saturate(1.1)}
+.bar > em{
+  position:absolute; top:0; left:0; height:19px; display:flex; align-items:center;
+  justify-content:flex-end; padding-right:8px;
+  font-family:"JetBrains Mono",monospace; font-size:11px; font-style:normal;
+  font-variant-numeric:tabular-nums; color:var(--on-fill); font-weight:600;
+}
+.axis{display:flex; justify-content:space-between; margin:12px 0 0 166px;
+  font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--muted);
+  border-top:1px solid var(--rule); padding-top:5px; min-width:0}
+.delta{font-family:"JetBrains Mono",monospace; font-size:12px; font-weight:600}
+.pos{color:var(--sutra)} .neg{color:var(--control)}
+
+/* single-series ladder */
+.ladder{display:flex; flex-direction:column; gap:9px; min-width:400px}
+.lrow{display:grid; grid-template-columns:112px minmax(0,1fr) 54px; gap:14px; align-items:center}
+.lrow .lb{font-family:Archivo,sans-serif; font-size:13px}
+.lrow .lb i{display:block; font-style:normal; font-family:"JetBrains Mono",monospace;
+  font-size:10.5px; color:var(--muted)}
+.lbar{height:15px; background:var(--sunk); border-radius:2px; position:relative}
+.lbar > b{position:absolute; inset:0 auto 0 0; border-radius:2px 4px 4px 2px; display:block}
+.lval{font-family:"JetBrains Mono",monospace; font-size:12.5px; text-align:right;
+  font-variant-numeric:tabular-nums; color:var(--ink-2)}
+.two-up{display:grid; grid-template-columns:1fr 1fr; gap:20px}
+@media (max-width:780px){ .two-up{grid-template-columns:1fr} }
+
+/* ---------- tables ---------- */
+.tablewrap{overflow-x:auto; margin:22px 0}
+table{border-collapse:collapse; width:100%; font-size:14.5px; min-width:460px}
+caption{text-align:left; font-family:Archivo,sans-serif; font-weight:600; font-size:15px;
+  margin-bottom:10px; color:var(--ink)}
+th,td{padding:9px 14px 9px 0; text-align:left; border-bottom:1px solid var(--rule); vertical-align:top}
+th{font-family:Archivo,sans-serif; font-size:11.5px; font-weight:600; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--ink-2)}
+td.num,th.num{text-align:right; padding-right:20px}
+tbody tr:last-child td{border-bottom:none}
+tr.tot td{font-weight:600; border-top:1px solid var(--ink-2)}
+.mk{display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:7px; vertical-align:1px}
+
+/* ---------- callouts ---------- */
+.note{
+  margin:26px 0; padding:20px 24px; background:var(--surface);
+  border:1px solid var(--rule); border-left:3px solid var(--flag); border-radius:2px;
+}
+.note h3{font-family:Archivo,sans-serif; font-size:14px; font-weight:600; margin:0 0 8px;
+  letter-spacing:.02em; color:var(--ink)}
+.note p{margin:0 0 10px; font-size:15.5px; color:var(--ink-2); max-width:70ch}
+.note p:last-child{margin:0}
+
+.pull{
+  margin:34px 0; padding:26px 0 26px 28px; border-left:3px solid var(--sutra);
+  font-family:Archivo,sans-serif; font-size:clamp(19px,2.6vw,24px); font-weight:500;
+  line-height:1.35; letter-spacing:-.01em; color:var(--ink); max-width:60ch;
+}
+
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(184px,1fr)); gap:14px; margin:24px 0}
+.tile{background:var(--surface); border:1px solid var(--rule); border-radius:3px; padding:18px 20px}
+.tile .v{font-family:Archivo,sans-serif; font-size:29px; font-weight:700; letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums; line-height:1.05}
+.tile .k{font-family:Archivo,sans-serif; font-size:11.5px; font-weight:600; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--muted); margin-top:9px; line-height:1.45}
+.tile .p{font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--muted); margin-top:6px}
+.tile.bad .v{color:var(--control)} .tile.good .v{color:var(--sutra)}
+
+ul.tight{max-width:68ch; padding-left:20px; margin:0 0 16px}
+ul.tight li{margin-bottom:9px}
+code{font-family:"JetBrains Mono",monospace; font-size:.88em; background:var(--sunk);
+  padding:1.5px 5px; border-radius:2px}
+
+footer{margin-top:72px; padding-top:24px; border-top:1px solid var(--rule);
+  font-size:13.5px; color:var(--muted)}
+footer p{max-width:74ch; margin:0 0 9px}
+
+@media (forced-colors: active){
+  .bar > b, .lbar > b, .swatch, .mk{ forced-color-adjust:none; outline:1px solid currentColor }
+}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="kicker">Controlled A/B · sutra vs. plain grep</p>
+  <h1>The Grep Boundary</h1>
+  <p class="dek">A code index was supposed to earn its keep on large repositories. Across a 26× corpus ladder it didn't. What it earned its keep on was questions that cross from one repository into another — where the grep-only agent went twelve for zero.</p>
+  <div class="meta">
+    <span><b>120</b> solver runs</span>
+    <span><b>20</b> tickets · <b>2</b> arms · <b>3</b> trials</span>
+    <span><b>claude-haiku</b> solvers, blind sonnet judges</span>
+    <span>budget <b>6</b> tool calls, held constant</span>
+    <span>2026-08-19</span>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="figure">
+    <div class="big">0<small> / 12</small></div>
+    <div class="cap">Cross-repo answers the grep-only arm got right</div>
+  </div>
+  <p>Given a question that could only be answered by comparing <strong>django, celery and sqlalchemy</strong> together, the grep-only agent produced <strong>zero correct answers in twelve attempts</strong> — 4 partial, 8 wrong — and confidently named a nonexistent or wrong symbol in 8 of those 12. The indexed arm scored 4 correct and 6 partial on the same questions.</p>
+</div>
+
+<section>
+  <h2>Method</h2>
+  <p class="lede">One hypothesis, built so it could fail.</p>
+  <p>Three new repositories were cloned and indexed for this run — celery (3,882 symbols), django (12,132) and sqlalchemy (13,175) — joining flask to form a ladder from 497 to 12,830 definitions. Twenty tickets were authored across three task shapes, every gold answer built by reading source code with no access to the index, then re-derived independently by a separate verifier.</p>
+  <p>Both arms received <strong>byte-identical prompts</strong> differing only in the tool list, and a hard budget of <strong>six tool calls</strong> that was deliberately <em class="term">not</em> varied by repository size. Holding the budget constant is the instrument: if six calls suffice at 497 definitions but not at 12,830, the ladder reveals it. Judges saw only final answers, never traces — a trace from the indexed arm displays its own tool calls, so trace-level grading cannot be blinded.</p>
+
+  <div class="tablewrap">
+    <table>
+      <caption>Run hygiene</caption>
+      <thead><tr><th>Check</th><th>Result</th><th>Reading</th></tr></thead>
+      <tbody>
+        <tr><td>Control-arm index calls</td><td class="mono">0.00</td><td>no contamination</td></tr>
+        <tr><td>Budget violations</td><td class="mono">5/60 vs 7/60</td><td>balanced across arms</td></tr>
+        <tr><td>Concurrency at solver start</td><td class="mono">6 vs 7</td><td>control ran in the busier slice</td></tr>
+        <tr><td>Ticket verification</td><td class="mono">16/16 pass</td><td>zero repairs, all caller sets re-derived</td></tr>
+        <tr><td>Index adoption (cross-repo)</td><td class="mono">12/12</td><td>mean 5.33 index calls per trial</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Finding 01</h2>
+  <p class="lede">Corpus size does not predict the advantage.</p>
+  <p>The result is non-monotonic, and the largest repository in the set is one where the index <em class="term">loses</em>. Whatever drives the difference, raw corpus size is not it — which matters, because "adopt an index because your monorepo is big" is the standard industry pitch and this run does not support it.</p>
+
+  <figure>
+    <p class="figtitle">Correctness score by repository, ordered by size</p>
+    <p class="figsub">Score = 1.0 correct, 0.5 partial, 0 wrong. 0–1 scale, zero-based.</p>
+    <div class="legend">
+      <span><i class="swatch sw-s"></i>sutra (indexed)</span>
+      <span><i class="swatch sw-c"></i>control (grep only)</span>
+    </div>
+    <div class="rows">
+      <div class="row">
+        <div class="rowlab">flask<i>497 defs</i></div>
+        <div class="pair">
+          <div class="bar s" title="sutra — flask: 0.944"><b style="width:94.4%"></b><em style="width:94.4%">0.944</em></div>
+          <div class="bar c" title="control — flask: 1.000"><b style="width:100%"></b><em style="width:100%">1.000</em></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="rowlab">celery<i>3,601 defs</i></div>
+        <div class="pair">
+          <div class="bar s" title="sutra — celery: 0.792"><b style="width:79.2%"></b><em style="width:79.2%">0.792</em></div>
+          <div class="bar c" title="control — celery: 0.583"><b style="width:58.3%"></b><em style="width:58.3%">0.583</em></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="rowlab">django<i>11,010 defs</i></div>
+        <div class="pair">
+          <div class="bar s" title="sutra — django: 0.933"><b style="width:93.3%"></b><em style="width:93.3%">0.933</em></div>
+          <div class="bar c" title="control — django: 0.867"><b style="width:86.7%"></b><em style="width:86.7%">0.867</em></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="rowlab">sqlalchemy<i>12,830 defs</i></div>
+        <div class="pair">
+          <div class="bar s" title="sutra — sqlalchemy: 0.792"><b style="width:79.2%"></b><em style="width:79.2%">0.792</em></div>
+          <div class="bar c" title="control — sqlalchemy: 0.875"><b style="width:87.5%"></b><em style="width:87.5%">0.875</em></div>
+        </div>
+      </div>
+    </div>
+    <div class="axis"><span>0</span><span>0.25</span><span>0.5</span><span>0.75</span><span>1.0</span></div>
+    <figcaption>Deltas run −0.056, +0.208, +0.067, −0.083 as size increases 26×. No trend. Per-repo scores rest on 4–5 tickets each, so read this as <em class="term">no evidence for a size effect</em> rather than proof none exists.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Finding 02</h2>
+  <p class="lede">Task shape predicts it, and one shape decides it.</p>
+
+  <figure>
+    <p class="figtitle">Correctness score by task shape</p>
+    <p class="figsub">8 blast-radius tickets, 8 disambiguation, 4 cross-repo — 3 trials per arm each.</p>
+    <div class="legend">
+      <span><i class="swatch sw-s"></i>sutra (indexed)</span>
+      <span><i class="swatch sw-c"></i>control (grep only)</span>
+    </div>
+    <div class="rows">
+      <div class="row">
+        <div class="rowlab">Blast radius<i>what calls X?</i></div>
+        <div class="pair">
+          <div class="bar s" title="sutra — blast radius: 0.812"><b style="width:81.2%"></b><em style="width:81.2%">0.812</em></div>
+          <div class="bar c" title="control — blast radius: 0.875"><b style="width:87.5%"></b><em style="width:87.5%">0.875</em></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="rowlab">Disambiguation<i>which one runs?</i></div>
+        <div class="pair">
+          <div class="bar s" title="sutra — disambiguation: 0.917"><b style="width:91.7%"></b><em style="width:91.7%">0.917</em></div>
+          <div class="bar c" title="control — disambiguation: 0.771"><b style="width:77.1%"></b><em style="width:77.1%">0.771</em></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="rowlab">Cross-repo<i>3 repos at once</i></div>
+        <div class="pair">
+          <div class="bar s" title="sutra — cross-repo: 0.583"><b style="width:58.3%"></b><em style="width:58.3%">0.583</em></div>
+          <div class="bar c" title="control — cross-repo: 0.167"><b style="width:16.7%"></b><em style="width:16.7%">0.167</em></div>
+        </div>
+      </div>
+    </div>
+    <div class="axis"><span>0</span><span>0.25</span><span>0.5</span><span>0.75</span><span>1.0</span></div>
+    <figcaption>Deltas: blast radius <span class="delta neg">−0.062</span> (control wins, 1 of 8 tickets favour sutra) · disambiguation <span class="delta pos">+0.146</span> (3 favour sutra, 0 against) · cross-repo <span class="delta pos">+0.417</span> (4 of 4).</figcaption>
+  </figure>
+
+  <div class="tablewrap">
+    <table>
+      <caption>Cross-repo verdicts — 12 trials per arm</caption>
+      <thead><tr><th>Arm</th><th class="num">Correct</th><th class="num">Partial</th><th class="num">Wrong</th><th class="num">Localized gold</th><th class="num">Fabricated a symbol</th></tr></thead>
+      <tbody>
+        <tr><td><i class="mk sw-s"></i>sutra</td><td class="num">4</td><td class="num">6</td><td class="num">2</td><td class="num">10 / 12</td><td class="num">6 / 12</td></tr>
+        <tr><td><i class="mk sw-c"></i>control</td><td class="num">0</td><td class="num">4</td><td class="num">8</td><td class="num">7 / 12</td><td class="num">8 / 12</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The mechanism is not subtle. A cross-repo question requires holding three codebases side by side. Grep must be pointed at one tree at a time, and the agent then has to assemble and compare the results itself — under a six-call budget that the sweeping alone consumes. A single index search with no repository argument returns ranked hits across all three at once.</p>
+  <p>Adoption tells the same story from the agent's side: on cross-repo tickets the indexed arm used the index in <strong>12 of 12 trials at a mean of 5.33 calls</strong>, more than double any other task shape. It reached for the index because nothing else could do the job.</p>
+
+  <div class="pull">Grep cannot see across repository boundaries, and an agent under a call budget cannot paper over that.</div>
+</section>
+
+<section>
+  <h2>Finding 03</h2>
+  <p class="lede">When a name has 39 implementations, grep declines to guess.</p>
+  <p>Disambiguation tickets ask which of several identically-named implementations actually runs in a described situation. Naming the bare function earns nothing; the judge scores a hit only if the answer identifies the specific sibling, with the right file and owning class.</p>
+
+  <div class="tiles">
+    <div class="tile good"><div class="v">24 / 24</div><div class="k">sutra named the right implementation</div><div class="p">100%</div></div>
+    <div class="tile"><div class="v">20 / 24</div><div class="k">control named the right implementation</div><div class="p">83%</div></div>
+    <div class="tile"><div class="v">0</div><div class="k">Times either arm named a wrong sibling</div><div class="p">no confident mis-picks</div></div>
+  </div>
+
+  <p>The gap concentrates on the hardest case. Django's <code>as_oracle</code> has <strong>39 definitions across 13 files</strong>: the indexed arm identified the right one 3 times out of 3, the grep-only arm once out of 3.</p>
+  <p>Note what the control arm did <em class="term">not</em> do. It never named a wrong sibling. Its failure was declining to say which implementation at all — naming the function and stopping. That is the correct response to 39 indistinguishable hits: grep confirms the name exists 39 times and offers nothing to rank them by, so a careful agent refuses to guess. The index returns qualified names and owning classes, and the agent answers.</p>
+</section>
+
+<section>
+  <h2>Finding 04</h2>
+  <p class="lede">Both tools degrade as codebases grow — in opposite directions.</p>
+  <p>Two measurements taken during setup, before any benchmark agent ran. Together they explain why small-repo benchmarks kept coming back null, and they cut in both directions.</p>
+
+  <div class="two-up">
+    <figure>
+      <p class="figtitle">Grep gets ambiguous</p>
+      <p class="figsub">Share of definitions whose name is shared with another definition in the same repo.</p>
+      <div class="ladder">
+        <div class="lrow"><div class="lb">requests<i>321</i></div><div class="lbar"><b style="width:34.6%;background:var(--control)"></b></div><div class="lval">34.6%</div></div>
+        <div class="lrow"><div class="lb">flask<i>497</i></div><div class="lbar"><b style="width:44.1%;background:var(--control)"></b></div><div class="lval">44.1%</div></div>
+        <div class="lrow"><div class="lb">fastapi<i>1,063</i></div><div class="lbar"><b style="width:34.8%;background:var(--control)"></b></div><div class="lval">34.8%</div></div>
+        <div class="lrow"><div class="lb">pydantic<i>2,799</i></div><div class="lbar"><b style="width:51.1%;background:var(--control)"></b></div><div class="lval">51.1%</div></div>
+        <div class="lrow"><div class="lb">celery<i>3,601</i></div><div class="lbar"><b style="width:46.9%;background:var(--control)"></b></div><div class="lval">46.9%</div></div>
+        <div class="lrow"><div class="lb">django<i>11,010</i></div><div class="lbar"><b style="width:55.6%;background:var(--control)"></b></div><div class="lval">55.6%</div></div>
+        <div class="lrow"><div class="lb">sqlalchemy<i>12,830</i></div><div class="lbar"><b style="width:64.1%;background:var(--control)"></b></div><div class="lval">64.1%</div></div>
+      </div>
+      <figcaption>Median grep hits per symbol stay flat at 4–7 across the whole ladder — the typical symbol is as greppable in django as in requests. What scales is the tail. The worst single name goes from 18 duplicate definitions in requests to <strong>730 in django</strong>.</figcaption>
+    </figure>
+
+    <figure>
+      <p class="figtitle">The index gets incomplete</p>
+      <p class="figsub">Share of matchable CALL edges the indexer actually resolves.</p>
+      <div class="ladder">
+        <div class="lrow"><div class="lb">requests<i>321</i></div><div class="lbar"><b style="width:83%;background:var(--sutra)"></b></div><div class="lval">83%</div></div>
+        <div class="lrow"><div class="lb">flask<i>497</i></div><div class="lbar"><b style="width:79%;background:var(--sutra)"></b></div><div class="lval">79%</div></div>
+        <div class="lrow"><div class="lb">fastapi<i>1,063</i></div><div class="lbar"><b style="width:79%;background:var(--sutra)"></b></div><div class="lval">79%</div></div>
+        <div class="lrow"><div class="lb">pydantic<i>2,799</i></div><div class="lbar"><b style="width:77%;background:var(--sutra)"></b></div><div class="lval">77%</div></div>
+        <div class="lrow"><div class="lb">celery<i>3,601</i></div><div class="lbar"><b style="width:65%;background:var(--sutra)"></b></div><div class="lval">65%</div></div>
+        <div class="lrow"><div class="lb">django<i>11,010</i></div><div class="lbar"><b style="width:63%;background:var(--sutra)"></b></div><div class="lval">63%</div></div>
+        <div class="lrow"><div class="lb">sqlalchemy<i>12,830</i></div><div class="lbar"><b style="width:56%;background:var(--sutra)"></b></div><div class="lval">56%</div></div>
+      </div>
+      <figcaption>Monotonic, 83% → 56%. Unresolved edges grow from 61 to <strong>9,320</strong> — a 152× increase. Test files are excluded by design on top of this, and nothing at the point of use signals that a caller list is truncated.</figcaption>
+    </figure>
+  </div>
+
+  <div class="note">
+    <h3>Why every earlier benchmark returned a null</h3>
+    <p>The problem class this index exists to solve barely occurs in a small repository. Flask yields <strong>2</strong> ambiguity-hard blast-radius candidates and <strong>1</strong> disambiguation candidate; celery, django and sqlalchemy yield 10+ each. You cannot construct the hard case in a small codebase.</p>
+    <p>Three prior benchmarks all ran on repositories of 2,799 definitions or fewer. That is very likely why all three found no correctness effect.</p>
+  </div>
+</section>
+
+<section>
+  <h2>The bill</h2>
+  <p class="lede">Capability is bought with latency.</p>
+  <p>Paired by ticket across all twenty. The latency penalty replicates an earlier independent run (+5.9 s there, p&lt;0.001); context growth was marginal there and is significant here.</p>
+
+  <div class="tiles">
+    <div class="tile bad"><div class="v">+7.2 s</div><div class="k">Wall clock per task</div><div class="p">p &lt; 0.0001 · significant</div></div>
+    <div class="tile bad"><div class="v">+4,913</div><div class="k">Context growth, tokens</div><div class="p">p = 0.040 · significant</div></div>
+    <div class="tile"><div class="v">+3.8 s</div><div class="k">Time to first gold</div><div class="p">p = 0.11 · not significant</div></div>
+    <div class="tile"><div class="v">−0.3</div><div class="k">Tool calls to gold</div><div class="p">p = 0.67 · not significant</div></div>
+  </div>
+
+  <p>The index is not a faster grep. It answers questions grep structurally cannot, and it charges roughly seven seconds and five thousand tokens per task for the privilege.</p>
+</section>
+
+<section>
+  <h2>Caveat</h2>
+  <p class="lede">Read this before quoting any p-value here.</p>
+
+  <div class="note">
+    <h3>The headline is the least-powered cell in the run</h3>
+    <p>Overall correctness is <strong>+0.117 at p = 0.11</strong> — not significant across 20 tickets. No individual task class reaches p &lt; 0.05 either.</p>
+    <p>The cross-repo result needs a caveat in both directions. The indexed arm wins <strong>4 of 4</strong> cross-repo tickets and the control arm scores zero correct out of twelve, which is a large effect. But with four paired tickets, a sign-flip permutation test <em class="term">cannot</em> return a p below 0.125 no matter how big the effect is — the test is floor-limited by sample size.</p>
+    <p>So this finding is strong evidence and weak statistics at the same time. The right response is to power it properly with 12–15 cross-repo tickets, not to quote p = 0.12 as though it were a null.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Verdict</h2>
+  <p class="lede">Not "your repo is big." "Your question crosses a boundary."</p>
+  <p>The case for installing a code index, as this run actually supports it:</p>
+  <ul class="tight">
+    <li><strong>Cross-repository questions.</strong> On questions spanning three services, the grep-only agent got zero right out of twelve. This is a capability difference, not an efficiency one.</li>
+    <li><strong>Disambiguation at scale.</strong> When a name has dozens of implementations, grep returns dozens of indistinguishable hits and a careful agent declines to answer. The index resolves which one runs.</li>
+    <li><strong>Not single-repo call-site enumeration.</strong> On what is probably the most common real task, grep-only wins — and it localized the target in 24 of 24 trials.</li>
+    <li><strong>Not for speed.</strong> Seven seconds and five thousand tokens slower per task, both statistically significant, both replicated.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Limitations</h2>
+  <ul class="tight">
+    <li>One model tier (claude-haiku), 3 trials per ticket, and only 4 cross-repo tickets — the headline effect sits in the smallest cell.</li>
+    <li>A six-call budget may itself favour the arm needing fewer calls for cross-repo work. A budget sweep on cross-repo tickets alone would separate "better at this" from "better at this <em class="term">under a budget</em>".</li>
+    <li>Two indexed-arm trials badly overran the budget (+14 and +10 calls). Violations are balanced overall at 5/60 versus 7/60, but the tail is not.</li>
+    <li>The corpus ladder is four repositories; per-repo scores rest on 4–5 tickets each.</li>
+    <li>Judges grade final answers only — deliberate, since trace-level grading cannot be blinded, but it means grading cannot see <em class="term">how</em> an answer was reached.</li>
+  </ul>
+</section>
+
+<footer>
+  <p><strong>Reproduction.</strong> Tickets and golds in <code>benchmarks/fresh_ab/scale_tickets_v2.json</code>, verification in <code>scale_verification_v2.json</code>. Workflows: <code>scale_authoring_v2.js</code>, <code>scale_main_wf.js</code>. Analyzer: <code>AB_BUDGET=6 python3 analyze.py &lt;transcript_dir&gt; scale_tickets_v2.json</code>. Raw rows: <code>scale_efficiency.json</code> and <code>scale_grades.json</code>, 120 each. Supporting no-agent measurements in <code>grep_noise.json</code> and <code>resolver_rates.json</code>.</p>
+  <p>Every gold answer was authored and verified without access to the index, so no gold can be derived from the system it scores. Judges never saw which arm produced which answer.</p>
+</footer>
+
+</div>
