@@ -1,0 +1,1082 @@
+[
+ {
+  "ticket": "BR1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "claimed_call_sites": 3,
+  "correct_call_sites": 3,
+  "missed_call_sites": 1,
+  "decoys_claimed": 0,
+  "evidence": "Correctly finds and accurately describes routing.py:481 (get_request_handler().app()), routing.py:783 (get_websocket_app().app()), and routing.py:2234 (_FrontendRouteGroup._solve_dependencies, correctly named class and confirmed as an asynccontextmanager). No decoys claimed \u2014 precision is good. But it entirely misses the recursive self-call at fastapi/dependencies/utils.py:640, which is arguably the most consequential site for this specific task: since solve_dependencies calls itself while resolving sub-dependants, a required trace_ctx parameter must be threaded through that recursive call or every nested dependency resolution breaks. Stating 'three call sites' when there are four, and omitting the one inside the function's own recursion, is a material gap for an answer whose whole purpose is to enumerate every caller before a signature change."
+ },
+ {
+  "ticket": "BR1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Finds all 4 correct line numbers (481, 783, 2234, 640) with correct parameter lists and a solid trace_ctx pass-through strategy \u2014 no decoys claimed. However several confident characterizations are factually wrong, verified against the source: (1) it calls routing.py:481 'HTTP Streaming Endpoint Handler...for streaming path operations', but get_request_handler is the general handler used for every APIRoute (get_route_handler calls it unconditionally at line 1232), not a streaming-specific path; (2) it names the websocket call site as being inside 'websocket_handler() in get_websocket_handler()', but the actual function is get_websocket_app() and the inner coroutine is named app(), not websocket_handler; (3) it attributes the routing.py:2234 method to 'APIRoute' ('_solve_dependencies() generator method of APIRoute'), but grep/class-boundary check confirms it belongs to _FrontendRouteGroup, a distinct class, and mischaracterizes its purpose as 'used for testing/programmatic access' when it is the frontend-route-group request-matching path. These are confidently stated wrong symbol names that would misdirect someone reading the code, even though the line numbers themselves are correct."
+ },
+ {
+  "ticket": "BR1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Finds all 4 real call sites with correct line numbers and verbatim-accurate code snippets for each (481 in get_request_handler().app(), 783 in get_websocket_app().app(), 2234 correctly attributed to _FrontendRouteGroup._solve_dependencies() with the class name matching source, and utils.py:640 recursive call). Even cites the exact line (2226) where Request(scope, receive, send) is constructed inside the _FrontendRouteGroup method \u2014 verified accurate. No decoys claimed. This is the most precise and fully accurate of the six answers."
+ },
+ {
+  "ticket": "BR1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Correctly separates the definition (utils.py:586) from the 4 real calls (utils.py:640, routing.py:481, 783, 2234), matching the gold's structure exactly, and never falls into the 2193/2216 decoy trap. Parameter lists and code snippets for each site are accurate. The one weak spot: it labels routing.py:2234 as 'Mount Route Dependencies...handles dependencies for mounted sub-applications' without naming the owning class (_FrontendRouteGroup) and mischaracterizes its purpose (it's the frontend static-file route-group matching path, not general application mounting) \u2014 a soft inaccuracy, but it does not assert a specific wrong symbol/class name the way B does."
+ },
+ {
+  "ticket": "BR1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Correctly identifies the recursive call at utils.py:640 with a precise line number and correctly emphasizes that it must thread trace_ctx through the recursion \u2014 the single most important detail for this task. But for the other three real call sites it gives no line numbers at all, lumping them together as 'Three calls in fastapi/routing.py' with hedged, non-committal descriptions ('First location: When building responses for HTTP requests', 'appears to be'), explicitly citing an 'analysis budget' as the reason for not pinning them down. The question specifically asked to walk through every place with citations; declining to give locations for 3 of 4 sites is a material shortfall even though the conceptual mapping to the right places is not wrong."
+ },
+ {
+  "ticket": "BR1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Identifies the right 4 conceptual locations (get_request_handler, websocket handler, _solve_dependencies() context manager, and the utils.py recursive call) with correct parameter lists, and does not claim any decoys. But its line-number citations are imprecise/misleading: it cites 'line ~375' for the routing.py:481 call, which is actually the definition line of the enclosing get_request_handler function, not the solve_dependencies call itself (over 100 lines away, inside the nested app() coroutine); similarly cites 'line ~2216' for the 2234 call, again the enclosing method's def line rather than the call line. It also gives no line number at all for the websocket call site, and never names the owning class (_FrontendRouteGroup) for the third site. For a question explicitly about pinpointing call sites before a signature change, citing definition lines instead of call lines is a meaningful precision failure even though the right functions/files are named."
+ },
+ {
+  "ticket": "BR2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Claims all 4 genuine call sites (adapters.py:483, 535, 583; tests/test_utils.py:565) with correct line numbers and accurate code snippets, no decoys claimed. Mildly mischaracterizes line 535's method as a 'deprecated SOCKS proxy manager method' \u2014 it is get_connection(), deprecated in favor of get_connection_with_tls_context, and not SOCKS-specific \u2014 but this is a vague label, not a confident wrong symbol name, so it doesn't rise to false localization. Update plan (unpack object for downstream string ops) is accurate."
+ },
+ {
+  "ticket": "BR2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "claimed_call_sites": 3,
+  "correct_call_sites": 3,
+  "missed_call_sites": 1,
+  "decoys_claimed": 0,
+  "evidence": "Correctly finds the 3 adapters.py sites (483, 535, 583) with accurate method names (get_connection_with_tls_context, get_connection, request_url) and correct usage descriptions, verified against source. But omits the tests/test_utils.py:565 call site entirely, understating the true count as 3 \u2014 a real miss since the test would break without updating."
+ },
+ {
+  "ticket": "BR2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Claims all 4 genuine call sites (483, 535, 583, tests/test_utils.py:565) with correct line numbers and accurate code excerpts matching source exactly, no decoys claimed. Method names are left generic ('HTTPAdapter method') rather than named, which is imprecise but not wrong."
+ },
+ {
+  "ticket": "BR2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "claimed_call_sites": 3,
+  "correct_call_sites": 3,
+  "missed_call_sites": 1,
+  "decoys_claimed": 0,
+  "evidence": "Correctly identifies the 3 adapters.py sites (483, 535, 583) with accurate method names and behavior descriptions verified against source. Explicitly asserts 'There are 3 call sites' total, entirely missing the tests/test_utils.py:565 direct call \u2014 a confident undercount of the real call-site set."
+ },
+ {
+  "ticket": "BR2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Line numbers are all correct (483, 535, 583, tests/test_utils.py:565) and no decoys are claimed, but the method attribution is confidently wrong for all three adapters.py sites: line 483 is inside get_connection_with_tls_context, not proxy_manager_for() (a different method at line 269 that never calls select_proxy); lines 535 and 583 are inside get_connection() and request_url() respectively, not two branches of a single send() method \u2014 HTTPAdapter.send() (line 634) does not call select_proxy at all. An engineer searching for 'proxy_manager_for' or 'send()' to find these call sites would look in the wrong place."
+ },
+ {
+  "ticket": "BR2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "claimed_call_sites": 3,
+  "correct_call_sites": 3,
+  "missed_call_sites": 1,
+  "decoys_claimed": 0,
+  "evidence": "Correctly identifies the 3 adapters.py sites (483, 535, 583) with accurate method names (get_connection_with_tls_context, get_connection, request_url) and verified-accurate code snippets. Explicitly states 'exactly 3 call sites,' omitting the tests/test_utils.py:565 direct call entirely."
+ },
+ {
+  "ticket": "BR3",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "All 4 call sites correctly identified with correct line numbers (249, 611, 632, 640), correct file (_model_construction.py), correct code snippets, and correct name/no-name distinction (611/632 have a name from exc.name/e.name; 249/640 have none). Proposed reason-object mapping is sound and matches the gold's structure exactly."
+ },
+ {
+  "ticket": "BR3",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Code snippets for all 4 sites are verbatim-correct and match the gold's 4 sites with no decoys claimed. However it confidently states call site 1 is 'In `__init_subclass__` hook' \u2014 there is no `__init_subclass__` method in _model_construction.py; the code snippet shown (`if config_wrapper.defer_build: set_model_mocks(cls)`) is actually inside `ModelMetaclass.__new__` at line 249, per the gold. This is a confident, specific, and wrong claim about the containing method."
+ },
+ {
+  "ticket": "BR3",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Correctly cites set_model_mocks def at _mock_val_ser.py:151-189 (verified: def at 151, function body ends at 189 before set_dataclass_mocks begins at 192) and all 4 call sites at exact lines 249/611/632/640 with correct contexts and correct name-availability per site. No decoys claimed."
+ },
+ {
+  "ticket": "BR3",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "All 4 call sites correct at lines 249/611/632/640 with accurate code and context. Also cites PydanticUndefinedAnnotation at pydantic/errors.py:104 (verified exact) and InvalidSchemaError at _internal/_generate_schema.py:314 (verified exact) \u2014 both confirmed correct via grep. No decoys claimed."
+ },
+ {
+  "ticket": "BR3",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "All 4 call sites correctly identified at lines 249/611/632/640 with correct code snippets and accurate explanation of which sites have names available (611, 632) vs not (249, 640). No decoys claimed."
+ },
+ {
+  "ticket": "BR3",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "All 4 call sites correct at lines 249/611/632/640, correct code and context, and accurately cites PydanticUndefinedAnnotation at pydantic/errors.py:104 (verified) with correct description of its name/code attributes. No decoys claimed."
+ },
+ {
+  "ticket": "BR4",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 3,
+  "missed_call_sites": 0,
+  "decoys_claimed": 1,
+  "evidence": "Correctly finds all 3 genuine sites (app.py send_static_file, blueprints.py send_static_file, tests/test_helpers.py) and accurately explains _prepare_send_file_kwargs's None-fallback mechanism and the werkzeug delegation at helpers.py:582-583. However it lists the docstring code example at helpers.py:554-556 as a fourth 'call site' ('1 undocumented example in docstring'), and its migration guidance explicitly tells the user to update 'the test case and the docstring example' as if both were real call sites needing changes \u2014 conflating a decoy (prose/example, never executed) with genuine code. This is a confident, specific false positive."
+ },
+ {
+  "ticket": "BR4",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "claimed_call_sites": 2,
+  "correct_call_sites": 2,
+  "missed_call_sites": 1,
+  "decoys_claimed": 0,
+  "evidence": "Correctly and precisely identifies app.py:393-413 and blueprints.py:82-102 with accurate code excerpts and correct mechanism description (_prepare_send_file_kwargs default at helpers.py:402-414). But it flatly states 'exactly 2 callers in the entire codebase' and 'No caller needs to be updated,' omitting tests/test_helpers.py:89 entirely \u2014 which is a genuine call site that does NOT pass max_age and would break under the proposed signature change. For a 'walk me through every place' question, silently missing a real call site while asserting completeness is a material gap, though no wrong site was named."
+ },
+ {
+  "ticket": "BR4",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 3,
+  "correct_call_sites": 3,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Despite noting it exhausted its budget, it lands on the complete and precise set: app.py send_static_file, blueprints.py send_static_file (both correctly noted as already passing max_age explicitly), and tests/test_helpers.py's test_send_from_directory (correctly flagged as the one call needing a change since it omits max_age). No decoys included, mechanism description of **kwargs -> _prepare_send_file_kwargs is accurate."
+ },
+ {
+  "ticket": "BR4",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "claimed_call_sites": 2,
+  "correct_call_sites": 2,
+  "missed_call_sites": 1,
+  "decoys_claimed": 0,
+  "evidence": "Correctly identifies app.py and blueprints.py with accurate code and line ranges, and correctly explains the current **kwargs signature and werkzeug delegation. Entirely omits tests/test_helpers.py:89, and its closing claim ('No external application code is impacted... the two internal callers are already safety-conscious') implies the survey is complete when a real, in-repo call site needing a change (the test) was missed."
+ },
+ {
+  "ticket": "BR4",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "claimed_call_sites": 2,
+  "correct_call_sites": 2,
+  "missed_call_sites": 1,
+  "decoys_claimed": 0,
+  "evidence": "Correctly and accurately covers app.py:411-413 and blueprints.py:100-102, including the get_send_file_max_age computation line. Unlike B/D/F, it explicitly discloses the gap: 'There is also a test call in tests/test_helpers.py, but I exhausted my budget before inspecting it' \u2014 so it does not falsely claim completeness, but it still fails to deliver the full verified call-site list the question asked for."
+ },
+ {
+  "ticket": "BR4",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "claimed_call_sites": 2,
+  "correct_call_sites": 2,
+  "missed_call_sites": 1,
+  "decoys_claimed": 0,
+  "evidence": "Correctly identifies app.py:411 and blueprints.py:100 with accurate code, including the explanatory comment about get_send_file_max_age needing to be called per-app/blueprint. States 'exactly 2 call sites' and never mentions tests/test_helpers.py at all, missing a genuine call site while asserting a precise, confident count."
+ },
+ {
+  "ticket": "BR5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Correctly identifies all 4 real call sites (2 in sutra/mcp/server.py \u2014 one in the symbol-resolution/sutra_get_symbol closure populating the callers field, one inside the sutra_get_callers tool implementation; 2 in tests/test_mcp_loader.py). Correctly flags the sutra_get_callers wrapper function/tool name as a distinct, separately-considered rename rather than mislabeling it as a call site. No decoys claimed as call sites."
+ },
+ {
+  "ticket": "BR5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Enumerates the same 4 correct call sites (2 in server.py, 2 in test_mcp_loader.py) with accurate descriptions, and correctly separates the sutra_get_callers wrapper as a distinct entity. However the answer is internally inconsistent about counts: heading says '3 locations', the summary says '3 invocation sites' then '5 method calls', neither of which matches the 4 it actually lists \u2014 this numeric confusion is a real accuracy defect even though the underlying site descriptions are correct."
+ },
+ {
+  "ticket": "BR5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Exact match to gold: server.py:324 and :344 with correct code and correct attribution (sutra_get_symbol closure vs sutra_get_callers closure), test_mcp_loader.py:334 and :353, and explicitly calls out server.py:339 (the sutra_get_callers function definition) as a false positive not to rename."
+ },
+ {
+  "ticket": "BR5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 4,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Exact match to gold: server.py:324 (inside sutra_get_symbol) and :344 (inside sutra_get_callers), test_mcp_loader.py:334 and :353, correct code snippets, and explicitly excludes line 339 as the tool's external identifier rather than a call."
+ },
+ {
+  "ticket": "BR5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 2,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Gets the right files (server.py, test_mcp_loader.py) and right total count (4), and the two test-file calls are described accurately. But it confidently mislocates the two server.py calls at 'line ~62 and ~68' (actual: 324 and 344) and asserts both are 'in the sutra_get_callers MCP tool function body' \u2014 when in fact one call (line 324) lives inside the separate sutra_get_symbol tool's closure, not sutra_get_callers. That's a confident, specific, wrong claim about where/how the code works."
+ },
+ {
+  "ticket": "BR5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "claimed_call_sites": 4,
+  "correct_call_sites": 2,
+  "missed_call_sites": 0,
+  "decoys_claimed": 0,
+  "evidence": "Identifies the right files and correct count (4 total: 2 in server.py, 2 in test_mcp_loader.py), and the test-file calls are accurately described. But it confidently states 'Both are inside the sutra_get_callers() MCP handler function' for the two server.py calls, which is wrong \u2014 one of the two calls (payload['callers'] = ...) is actually inside the separate sutra_get_symbol tool's closure, not sutra_get_callers."
+ },
+ {
+  "ticket": "XR1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "wrong",
+  "false_localization": true,
+  "evidence": "Sutra: points to cli/config_io.py and cli/main.py, never mentions sutra/core/embedder/factory.py at all \u2014 misses the actual mechanism (FixtureEmbedder default fallback, from_config/from_dict) entirely; confidently cites the wrong locus. Pydantic: no specific file:line for ConfigWrapper/for_model/prepare_config; instead asserts a generic 'field validator system' and claims model_config supports an 'env_file' with dotenv precedence, conflating ordinary BaseModel config with the separate BaseSettings mechanism \u2014 confidently wrong. Flask: honestly labeled 'not fully traced,' gives only a hedged guess, so it doesn't confirm anything but at least isn't confidently false there."
+ },
+ {
+  "ticket": "XR1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "Pydantic: correctly cites _internal/_config.py lines 324-342 for prepare_config, ConfigWrapper.__init__/for_model, and correctly says None -> empty ConfigDict, no error \u2014 matches gold. Sutra: correctly cites factory.py lines 16-33 from_config, FixtureEmbedder fallback, from_dict lines 36-116, plus a verified-accurate secondary pointer to cli/detect.py load_config (lines 172-181) \u2014 matches gold closely. Flask: correctly identifies Config(dict) and its from_* methods with accurate line ranges, but states 'When no methods are called, the dict starts empty' / 'no error... empty dict' \u2014 verified false: App.make_config seeds Config with `dict(self.default_config)` before any caller ever touches it, so 'nothing supplied' means hard-coded default_config values stand, not an empty dict. Correct files/symbols throughout, but wrong on the specific 'what happens when nothing is supplied' question for one of the three libraries."
+ },
+ {
+  "ticket": "XR1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "wrong",
+  "false_localization": true,
+  "evidence": "Pydantic: cites main.py BaseModel line 133 and 'ModelMetaclass' as the resolution site, never naming ConfigWrapper/for_model/prepare_config in _internal/_config.py; answers the 'nothing supplied' question by talking about required-field ValidationError, which conflates ordinary field defaults with the model_config resolution the question asked about \u2014 confidently mislocalized. Sutra: cites config_io.py's read_yaml/read_env/merge_config/plan_write as 'the actual resolution point,' never mentioning sutra/core/embedder/factory.py or FixtureEmbedder \u2014 misses the real mechanism and gives a wrong 'nothing supplied' answer ('returns the existing config untouched' rather than a concrete default object). Flask: this part is actually accurate \u2014 quotes the real `super().__init__(defaults or {})` and correctly hedges that the dict 'contains only the defaults passed at init time,' consistent with gold. Two of three sections confidently point to the wrong file."
+ },
+ {
+  "ticket": "XR1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "wrong",
+  "false_localization": false,
+  "evidence": "Pydantic: correct \u2014 prepare_config() in _internal/_config.py lines 324-342 verified accurate, correctly states None -> empty ConfigDict silently, mentions ConfigWrapper.__init__/for_model as the precedence-applying callers. Flask: correct files/methods and line numbers, but repeats the same wrong claim as B/D that 'the config dict remains at its initialized empty state' when nothing supplied, ignoring App.make_config's default_config seeding. Sutra: outright denies the library-level mechanism exists ('does not have an equivalent library-level configuration resolution layer'; conflates with symbol-resolution code in core/resolver/) \u2014 a confident, verifiably false claim about factory.py's from_config/FixtureEmbedder pattern, arguably worse than a wrong pointer since it tells the reader nothing is there at all. No single wrong file is named as 'the' answer for sutra, so not scored as false_localization, but this is a serious miss on one of the three required libraries."
+ },
+ {
+  "ticket": "XR1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "Pydantic: correct \u2014 ConfigWrapper class (line 62) and for_model() (line 133) are the right symbols, correctly notes prepare_config handles None gracefully with a silent fallback. Sutra: cites plan_write()/read_yaml()/read_env()/merge_config() in cli/config_io.py as 'the resolution mechanism,' never mentioning sutra/core/embedder/factory.py or FixtureEmbedder \u2014 confidently wrong locus, same failure mode as A/C. Flask: honestly stated as unreachable within budget rather than fabricated \u2014 an incomplete answer but not a false one."
+ },
+ {
+  "ticket": "XR1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "Sutra: correct and detailed \u2014 factory.py from_config()/from_dict(), FixtureEmbedder fallback on None/missing file, provider default via .get() \u2014 matches gold closely. Flask: correct file, and the from_* method line ranges (verified: from_envvar 102-124, from_prefixed_env 126-185, from_pyfile 187-216, from_object 218-254, from_file 256-302, from_mapping 304-321 all check out against the real source) with an accurate 'explicit and manual, no built-in precedence' characterization; doesn't explicitly state the default_config-seeding nuance but also doesn't assert anything false about it. Pydantic: entirely misses gold's target \u2014 cites pydantic/v1/env_settings.py's BaseSettings/_build_values/customise_sources/deep_update (verified these line numbers are accurate for that file) as 'the' pydantic mechanism, never mentioning _internal/_config.py, ConfigWrapper, for_model, or prepare_config at all. This is a real, precisely-cited, but different and legacy (v1-compat) mechanism, confidently presented as the answer \u2014 false localization relative to gold."
+ },
+ {
+  "ticket": "XR2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "Requests: correct \u2014 hooks.py HOOKS/dispatch_hook, models.py register_hook, matches gold. Flask: correct \u2014 Scaffold decorators, before_request_funcs/after_request_funcs dicts, preprocess_request/full_dispatch_request, matches gold's callback-list-per-blueprint description. Pydantic: wrong mechanism for the question asked. Confidently names functional_validators.py / _internal/_decorators.py (field_validator/model_validator, metaclass-collected) as the answer to 'a third-party package can observe validation' \u2014 but that is author-side validation logic within the same model, not the actual PydanticPluginProtocol/entry-point plugin system in pydantic/plugin/__init__.py and _schema_validator.py that gold identifies and that the question's phrasing ('full protocol class an external package implements') is clearly pointing at. Verified pydantic/plugin/__init__.py contains PydanticPluginProtocol.new_schema_validator and BaseValidateHandlerProtocol \u2014 none of this is mentioned."
+ },
+ {
+  "ticket": "XR2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "Requests: correct and detailed, matches gold's hooks.py/dispatch_hook mechanics precisely (verified default_hooks lines 25-26, dispatch_hook lines 32-48 exactly as cited). Flask: correct in substance (before_request_funcs/after_request_funcs dicts keyed by blueprint name, full_dispatch_request, reversed after_request order) though it hedges on exact decorator location ('likely in Flask.app or blueprints.py') rather than confidently misattributing. Pydantic: honestly not investigated \u2014 explicitly states budget exhausted and only speculates loosely ('likely a protocol/validator pattern') without asserting anything false. This is the only answer that doesn't produce a confidently wrong pydantic mechanism, but it still fails to deliver 1/3 of the requested comparison."
+ },
+ {
+  "ticket": "XR2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "Requests: correct, with accurate line citations (register_hook ~257-270, dispatch_hook 32-48 verified exact) and correct dict-of-lists description matching gold. Flask: correct, scaffold.py decorator lines and blueprint-keyed lists description accurate. Pydantic: confidently wrong mechanism \u2014 cites specific (and largely accurate-to-itself) line ranges in functional_validators.py and _internal/_decorators.py for field_validator/FieldValidatorDecoratorInfo as 'the' extension mechanism, when gold's actual answer (and the question's framing of a third-party-implemented protocol class) points to pydantic/plugin/__init__.py's PydanticPluginProtocol and _schema_validator.py's wrapped validators \u2014 verified present in the codebase and entirely unmentioned by this answer."
+ },
+ {
+  "ticket": "XR2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "Requests: correct \u2014 verified prepare_hooks (models.py line 722) and register_hook exist as described; hooks dict stored on PreparedRequest/Response, dispatch iterates the list. Flask: correct \u2014 before_request_funcs/after_request_funcs keyed by blueprint name (verified via scaffold.py setdefault(None,...) pattern), preprocess_request/do_after_request iteration and reversal accurate. Pydantic: confidently wrong mechanism \u2014 points to functional_validators.py field_validator/model_validator metaclass collection as the answer, omitting the actual plugin protocol (pydantic/plugin/__init__.py PydanticPluginProtocol, entry-point discovery in _loader.py, wrapping in _schema_validator.py) that gold identifies and that matches the question's 'external package implements a protocol class' framing."
+ },
+ {
+  "ticket": "XR2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "Requests: correct, precise and verified line citations (register_hook models.py:257-270, default_hooks hooks.py:25-26, dispatch_hook hooks.py:32-48 all exact matches). Flask: correct in substance but vaguer than others on exact dispatch site ('WSGI request handling pipeline' rather than naming preprocess_request explicitly) \u2014 still not wrong, just less precise. Pydantic: confidently wrong mechanism \u2014 field_validator() in functional_validators.py:410-520 presented as the full answer to 'third-party package observes validation,' with no mention of the actual PydanticPluginProtocol/plugin loader/entry-points system that gold cites and that fits the question's explicit hint about an externally-implemented protocol class."
+ },
+ {
+  "ticket": "XR2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "Requests: correct \u2014 HOOKS list, dispatch_hook mechanics, session.hooks list usage all accurate and match hooks.py/sessions.py. Flask: correct \u2014 before_request_funcs/after_request_funcs keyed by name, reversed after_request iteration, matches gold. Pydantic: confidently wrong mechanism \u2014 field_validator decorator with mode parameter presented as the extension point, with a summary line calling it 'the most sophisticated' pipeline-aware system, but this is author-defined validation logic, not the third-party plugin protocol (PydanticPluginProtocol / BaseValidateHandlerProtocol in pydantic/plugin/) that gold identifies as the actual mechanism matching the question's third-party-observability framing."
+ },
+ {
+  "ticket": "XR3",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "FastAPI section correctly names exception_handlers.py's two handlers and applications.py's middleware registration, close to gold. Flask section is vague ('no single transformation point... handled through these different handler methods') and never explains the actual two-tier delegation (handle_http_exception vs handle_user_exception, _find_error_handler, fallback to returning e); its cited line numbers (262-265) actually point to a deprecation-warning list in __init_subclass__, not the method definitions (real defs are at 833/868/900/953). Requests section confidently declares raise_for_status() 'the mechanism' and omits adapters.py entirely, missing the actual answer to the question asked (translation of underlying urllib3 exceptions into requests' own types happens in HTTPAdapter.send(), not in raise_for_status which is a user-invoked status-code check)."
+ },
+ {
+  "ticket": "XR3",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": true,
+  "evidence": "FastAPI section matches gold closely (two default handlers, setdefault-style registration implied, extensible via decorator). Flask section cites correct line ranges (833-866, 900-951) but mislabels handle_exception as the handler 'for all other exceptions' with its own _find_error_handler lookup, completely omitting handle_user_exception -- the actual dispatcher gold identifies as forming the two-tier split; this misrepresents the real call chain (full_dispatch_request -> handle_user_exception -> handle_http_exception, with handle_exception only reached as a 500 fallback after handle_user_exception re-raises). Requests section only cites raise_for_status()/exceptions.py and never mentions adapters.py's inline exception translation, missing the mechanism gold identifies as the actual answer to 'raised as one of our own exception types instead of whatever the underlying library raised.'"
+ },
+ {
+  "ticket": "XR3",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "wrong",
+  "false_localization": true,
+  "evidence": "FastAPI section is reasonable and roughly matches gold. Flask section confidently and incorrectly claims handle_exception() (line 900) is 'ONE primary function' / 'the unified bottleneck - all exception-to-response conversions flow through here, whether for built-in exceptions, user-registered handlers, or framework defaults' -- verified false: full_dispatch_request routes exceptions to handle_user_exception first, which for HTTPExceptions calls handle_http_exception and for others does its own _find_error_handler lookup or re-raises; handle_exception is only reached as a 500 fallback, not a universal bottleneck. Requests section is vague and never names adapters.py's exception-translation code, missing the actual mechanism."
+ },
+ {
+  "ticket": "XR3",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "wrong",
+  "false_localization": true,
+  "evidence": "FastAPI section is solid (build_middleware_stack, ExceptionMiddleware, exception_handlers.py) matching gold well. Flask section confidently states 'handle_exception() is THE single place... It first tries handle_http_exception(), then searches for a registered error handler' -- verified false: handle_exception's actual body (line 900) never calls handle_http_exception; that call happens inside the separate handle_user_exception method which D never mentions. Requests section claims 'Requests doesn't automatically convert errors' and frames raise_for_status as user-triggered, but this contradicts the verified code: HTTPAdapter.send() in adapters.py automatically re-raises urllib3-internal exceptions (MaxRetryError, ProtocolError, _SSLError, etc.) as requests' own exception types with no user action required -- exactly the mechanism the question asked about, which D's framing misses/denies."
+ },
+ {
+  "ticket": "XR3",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "FastAPI section closely matches gold (exception_handlers.py functions, registration in applications.py, middleware invocation). Flask section is vague and non-committal -- lists 'error handler registry,' 'default error handling,' 'exception handling in dispatch' with no file/line/symbol specificity, never naming handle_http_exception, handle_user_exception, or _find_error_handler, so it lacks the concrete mechanism gold requires even though its top-line conclusion ('no single centralized place') is directionally right. Requests section is the only answer that correctly identifies both requests mechanisms: raise_for_status() AND explicitly 'other errors (connection, SSL, timeout) are caught from urllib3 and wrapped as requests exceptions in adapters.py during the request execution phase' -- this matches gold's core answer, unlike A-D and F which omit adapters.py entirely."
+ },
+ {
+  "ticket": "XR3",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "wrong",
+  "false_localization": true,
+  "evidence": "FastAPI section is accurate and matches gold (exception_handlers.py, build_middleware_stack, ExceptionMiddleware dict lookup). Flask section lists several methods but then confidently asserts 'The actual conversion mechanism is in handle_exception()... Single point of decision: Flask.handle_exception() is where the outward-facing representation is determined' -- verified false: handle_exception is a 500-fallback reached only when handle_user_exception's own lookup fails and re-raises; most exceptions (including anything with a registered handler, and all HTTPExceptions) never reach handle_exception at all. Requests section mentions adapters.py's build_response and vaguely gestures at 'lower-level adapter and connection errors' but muddies this by foregrounding hooks.py's dispatch_hook (a user-callback mechanism, not exception translation) as a peer 'point of decision,' never identifying HTTPAdapter.send()'s except-clauses as the actual translation site gold specifies."
+ },
+ {
+  "ticket": "XR4",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "FastAPI and Sutra sections are accurate and match gold. The Flask section, however, mischaracterizes the mechanism: it headlines Flask as 'Limited handler, fails on unknown types' and states 'The handler does NOT recursively walk the tree\u2014it only converts types that stdlib json can't handle, one at a time,' framing Flask as meaningfully inferior to FastAPI for the exact bug scenario (datetime nested in an object). In fact, per the verified code, json.dumps()'s own encoder recursively walks the structure and invokes the `default` callback at every level for date/Decimal/UUID/dataclass \u2014 functionally equivalent to a general mechanism for those types, which is exactly what gold says ('any of those types anywhere in the object graph are converted automatically'). The answer's final prose ('The bug ... was likely Flask not handling a type in its handler ... FastAPI's approach is the most robust') pushes the reader toward distrusting Flask's datetime handling specifically, which contradicts gold's classification that Flask 'just works' for datetime/UUID/dataclass. No files are wrong, but the explanation of how Flask's mechanism behaves for the asked-about types is materially muddled relative to gold."
+ },
+ {
+  "ticket": "XR4",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "All three sections match gold precisely: jsonable_encoder() in fastapi/encoders.py recursively converts BaseModel/dataclass/dict/list/etc. and is applied to all return values (matches routing.py:341/517 usage); Flask's _default() is registered via DefaultJSONProvider.default = staticmethod(_default) and passed as `default` to json.dumps(), with the answer correctly explaining that Python's own json encoder recursion calls `default` at each nested level, so nested types 'just work' \u2014 the same conclusion as gold; Sutra correctly identified as manually building dicts field-by-field with json.dumps(graph, indent=2, ...) and no default parameter, correctly noting it will crash on any un-pre-converted type."
+ },
+ {
+  "ticket": "XR4",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "wrong",
+  "false_localization": false,
+  "evidence": "FastAPI and Sutra sections are accurate. But the Flask section makes a confidently wrong claim that directly contradicts the verified source: 'If you return a custom dataclass with datetime fields: Flask will blow up unless you explicitly convert those fields yourself.' The actual _default() function explicitly handles dataclasses via `dataclasses.asdict(o)`, and because json.dumps() recursively re-invokes `default` on the resulting nested datetime field, a dataclass with datetime fields serializes correctly automatically \u2014 it does NOT blow up. This is the exact scenario the question asked about (nested unsupported types inside an object), and the answer gets it backwards, misclassifying Flask as requiring manual conversion for a case that in fact 'just works,' contrary to gold."
+ },
+ {
+  "ticket": "XR4",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Accurately distinguishes FastAPI's pre-processing recursive walk (jsonable_encoder with ENCODERS_BY_TYPE plus dict()/vars() fallback) from Flask's on-demand walk (json.dumps() itself traverses the tree and calls the `default` callback for every unsupported type it meets, including nested ones), correctly concluding both 'just work' for arbitrary nesting of the listed types. Sutra section cites the exact code (json.dumps(moniker_order/graph, indent=2) with no custom encoder, and the standalone .isoformat() call at the generated_at field) matching the verified source exactly."
+ },
+ {
+  "ticket": "XR4",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies jsonable_encoder() as FastAPI's general recursive mechanism applied automatically by the framework, and correctly identifies Flask's DefaultJSONProvider/custom encoder as handling datetime/date, UUID, dataclass, and __html__ objects automatically for nested structures \u2014 matching gold's conclusion that both frameworks 'just work.' The Flask explanation is a bit thinner on mechanics (doesn't name the module-level _default function or explicitly describe the default= wiring into json.dumps), but makes no incorrect claims. Sutra section correctly identifies the bare json.dumps() calls and the manual .isoformat() conversion, matching gold."
+ },
+ {
+  "ticket": "XR4",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "wrong",
+  "false_localization": true,
+  "evidence": "The Flask and Sutra sections are accurate and match gold closely (Flask's _default/DefaultJSONProvider correctly described; Sutra's manual dict-building and bare json.dumps() correctly cited with accurate line numbers). But the FastAPI section is wrong: it never mentions jsonable_encoder() or fastapi/encoders.py at all \u2014 the actual gold-verified general mechanism \u2014 and instead confidently points to fastapi/responses.py's deprecation docstring for UJSONResponse ('FastAPI now serializes data directly to JSON bytes via Pydantic when a return type or response model is set') as 'the general mechanism,' claiming FastAPI 'delegates to Pydantic's model_dump_json(), which walks nested structures.' This is a different, narrower, and not the actual applied mechanism verified in code (routing.py calls jsonable_encoder(response_content) unconditionally, not Pydantic's model_dump_json). An engineer following this answer would look in the wrong file (responses.py) and come away with an incorrect mental model of how FastAPI actually handles the datetime/UUID case."
+ },
+ {
+  "ticket": "XR5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "Correct on symbols/files for all four libraries and correctly transcribes pydantic's since/expected_removal structure and FastAPI's UserWarning workaround. But it confidently asserts pydantic's subclassing 'avoids being filtered out by default Python warning filters' and reiterates this in the summary table ('Pydantic: Yes\u2014custom subclass of DeprecationWarning to bypass default filtering'). This is factually wrong: Python's default filters match DeprecationWarning by issubclass, so PydanticDeprecationWarning is still silenced by default just like the gold explains (pydantic does NOT solve the silencing problem, unlike FastAPI's deliberate UserWarning workaround). Also omits that requests' adapters.py/auth.py/utils.py call raw stdlib DeprecationWarning directly, inconsistent with RequestsWarning/FileModeWarning."
+ },
+ {
+  "ticket": "XR5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "Pydantic section is accurate and correctly notes pydantic does NOT work around the silencing problem, just adds metadata (matches gold nuance). FastAPI and Flask sections are correct. But the Requests section states 'Base class: UserWarning' for RequestsWarning \u2014 the actual code is `class RequestsWarning(Warning):`, not UserWarning; this is a confident factual error. It also states requests 'Does not appear to have a deprecation-specific warning class,' which is wrong \u2014 FileModeWarning(RequestsWarning, DeprecationWarning) is exactly that, and the answer even lists it as a subclass without recognizing its role. Misses requests' inconsistency (raw DeprecationWarning used directly in adapters.py/auth.py/utils.py)."
+ },
+ {
+  "ticket": "XR5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correct files/symbols for all four. Pydantic: accurate constructor/__str__/subclass details matching pydantic/warnings.py exactly, and importantly does not claim pydantic bypasses default filtering (correctly frames it as 'custom enough' rather than a workaround for silencing). FastAPI: correct UserWarning + docstring quote. Requests: correctly identifies RequestsWarning(Warning) base and FileModeWarning(RequestsWarning, DeprecationWarning) multiple inheritance. Flask: correctly states no custom class, uses stdlib directly (minor odd phrasing calling globals.py a 'test file', which it isn't, but doesn't change the substance). Main gap: doesn't flag that requests' other deprecation sites (utils.py/adapters.py/auth.py) bypass RequestsWarning entirely and use raw DeprecationWarning \u2014 but nothing stated is factually wrong."
+ },
+ {
+  "ticket": "XR5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "Pydantic and FastAPI sections are accurate, and correctly states pydantic 'didn't work around the stdlib behavior' (matches gold). Flask correct. Requests section gets RequestsWarning's base class right (Warning) but frames requests as deliberately working around the problem 'Like FastAPI... uses a broader warning class (Warning) as the base' \u2014 this overstates requests' consistency/intent: it omits that FileModeWarning also multiply-inherits from DeprecationWarning, and omits that most requests deprecation call sites use raw stdlib DeprecationWarning directly rather than any custom class, making the 'like FastAPI' comparison materially misleading."
+ },
+ {
+  "ticket": "XR5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correct files/symbols throughout. Pydantic: verbatim-accurate constructor/attributes/__str__ format. FastAPI: correct UserWarning workaround with rationale. Requests: correctly describes RequestsWarning(Warning) base and FileModeWarning(RequestsWarning, DeprecationWarning) multiple inheritance, plus RequestsDependencyWarning \u2014 matches the actual exceptions.py hierarchy precisely. Flask: correct, no custom class, cites globals.py/app.py/ctx.py. Summary correctly avoids claiming pydantic solves the silencing problem. Gap (shared with most other answers): doesn't note that requests' adapters.py/auth.py/utils.py use raw DeprecationWarning directly, i.e., the inconsistency gold highlights \u2014 but no false claims are made."
+ },
+ {
+  "ticket": "XR5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "Pydantic, FastAPI, and Flask sections are accurate and correctly located. Requests section correctly names RequestsWarning(Warning) and lists FileModeWarning/RequestsDependencyWarning as subclasses, but the answer's own 'Key Insight' concludes 'Only Pydantic extends DeprecationWarning' \u2014 this is confidently wrong: FileModeWarning(RequestsWarning, DeprecationWarning) also extends DeprecationWarning via multiple inheritance, a fact the answer itself lists but fails to connect. This central summary claim, which directly addresses what the user asked (which libraries still touch DeprecationWarning and how), contradicts the code. Also omits requests' raw-DeprecationWarning call sites in adapters.py/auth.py/utils.py."
+ },
+ {
+  "ticket": "GF1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies file/lines (sessions.py:284-385), TaggedJSONSerializer, get_signing_serializer with hmac key_derivation, SHA1 digest, salt cookie-session, fallback keys, dumps/loads usage, BadSignature handling, and default wiring at app.py:253 with the exact attribute line. Minor imprecision: describes salt as being 'derived via HMAC from secret_key' which slightly muddles the relationship (salt is a separate constant fed into itsdangerous's HMAC key derivation, not itself HMAC-derived), but this is a minor phrasing issue, not a factual error about the mechanism. All file/line citations verified accurate."
+ },
+ {
+  "ticket": "GF1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Accurate and detailed: correct file/line ranges, correct salt/digest_method/key_derivation/get_signing_serializer lines, correct explanation of open_session/save_session, correct SECRET_KEY_FALLBACKS behavior, and correct default wiring citation. Also correctly cites TaggedJSONSerializer's source file (flask/json/tag.py). No errors found."
+ },
+ {
+  "ticket": "GF1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correct file/line locations for definition (sessions.py:284-385) and wiring (app.py:253), correct description of get_signing_serializer, salt, HMAC, SECRET_KEY_FALLBACKS, and open_session/save_session flow including BadSignature handling. Uses 'session_json_serializer' terminology matching the actual code (line 300: serializer = session_json_serializer, which is a TaggedJSONSerializer instance) \u2014 fully accurate, just less detail on TaggedJSONSerializer's type-preservation features than others, but doesn't state anything wrong instead of TaggedJSONSerializer, it correctly says 'JSON serializer with support for datetime, tuple, and other Python types' which describes TaggedJSONSerializer's actual behavior."
+ },
+ {
+  "ticket": "GF1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correct file, correct line ranges (284-386, close enough to 284-385), correct TaggedJSONSerializer citation with file path, correct get_signing_serializer lines, correct salt/HMAC/SHA1 details with line citations, correct open_session/save_session description, correct default wiring at app.py:253. No errors found."
+ },
+ {
+  "ticket": "GF1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correct file/line citations throughout (sessions.py:284-385, get_signing_serializer:303-321, salt line 291, digest_method line 293 noting lazy-load for FIPS builds which matches the actual _lazy_sha1 pattern, key_derivation line 296, serializer line 300, open_session:323-335, save_session:337-385), correct default wiring citation. Accurate and precise throughout."
+ },
+ {
+  "ticket": "GF1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correct core mechanism, correct salt/digest_method/key_derivation lines, correct get_signing_serializer, open_session, save_session line citations, correct default wiring at app.py, and additionally correctly cites the integration points in ctx.py:381-393 (_get_session calling session_interface.open_session) and app.py:1419 (save_session call in response finalization) \u2014 both verified accurate against the actual code. This is the most complete answer and every added claim checks out."
+ },
+ {
+  "ticket": "GF2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly cites fastapi/sse.py lines 46-49 for _check_id_valid and the AfterValidator(_check_id_valid) wiring on the id field (line 112), matching the actual source verbatim. The trigger condition (null char '\\0' in a ServerSentEvent id) is stated accurately. The added routing.py detail about format_sse_event/item.id is accurate and appropriately hedged ('around the line'), not a confident wrong pointer."
+ },
+ {
+  "ticket": "GF2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Same correct function/file/lines (46-49) and correct trigger condition. One inaccuracy: it says the AfterValidator is wired 'line 106', but that line actually falls inside the neighboring `event` field's docstring \u2014 the real AfterValidator line is 112. File and symbol are still right, so this is a minor line-number slip, not a false localization of the mechanism."
+ },
+ {
+  "ticket": "GF2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Matches gold precisely: lines 46-49 for _check_id_valid, AfterValidator wiring on id field at lines 110-112, and the correct None/non-None null-char trigger condition, verified against the actual file contents."
+ },
+ {
+  "ticket": "GF2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Core mechanism (line 48, _check_id_valid, AfterValidator at line 112) matches gold exactly and line numbers were verified accurate against the file. The 'secondary unprotected path' aside (format_sse_event at sse.py:165/226 called from routing.py's _serialize_sse_item near line 541-542 with item.id) is also factually accurate per the source, though it's tangential since item is already a validated ServerSentEvent by that point \u2014 this is extra color, not a wrong assertion."
+ },
+ {
+  "ticket": "GF2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Matches gold: _check_id_valid at lines 46-49 in fastapi/sse.py, AfterValidator wiring at line 112 on the id field, correct null-character trigger condition, all verified against the actual file."
+ },
+ {
+  "ticket": "GF2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Matches gold: correct file/function/lines (46-49) for _check_id_valid, correct AfterValidator wiring on the id field (line 112), and correct description of the null-byte trigger condition on ServerSentEvent construction."
+ },
+ {
+  "ticket": "GF3",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly quotes urllib3>=1.26,<3 at line 21 and build-backend=\"setuptools.build_meta\" at line 3, both verified exact matches against the file. Explanation of PEP 517/518 mechanism is accurate and concise."
+ },
+ {
+  "ticket": "GF3",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Same two facts correctly located (line 21 for urllib3, lines 1-3 for build-system) with correct absolute path. Explanation is accurate."
+ },
+ {
+  "ticket": "GF3",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly cites line 21 for urllib3 constraint and line 3 for build-backend, plus accurate line ranges 1-3 and 18-23. Matches gold exactly."
+ },
+ {
+  "ticket": "GF3",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correct values and line numbers (line 21, line 3, lines 1-3, lines 18-23) verified against the actual file content."
+ },
+ {
+  "ticket": "GF3",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correct facts and lines (line 3, line 21) plus an accurate bonus detail that setup.py line 9 is a bare setup() call with no arguments, verified true against the file."
+ },
+ {
+  "ticket": "GF3",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correct urllib3 range and build backend, correct line 21 and lines 1-3 citations, matches gold."
+ },
+ {
+  "ticket": "GF4",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies _PING_INTERVAL: float = 15.0 at sse.py:241 and KEEPALIVE_COMMENT at sse.py:237, and accurately locates the application point in routing.py's _keepalive_inserter() coroutine (lines 589-602) with correct code showing anyio.fail_after(_PING_INTERVAL) wrapping receive_stream.receive() and KEEPALIVE_COMMENT sent on TimeoutError. Matches gold precisely."
+ },
+ {
+  "ticket": "GF4",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "Correctly identifies the value (_PING_INTERVAL=15.0) and its file/line in sse.py, and correctly guesses fastapi/routing.py as the likely application site, but explicitly hedges ('likely fastapi/routing.py') and never actually confirms or names the mechanism (anyio.fail_after, _keepalive_inserter, TimeoutError handling) that gold requires \u2014 it just quotes a docstring rather than showing where/how _PING_INTERVAL is applied to the stream."
+ },
+ {
+  "ticket": "GF4",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Identifies _PING_INTERVAL=15.0 and KEEPALIVE_COMMENT with correct file/lines, and accurately describes the mechanism in routing.py: anyio.fail_after(_PING_INTERVAL) wraps the receive call, TimeoutError triggers sending KEEPALIVE_COMMENT. Matches gold."
+ },
+ {
+  "ticket": "GF4",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Same accurate identification as A/C: _PING_INTERVAL at sse.py:241, KEEPALIVE_COMMENT at sse.py:237, and the _keepalive_inserter() function in routing.py shown with correct code (anyio.fail_after(_PING_INTERVAL), KEEPALIVE_COMMENT on TimeoutError). Matches gold."
+ },
+ {
+  "ticket": "GF4",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly cites _PING_INTERVAL=15.0 and KEEPALIVE_COMMENT with file/lines, correctly names _keepalive_inserter() in routing.py (lines 589-602), correctly describes anyio.fail_after(_PING_INTERVAL) wrapping receive_stream.receive() and KEEPALIVE_COMMENT sent on timeout, plus correctly notes the concurrent task group structure and the imports at routing.py. Matches gold."
+ },
+ {
+  "ticket": "GF4",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies KEEPALIVE_COMMENT (sse.py:237) and _PING_INTERVAL (sse.py:241), correctly names _keepalive_inserter() in routing.py, correctly describes anyio.fail_after(_PING_INTERVAL) around the receive with KEEPALIVE_COMMENT sent on timeout, and notes the import into routing.py. Matches gold."
+ },
+ {
+  "ticket": "GF5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly locates analyze_file() accumulating cache_write_tokens += usage.get('cache_creation_input_tokens', 0) or 0 at line 65, returned as 'cache_write_tokens' at line 91, and printed via med() in main() at line 117. Line numbers verified against the actual file. Matches gold exactly."
+ },
+ {
+  "ticket": "GF5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Shows the same accumulation code block (lines 56-65) and return dict (lines 83-92), correctly identifies the print at line 117 and the field cache_creation_input_tokens. Matches gold."
+ },
+ {
+  "ticket": "GF5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly traces the loop, msg/usage extraction, summation of cache_creation_input_tokens at line 65, storage in result dict, and median print at line 117. All claimed line numbers verified correct."
+ },
+ {
+  "ticket": "GF5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Traces from print (line 117) back through the return dict (line 91), accumulation (line 65), and usage/msg extraction (lines 63, 62) -- all verified accurate. Correctly names the field cache_creation_input_tokens."
+ },
+ {
+  "ticket": "GF5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies the print (line 117), accumulation (line 65), field usage['cache_creation_input_tokens'], per-transcript summation, and the med lambda (line 111) used to aggregate. Matches gold's description precisely."
+ },
+ {
+  "ticket": "GF5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly walks the pipeline: source field message.usage.cache_creation_input_tokens, accumulation at line 65, storage at line 91, median print at line 117 using med() defined at line 111, and correctly names analyze_file() (line 45) and main() (line 95). Matches gold."
+ },
+ {
+  "ticket": "NT1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies SecureCookieSession/CallbackDict, quotes the on_update callback and the exact docstring warning (lines 66-70) matching gold, correctly quotes should_set_cookie's modified-or-refresh logic, and correctly explains why .append() doesn't trigger on_update while reassignment does. Concise and accurate; doesn't cite app.py's process_response but that's a minor completeness gap, not an error."
+ },
+ {
+  "ticket": "NT1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Same core mechanism as gold: on_update only fires on dict-level mutation, session.modified stays False after .append(), should_set_cookie returns False, no Set-Cookie. Cites correct file/lines/docstring. Accurate and precise."
+ },
+ {
+  "ticket": "NT1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly traces SecureCookieSession -> on_update -> should_set_cookie -> save_session's Set-Cookie skip, with accurate line citations for sessions.py (docstring 66-70, should_set_cookie 233-247, save_session 337-385). Explanation of why append vs reassignment differ matches gold precisely."
+ },
+ {
+  "ticket": "NT1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Accurately reproduces the CallbackDict/on_update mechanism, the docstring warning, should_set_cookie logic, and the actual code snippet 'if not self.should_set_cookie(app, session): return'. Minor line-number drift (369-385 vs actual ~367-368) but points to the correct function and correct behavior, not a wrong symbol."
+ },
+ {
+  "ticket": "NT1",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly names SecureCookieSession, on_update callback, should_set_cookie, and save_session, and gives an accurate step-by-step of why append() silently fails to trigger modified while reassignment succeeds. Matches gold's mechanism exactly."
+ },
+ {
+  "ticket": "NT1",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Same accurate mechanism: on_update only triggered by dict-level ops (verified against werkzeug's UpdateDictMixin covering __setitem__/__delitem__/clear/popitem/update/pop/setdefault, not nested mutations), session.modified stays False, should_set_cookie returns False, cookie omitted. Correct file/symbol citations."
+ },
+ {
+  "ticket": "NT2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly locates should_strip_auth in sessions.py (lines 154-184), reproduces the exact port-check code block (lines 172-181 verified verbatim against source), and correctly traces old_parsed.port=8443, new_parsed.port=None, default_port=(443,None) exception failing, falling through to line 184's changed_port-or-changed_scheme returning True. Matches gold mechanism precisely."
+ },
+ {
+  "ticket": "NT2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies should_strip_auth and rebuild_auth in sessions.py, cites the del headers['Authorization'] line (327, verified exact), and walks the hostname check, http->https exception, and default-port exception failing for 8443, concluding changed_port=True drives the strip. rebuild_auth cited as 310-332 vs actual def start at 309 -- trivial off-by-one, immaterial."
+ },
+ {
+  "ticket": "NT2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly locates should_strip_auth (154-184) and gives an accurate line-by-line trace (port parsing/comparison at 173, exception at 176-181, final return at 184) that matches verified source exactly. Mechanism and conclusion match gold."
+ },
+ {
+  "ticket": "NT2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Reproduces should_strip_auth verbatim (matches source exactly) and rebuild_auth's deletion call (lines 324-327, verified exact). Correctly explains old_parsed.port=8443 vs new_parsed.port=None, the default_port exception failing, and line 184 returning True. Fully matches gold."
+ },
+ {
+  "ticket": "NT2",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly locates should_strip_auth (154-184), accurately quotes changed_port = old_parsed.port != new_parsed.port evaluating 8443 != None -> True (matches source line 173 exactly), and correctly notes the http->https and default-port exceptions don't apply. Minor looseness bundling both exceptions as 'lines 160-181' but not misleading."
+ },
+ {
+  "ticket": "NT2",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies should_strip_auth and the del headers['Authorization'] call, accurately traces hostname check (158), http->https exception (164-170), changed_port assignment (173), default-port exception (176-180) failing for 8443, and final return (184). Also correctly cites DEFAULT_PORTS at utils.py line 85, verified exact. 'Header stripping decision (lines 312-327)' is a loose range for rebuild_auth but the quoted code and line-specific citations elsewhere are precise."
+ },
+ {
+  "ticket": "NT3",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies solve_dependencies() in fastapi/dependencies/utils.py as maintaining a dependency_cache dict, correctly cites routing.py lines 481 and 783 as the two places solve_dependencies is invoked during request handling (verified: 481 is the HTTP path, 783 is the WebSocket path), and correctly explains that the same cache dict threaded through the recursive resolution causes get_request_context to be invoked once and reused for the indirect reference via get_current_user. The only imprecision is the vague 'around line 100+' for solve_dependencies (actual start is line 586), but this is hedged rather than confidently wrong, so not false localization."
+ },
+ {
+  "ticket": "NT3",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Cites solve_dependencies() lines 586-731 (586 is the verified exact start), dependency_cache = {} at line 616 (verified exact), cache-key check code that matches the real code almost verbatim, and _get_cache_key() in models.py at lines 82-96 (verified: def _get_cache_key starts at line 82) with a code block matching the real return tuple (dependant.call, scopes_for_cache, _get_computed_scope(...) or ''). Minor off-by-one on the 'line 648' citation for dependency_cache=dependency_cache (actually line 647) is immaterial. Explanation of mechanism matches gold precisely."
+ },
+ {
+  "ticket": "NT3",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies solve_dependencies() in utils.py, the dependency_cache dict scoped per request, the cache-key check using use_cache (default True), and Dependant.use_cache in models.py (verified default True). No incorrect specific claims; less line-level detail than others but the named files/symbols and mechanism match gold."
+ },
+ {
+  "ticket": "NT3",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Cites solve_dependencies() lines 586-731 (start verified exact) and a cache-lookup snippet matching the real code at lines 656-680. Also cites Depends() in param_functions.py at line 2316 (actual def Depends is at line 2283, a ~33-line discrepancy) but the quoted docstring text ('after a dependency is called the first time in a request... the value will be re-used') was verified to closely match the real docstring, so the function/file identification itself is correct even though the line number is imprecise -- not a case of pointing to a wrong symbol."
+ },
+ {
+  "ticket": "NT3",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Most precise of all six: Cache Key Creation at lines 656-659 (verified exact), Cache Check at line 660 (verified exact), Cache Population at lines 679-680 (verified exact: line 679 is 'if sub_dependant_cache_key not in dependency_cache:' and 680 is the assignment). Mechanism explanation matches gold exactly."
+ },
+ {
+  "ticket": "NT3",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies solve_dependencies() lines 586-731 (start verified exact) and quotes a condensed version of the real caching logic around lines 660-680 (verified to match, aside from omitting the generator-callable elif branch, which doesn't affect correctness of the explanation). Correctly explains the same dependency_cache object is threaded through the recursion and that use_cache=True by default enables the dedup. Mentions Depends(..., use_cache=False) as the fix, consistent with real API."
+ },
+ {
+  "ticket": "NT4",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly identifies the file (python.py), the function (_build_function), the body_hash-only hashing, and the incremental_updater.py four-way diff (changed_monikers computed via body_hash comparison) that causes unchanged symbols to be skipped from the write path. One inaccuracy: it cites 'Lines 741-757' as the _build_function body_hash code, but those line numbers actually belong to the sibling _build_class method (identical code pattern) \u2014 _build_function's real body_bytes/body_hash lines are 782/800. The mechanism and files named are otherwise correct, so this is a citation slip rather than a wrong-symbol claim."
+ },
+ {
+  "ticket": "NT4",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Line citations verified exact: python.py 781-782 (body extraction), 800 (body_hash=_sha256(body_bytes)), and even the field lines for signature (804), return_type (806), decorators (808) match the actual file. incremental_updater.py 311-318 matches the changed/unchanged split exactly. Explanation of why unchanged symbols never get written/embedded is accurate."
+ },
+ {
+  "ticket": "NT4",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Correctly cites incremental_updater.py lines 275-365 and 311-318 for the diff logic, and accurately quotes the module docstring ('unchanged = same moniker, same body_hash \u2192 skip entirely'). python.py line 800 for body_hash is correct. Also correctly explains full re-index bypasses the hash check via Indexer.index(replace=True) (line 478, _full_reindex)."
+ },
+ {
+  "ticket": "NT4",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Mechanism and incremental_updater.py line ranges (311-318, 275-365, 334-358, and _full_reindex 450-489) all verified accurate. Does not cite specific python.py line numbers, describing body_hash extraction generally rather than precisely, which avoids errors but is slightly less precise than B/E/F."
+ },
+ {
+  "ticket": "NT4",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "python.py lines 781-813 (function span), 782 (body_bytes), 800 (body_hash), and the decorator/type-hint field lines 783-808 are all accurate. incremental_updater.py lines 311-318 and 334-341 (write_symbol_direct at 340) match the verified code exactly. Clear, precise, correct."
+ },
+ {
+  "ticket": "NT4",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "python.py lines 781-782 and 800 verified exact; decorators (808) and return_type (806) lines correct. incremental_updater.py lines 311-318 verified exact. Concise and accurate explanation of the write-path skip."
+ },
+ {
+  "ticket": "NT5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "partial",
+  "false_localization": false,
+  "evidence": "Correctly names ConfigWrapper.for_model() in _config.py and ModelMetaclass.__new__ in _model_construction.py as the general area, and correctly states the outcome (LooseMixin's extra='allow' wins). However it never pins down the actual mechanism: it hedges with 'likely iterates through base classes or uses some flattening logic' rather than showing/asserting the concrete `for base in bases: config_new.update(base.model_config)` left-to-right overwrite that the gold identifies. Also cites the call site as 'line ~50+' which is off from the actual line 119. Right neighborhood, but the causal explanation is speculative and materially incomplete compared to gold."
+ },
+ {
+  "ticket": "NT5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Quotes the exact real code (`for base in bases: config = getattr(base, 'model_config', None); if config: config_new.update(config.copy())`) at the correct location (_config.py, ~154-158), correctly explains that dict.update() lets later bases overwrite earlier ones so the last-listed base wins, inverting normal MRO precedence. Matches gold's mechanism precisely."
+ },
+ {
+  "ticket": "NT5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Same accurate code quote and line range as B, plus correctly cites ModelMetaclass.__new__ calling ConfigWrapper.for_model(bases, namespace, kwargs) at _model_construction.py line 119 (verified exact match). Explanation of the overwrite mechanism matches gold precisely."
+ },
+ {
+  "ticket": "NT5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Quotes the correct code and gives an accurate step-by-step trace (StrictMixin sets extra='forbid', then LooseMixin's update() overwrites it to extra='allow'), citing both _config.py (for_model) and _model_construction.py line 119 for the call site. Matches gold's mechanism."
+ },
+ {
+  "ticket": "NT5",
+  "arm": "control",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Quotes the same correct code, correctly explains dict.update() overwrite behavior producing last-base-wins, and additionally notes the docstring's 'descending order of priority' claim is contradicted by the actual (ascending) behavior -- consistent with gold. The added detail about core_config()/SchemaValidator is a reasonable, non-contradicted extension of the trace."
+ },
+ {
+  "ticket": "NT5",
+  "arm": "sutra",
+  "cap": 6,
+  "verdict": "correct",
+  "false_localization": false,
+  "evidence": "Same accurate code quote and correct step-by-step trace of StrictMixin being overwritten by LooseMixin via dict.update(), located precisely in ConfigWrapper.for_model() in _config.py. Matches gold's mechanism and files exactly."
+ }
+]
