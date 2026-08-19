@@ -1,0 +1,79 @@
+[
+ {
+  "repo": "requests",
+  "defs": 321,
+  "unresolved": 61,
+  "method_form_pct": 80.32786885245902,
+  "direct_form_pct": 19.672131147540984,
+  "has_import_source_pct": 0.0,
+  "same_class_candidate_pct": 16.39344262295082,
+  "zero_same_file_cand_pct": 81.9672131147541,
+  "multi_same_file_cand_pct": 18.0327868852459
+ },
+ {
+  "repo": "flask",
+  "defs": 497,
+  "unresolved": 106,
+  "method_form_pct": 95.28301886792453,
+  "direct_form_pct": 4.716981132075472,
+  "has_import_source_pct": 0.0,
+  "same_class_candidate_pct": 22.641509433962266,
+  "zero_same_file_cand_pct": 68.86792452830188,
+  "multi_same_file_cand_pct": 31.132075471698112
+ },
+ {
+  "repo": "fastapi",
+  "defs": 1063,
+  "unresolved": 273,
+  "method_form_pct": 86.08058608058609,
+  "direct_form_pct": 13.91941391941392,
+  "has_import_source_pct": 0.0,
+  "same_class_candidate_pct": 18.681318681318682,
+  "zero_same_file_cand_pct": 80.21978021978022,
+  "multi_same_file_cand_pct": 19.78021978021978
+ },
+ {
+  "repo": "pydantic",
+  "defs": 2799,
+  "unresolved": 951,
+  "method_form_pct": 80.7570977917981,
+  "direct_form_pct": 19.242902208201894,
+  "has_import_source_pct": 0.0,
+  "same_class_candidate_pct": 7.676130389064142,
+  "zero_same_file_cand_pct": 81.07255520504731,
+  "multi_same_file_cand_pct": 18.92744479495268
+ },
+ {
+  "repo": "celery",
+  "defs": 3601,
+  "unresolved": 2086,
+  "method_form_pct": 89.64525407478428,
+  "direct_form_pct": 10.354745925215724,
+  "has_import_source_pct": 0.0,
+  "same_class_candidate_pct": 16.347075743048897,
+  "zero_same_file_cand_pct": 81.5915627996165,
+  "multi_same_file_cand_pct": 18.40843720038351
+ },
+ {
+  "repo": "django",
+  "defs": 11010,
+  "unresolved": 8580,
+  "method_form_pct": 87.68065268065268,
+  "direct_form_pct": 12.319347319347319,
+  "has_import_source_pct": 0.0,
+  "same_class_candidate_pct": 15.454545454545453,
+  "zero_same_file_cand_pct": 81.92307692307692,
+  "multi_same_file_cand_pct": 18.076923076923077
+ },
+ {
+  "repo": "sqlalchemy",
+  "defs": 12830,
+  "unresolved": 9320,
+  "method_form_pct": 88.6480686695279,
+  "direct_form_pct": 11.351931330472103,
+  "has_import_source_pct": 0.0,
+  "same_class_candidate_pct": 11.587982832618025,
+  "zero_same_file_cand_pct": 83.73390557939913,
+  "multi_same_file_cand_pct": 16.266094420600858
+ }
+]

@@ -1,0 +1,65 @@
+[
+ {
+  "repo": "requests",
+  "defs": 321,
+  "unresolved": 61,
+  "self_only": 10,
+  "mro_recoverable": 10,
+  "old_rate": 82.5,
+  "projected_rate": 85.4
+ },
+ {
+  "repo": "flask",
+  "defs": 497,
+  "unresolved": 106,
+  "self_only": 24,
+  "mro_recoverable": 24,
+  "old_rate": 78.5,
+  "projected_rate": 83.3
+ },
+ {
+  "repo": "fastapi",
+  "defs": 1063,
+  "unresolved": 273,
+  "self_only": 51,
+  "mro_recoverable": 51,
+  "old_rate": 78.9,
+  "projected_rate": 82.8
+ },
+ {
+  "repo": "pydantic",
+  "defs": 2799,
+  "unresolved": 951,
+  "self_only": 73,
+  "mro_recoverable": 73,
+  "old_rate": 77.2,
+  "projected_rate": 79.0
+ },
+ {
+  "repo": "celery",
+  "defs": 3601,
+  "unresolved": 2086,
+  "self_only": 341,
+  "mro_recoverable": 341,
+  "old_rate": 64.7,
+  "projected_rate": 70.5
+ },
+ {
+  "repo": "django",
+  "defs": 11010,
+  "unresolved": 8580,
+  "self_only": 1326,
+  "mro_recoverable": 1326,
+  "old_rate": 62.7,
+  "projected_rate": 68.5
+ },
+ {
+  "repo": "sqlalchemy",
+  "defs": 12830,
+  "unresolved": 9320,
+  "self_only": 1080,
+  "mro_recoverable": 1080,
+  "old_rate": 56.0,
+  "projected_rate": 61.1
+ }
+]

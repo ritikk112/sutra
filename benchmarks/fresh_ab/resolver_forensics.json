@@ -1,0 +1,114 @@
+[
+ {
+  "repo": "requests",
+  "defs": 321,
+  "calls_total": 942,
+  "matchable": 349,
+  "external_share": 62.95116772823779,
+  "resolved": 288,
+  "unresolved": 61,
+  "rate": 82.52148997134671,
+  "same_file_share_of_resolved": 57.638888888888886,
+  "median_candidates_faced": 4,
+  "p90_candidates_faced": 4,
+  "cats": {
+   "ambiguous: >1 candidate with this name": 61
+  }
+ },
+ {
+  "repo": "flask",
+  "defs": 497,
+  "calls_total": 1226,
+  "matchable": 492,
+  "external_share": 59.8694942903752,
+  "resolved": 386,
+  "unresolved": 106,
+  "rate": 78.45528455284553,
+  "same_file_share_of_resolved": 53.10880829015544,
+  "median_candidates_faced": 2,
+  "p90_candidates_faced": 7,
+  "cats": {
+   "ambiguous: >1 candidate with this name": 106
+  }
+ },
+ {
+  "repo": "fastapi",
+  "defs": 1063,
+  "calls_total": 3394,
+  "matchable": 1291,
+  "external_share": 61.96228638774307,
+  "resolved": 1018,
+  "unresolved": 273,
+  "rate": 78.85360185902401,
+  "same_file_share_of_resolved": 63.654223968565816,
+  "median_candidates_faced": 6,
+  "p90_candidates_faced": 12,
+  "cats": {
+   "ambiguous: >1 candidate with this name": 273
+  }
+ },
+ {
+  "repo": "pydantic",
+  "defs": 2799,
+  "calls_total": 8052,
+  "matchable": 4177,
+  "external_share": 48.12468951813214,
+  "resolved": 3226,
+  "unresolved": 951,
+  "rate": 77.23246349054345,
+  "same_file_share_of_resolved": 49.287042777433356,
+  "median_candidates_faced": 3,
+  "p90_candidates_faced": 5,
+  "cats": {
+   "ambiguous: >1 candidate with this name": 951
+  }
+ },
+ {
+  "repo": "celery",
+  "defs": 3601,
+  "calls_total": 10068,
+  "matchable": 5913,
+  "external_share": 41.269368295589985,
+  "resolved": 3827,
+  "unresolved": 2086,
+  "rate": 64.72179942499578,
+  "same_file_share_of_resolved": 61.249020120198594,
+  "median_candidates_faced": 4,
+  "p90_candidates_faced": 23,
+  "cats": {
+   "ambiguous: >1 candidate with this name": 2086
+  }
+ },
+ {
+  "repo": "django",
+  "defs": 11010,
+  "calls_total": 33966,
+  "matchable": 22999,
+  "external_share": 32.28817052346464,
+  "resolved": 14419,
+  "unresolved": 8580,
+  "rate": 62.69403017522501,
+  "same_file_share_of_resolved": 43.636868021360705,
+  "median_candidates_faced": 8,
+  "p90_candidates_faced": 29,
+  "cats": {
+   "ambiguous: >1 candidate with this name": 8580
+  }
+ },
+ {
+  "repo": "sqlalchemy",
+  "defs": 12830,
+  "calls_total": 27472,
+  "matchable": 21160,
+  "external_share": 22.97612114152592,
+  "resolved": 11840,
+  "unresolved": 9320,
+  "rate": 55.954631379962194,
+  "same_file_share_of_resolved": 46.11486486486486,
+  "median_candidates_faced": 8,
+  "p90_candidates_faced": 23,
+  "cats": {
+   "ambiguous: >1 candidate with this name": 9320
+  }
+ }
+]
