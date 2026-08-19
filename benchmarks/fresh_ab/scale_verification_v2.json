@@ -1,0 +1,190 @@
+{
+ "results": [
+  {
+   "id": "FL1",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": true,
+   "out_of_scope_sites": 0,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep 'record_once' across repo gives exactly 11 hits (1 def line 233, 10 calls at 495,553,611,618,628,638,650,667,679,689), all in src/flask/sansio/blueprints.py, no hits elsewhere. Matches caller_set and decoy exactly. No broad markers ('record_once' only 11 hits)."
+  },
+  {
+   "id": "FL2",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": true,
+   "out_of_scope_sites": 0,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep '_method_route' gives 9 hits: def at scaffold.py:284, 6 genuine self._method_route(...) calls at 301/309/317/325/333/341, plus 2 unrelated test function names (test_method_route, test_method_route_no_methods) in tests/test_basic.py:57,70 correctly classed as decoys, not calls. Matches gold exactly."
+  },
+  {
+   "id": "FD1",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "implementation_correct": true,
+   "out_of_scope_sites": 0,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep 'def decorator(' finds exactly 13 hits across cli.py(2), blueprints.py(4), helpers.py(1), scaffold.py(3), app.py(3) -- matches target_definitions/sibling_count=13 and the 12-entry decoy list. Read stream_with_context in full: try/except TypeError branch at line 116-118 selects the closure at helpers.py:120 exactly as described; its body (call generator_or_function(*args,**kwargs) then recursively call stream_with_context, wrapped via update_wrapper) matches gold verbatim. Ticket text never names stream_with_context or 'decorator', no leak."
+  },
+  {
+   "id": "CE1",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": true,
+   "out_of_scope_sites": 0,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep '_ensure_retryable' gives 13 hits: def at base.py:636, 6 calls in base.py (685,698,760,798,811,819), 3 calls in database/__init__.py (125,192,239), and 3 prose-only mentions in test files (test_database.py:375, test_database_backend.py:54,111) correctly excluded. Read all call sites in context -- store_result/forget/get_task_meta/get_group_meta/save_group/delete_group in base.py and _create_tables/task_result_exists/cleanup in database/__init__.py all confirmed as genuine self._ensure_retryable(...) calls. Matches gold exactly; note line 798 sits inside get_group_meta not restore_group (restore_group calls get_group_meta indirectly) -- ticket prose is loosely worded there but the gold table itself correctly attributes it to get_group_meta."
+  },
+  {
+   "id": "CE2",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": true,
+   "out_of_scope_sites": 3,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep '_set_task_join_will_block' gives 13 hits: def at _state.py:55, 4 import statements (result.py:15, worker.py:10, prefork.py:16, components.py:11), and 8 genuine calls (result.py:45,55; worker.py:178; prefork.py:49; components.py:171; conftest.py:164,170; test_app.py:80). Read every site and confirmed classification matches gold exactly, including the allow_join_result/denied_join_result context managers and the Pool bootstep. 3 of the 8 gold call sites are test-only (conftest.py x2, test_app.py x1)."
+  },
+  {
+   "id": "CD1",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "implementation_correct": true,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep 'def delete(' under celery/ gives exactly 16 hits matching target_definitions/sibling_count=16 and the 15-entry decoy list precisely. Read GroupResult.delete (result.py:969): body is exactly '(backend or self.app.backend).delete_group(self.id)', confirmed distinct from every backend's delete(key) sibling. 'delete_group' has only 17 repo-wide hits, not broad. Ticket text describes the scenario (group + apply_async + .delete()) without naming GroupResult, no leak."
+  },
+  {
+   "id": "CD2",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "implementation_correct": true,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep 'def update(' under celery/ gives exactly 10 hits matching target_definitions/sibling_count=10 and the 9-entry decoy list. Read Context.update (task.py:131) in full: matches gold's description of the _UNSET-sentinel identity check and deriving time_limit/soft_time_limit from a changed 'timelimit' key. Ticket text never names 'Context' class, no leak."
+  },
+  {
+   "id": "DJ1",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": true,
+   "out_of_scope_sites": 0,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep 'units_name' gives exactly 14 hits across 6 files. Read all: confirmed exactly 6 genuine '.units_name(self.connection)' calls (oracle/mysql/postgis/spatialite operations.py + base/operations.py:202,212) and correctly classified the rest as def line, namedtuple field name, attribute access, and local variable assignment/kwarg -- matches gold caller_set and decoy list exactly, including the subtle base/operations.py:203/204 variable-name decoys."
+  },
+  {
+   "id": "DJ2",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": true,
+   "out_of_scope_sites": 0,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep '_sqlite_datetime_parse' gives exactly 7 hits, all in _functions.py: 1 def (119) + 6 calls (142,163,181,188,195,213) inside _sqlite_date_trunc/_sqlite_time_trunc/_sqlite_datetime_cast_date/_sqlite_datetime_cast_time/_sqlite_datetime_extract/_sqlite_datetime_trunc. Matches gold exactly, function names line up with ticket description."
+  },
+  {
+   "id": "DD1",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "implementation_correct": true,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep 'def as_oracle' gives exactly 39 hits matching target_definitions/sibling_count=39. Confirmed Sum(FixDurationInputMixin, Aggregate) at aggregates.py:452 has no own as_oracle so MRO resolves to mixins.py:35; read the full body (DurationField + not supports_aggregation_over_interval_types check, IntervalToSeconds/SecondsToInterval rewrite via compiler.compile) and confirmed supports_aggregation_over_interval_types is defined only in oracle/features.py:222 (Oracle-only, only 2 repo-wide hits, not broad). Sibling as_mysql (mixins.py:29, CAST...AS SIGNED) also confirmed as described. Ticket names Sum/DurationField/Oracle but never the mixin class itself, not a leak of the actual disambiguation answer."
+  },
+  {
+   "id": "DD2",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "implementation_correct": true,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep 'def as_mysql' gives exactly 18 hits matching target_definitions/sibling_count=18 and the 17-entry decoy list. Read StringAggDelimiter.as_mysql (aggregates.py:360, template=' SEPARATOR %(expressions)s') and StringAgg.as_mysql (aggregates.py:400, which strips the delimiter from source_expressions, compiles it separately via compiler.compile(c.delimiter), and appends its params after the main params) -- exactly matches gold's description of the two distinct roles. 'StringAggDelimiter' only 2 repo-wide hits. No leak of class name in ticket text."
+  },
+  {
+   "id": "DD3",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "implementation_correct": true,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep 'def output_field' (excluding tests) gives exactly 14 hits matching target_definitions/sibling_count=14. Confirmed RangeStartsWith at ranges.py:337-343 ('lookup_name=\"startswith\"', function='lower', property output_field returns self.lhs.output_field.base_field at line 342/343) and RangeEndsWith mirror at 346-353. Confirmed BaseExpression's default cached_property output_field is at expressions.py:326 exactly (calls _resolve_output_field), matching gold's marker line number precisely. Ticket text names 'period__startswith' lookup but not the RangeStartsWith class, no leak."
+  },
+  {
+   "id": "SA1",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": true,
+   "out_of_scope_sites": 0,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep 'detect_is_backref' gives exactly 8 hits: def closure at util.py:272 (inside _validator_events, gated by 'if not include_backrefs') and 7 genuine calls at 280,287,294,300,307,314,319 inside the append/bulk_set/set_/remove closures for both include_removes branches. No hits anywhere outside orm/util.py. Matches gold exactly."
+  },
+  {
+   "id": "SA2",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "caller_set_ok": true,
+   "out_of_scope_sites": 0,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep 'inspect_formatargspec' gives exactly 8 hits: def at compat.py:187, and 7 calls in langhelpers.py at 604,606,613,641,650,1026,1027, all via 'compat.inspect_formatargspec(...)'. No other module references it. Matches gold exactly."
+  },
+  {
+   "id": "SD1",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "implementation_correct": true,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep 'def fetchmany' gives exactly 19 hits matching target_definitions/sibling_count=19 and the 18-entry decoy list. Read FullyBufferedCursorFetchStrategy (cursor.py:1481 class, 1534 fetchmany) -- its docstring explicitly cites 'MSSQL INSERT...OUTPUT after an autocommit'; confirmed dialects/mssql/base.py:1965-1972 constructs it with self.cursor.fetchall() as initial_buffer exactly when self.compiled.effective_returning is true. fetchmany pops from the in-memory deque and never touches dbapi_cursor again, contrasted correctly with the default CursorFetchStrategy.fetchmany at line 1291 which calls dbapi_cursor.fetchmany(size) directly every time. Matches gold precisely."
+  },
+  {
+   "id": "SD2",
+   "verdict": "pass",
+   "markers_ok": true,
+   "paths_ok": true,
+   "gold_accurate": true,
+   "implementation_correct": true,
+   "broad_markers": [],
+   "answer_leaks": false,
+   "notes": "grep 'def python_type' gives exactly 16 hits matching target_definitions/sibling_count=16 and the 15-entry decoy list. Confirmed Numeric (sqltypes.py:578) and Float (sqltypes.py:708) both subclass NumericCommon (line 482) and neither defines its own python_type, so both resolve to NumericCommon.python_type at line 539: 'return decimal.Decimal if self.asdecimal else float' -- exactly as gold states. Spot-checked several sibling implementations (String:320, Integer:413, DateTime:907) as unconditional fixed-type returns, matching the contrast gold draws. 'self.asdecimal' has only 12 repo-wide hits, not broad."
+  }
+ ],
+ "summary": "All 16 tickets verified PASS with no repairs needed. Independently re-derived every caller set via grep + manual reading of each hit, and every gold_marker/primary_path checked directly against the repos (flask @ d318b683, celery, django @ 2c42237, sqlalchemy). All blast_radius caller sets (FL1, FL2, CE1, CE2, DJ1, DJ2, SA1, SA2) matched the gold caller_set/decoy lists exactly, including every subtle textual decoy (test function names sharing a substring, import statements vs calls, local variables/namedtuple fields reusing a method name, docstring/comment mentions). Only CE2 has out-of-scope (test-file) call sites among its gold callers (3 of 8); all others are 0. All disambiguation tickets (FD1, CD1, CD2, DD1, DD2, DD3, SD1, SD2) had their target_definitions/sibling_count independently reconfirmed by grep, and the named implementation was verified by reading the actual dispatch/MRO/construction path to confirm it truly is the one that runs under the stated condition, with the sibling/decoy implementations confirmed as plausible but genuinely different. No marker exceeded ~20 repo-wide hits (none broad), all primary_paths exist, and no ticket text names the actual disambiguation answer's owning class/implementation (no leaks)."
+}

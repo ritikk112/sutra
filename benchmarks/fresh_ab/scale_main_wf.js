@@ -1,0 +1,921 @@
+export const meta = {
+  name: 'scale-ab-main',
+  description: 'Corpus-size A/B: 20 tickets over a 497..12830-definition ladder, 2 arms x 3 trials at budget 6',
+  phases: [
+    { title: 'Solve', detail: '20 tickets x 2 arms x 3 trials = 120 haiku solvers' },
+    { title: 'Judge', detail: '1 blind sonnet judge per ticket over 6 shuffled answers' },
+  ],
+}
+
+const TICKETS = [
+ {
+  "id": "FL1",
+  "repo": "flask",
+  "task_kind": "blast_radius",
+  "title": "Need to tag deferred blueprint callbacks \u2014 updating record_once",
+  "text": "I want to make it easier to debug blueprint setup ordering issues, so I'm adding a required `tag` string argument to Blueprint's `record_once` helper (it would become `record_once(tag, func)` instead of `record_once(func)`, so the tag can be logged when the deferred function actually fires). Before I touch the signature, walk me through every place inside the blueprint module that currently calls `record_once` so I know exactly what needs a new argument passed in.",
+  "gold": "record_once is defined once, at src/flask/sansio/blueprints.py:233, and is called from exactly 10 places, all within the same file (src/flask/sansio/blueprints.py): line 495 (inside add_app_template_filter), line 553 (add_app_template_test), line 611 (add_app_template_global), line 618 (before_app_request, called on a lambda), line 628 (after_app_request, a lambda), line 638 (teardown_app_request, a lambda), line 650 (app_context_processor, a lambda), line 667 (app_errorhandler, called on the nested from_blueprint function inside its decorator closure), line 679 (app_url_value_preprocessor, a lambda), and line 689 (app_url_defaults, a lambda). Every call site would need a tag string added as the first argument. The class also defines a plain `record` method (line 222) which record_once wraps internally but is a separate method with its own call sites, not part of this set.",
+  "gold_markers": [
+   "record_once",
+   "src/flask/sansio/blueprints.py:233"
+  ],
+  "primary_paths": [
+   "src/flask/sansio/blueprints.py"
+  ],
+  "target_name": "record_once",
+  "target_definitions": 1,
+  "corpus_size": 497,
+  "caller_set": [
+   "src/flask/sansio/blueprints.py:495",
+   "src/flask/sansio/blueprints.py:553",
+   "src/flask/sansio/blueprints.py:611",
+   "src/flask/sansio/blueprints.py:618",
+   "src/flask/sansio/blueprints.py:628",
+   "src/flask/sansio/blueprints.py:638",
+   "src/flask/sansio/blueprints.py:650",
+   "src/flask/sansio/blueprints.py:667",
+   "src/flask/sansio/blueprints.py:679",
+   "src/flask/sansio/blueprints.py:689"
+  ],
+  "decoys": [
+   "src/flask/sansio/blueprints.py:233 (the def line itself, not a call)"
+  ],
+  "verified_how": "grep -rn \"record_once\" over all .py files in the repo, then read each of the 11 hits in src/flask/sansio/blueprints.py to classify: 1 def line and 10 genuine self.record_once(...) calls (some directly on a named function, some on a lambda passed inline). No calls exist outside this file.",
+  "why_this_is_hard": "the 10 call sites are spread across 8 differently-named public methods (template filter/test/global registration, four app_* lambda-based hooks, and one nested inside a decorator closure for app_errorhandler), so a shallow single-function read would miss most of them; the from_blueprint closure at line 667 in particular is easy to skip since the record_once call is nested two levels deep inside app_errorhandler's decorator."
+ },
+ {
+  "id": "FL2",
+  "repo": "flask",
+  "task_kind": "blast_radius",
+  "title": "Require a description string on the internal HTTP-method route shortcuts",
+  "text": "I'd like every one-word HTTP verb shortcut (get, post, put, etc.) to force callers to pass a short description that gets attached to the generated Rule for our internal docs generator. The cleanest place to plumb this through is the shared `_method_route` helper they all funnel into \u2014 I'm planning to give it a new required `description` parameter. Can you list every call site that invokes `_method_route` so I know everywhere that needs to pass the new argument?",
+  "gold": "_method_route is defined once, at src/flask/sansio/scaffold.py:284, and has exactly 6 call sites, all in the same file (src/flask/sansio/scaffold.py), one per HTTP-verb shortcut method: line 301 in get(), line 309 in query(), line 317 in post(), line 325 in put(), line 333 in delete(), and line 341 in patch(). Each would need a description string threaded through. Note that tests/test_basic.py defines functions named test_method_route and test_method_route_no_methods (lines 57 and 70) \u2014 these are test function names that happen to contain the substring '_method_route' but do not call the method at all; they exercise the get/post/etc. shortcuts indirectly via getattr.",
+  "gold_markers": [
+   "_method_route",
+   "src/flask/sansio/scaffold.py:284"
+  ],
+  "primary_paths": [
+   "src/flask/sansio/scaffold.py"
+  ],
+  "target_name": "_method_route",
+  "target_definitions": 1,
+  "corpus_size": 497,
+  "caller_set": [
+   "src/flask/sansio/scaffold.py:301",
+   "src/flask/sansio/scaffold.py:309",
+   "src/flask/sansio/scaffold.py:317",
+   "src/flask/sansio/scaffold.py:325",
+   "src/flask/sansio/scaffold.py:333",
+   "src/flask/sansio/scaffold.py:341"
+  ],
+  "decoys": [
+   "src/flask/sansio/scaffold.py:284 (the def line itself, not a call)",
+   "tests/test_basic.py:57 (function name test_method_route, not a call to _method_route)",
+   "tests/test_basic.py:70 (function name test_method_route_no_methods, not a call to _method_route)"
+  ],
+  "verified_how": "grep -rn \"_method_route\" over all .py files in the repo; 9 hits total. Read each: 1 def line, 6 genuine self._method_route(...) calls inside get/query/post/put/delete/patch, and 2 test function names in tests/test_basic.py that only coincidentally contain the substring and were excluded as decoys.",
+  "why_this_is_hard": "the substring '_method_route' also appears inside two unrelated test function names (test_method_route, test_method_route_no_methods) in tests/test_basic.py, which a naive text search would surface as false positives; the real call sites are all short one-line wrappers that look nearly identical, so it's easy to undercount or overcount them without reading each hit."
+ },
+ {
+  "id": "FD1",
+  "repo": "flask",
+  "task_kind": "disambiguation",
+  "title": "Streaming helper returns a callable instead of a ready generator in one usage pattern",
+  "text": "We're seeing inconsistent behavior from a response-streaming helper depending on how it's applied. When we call it directly on an already-created generator object, e.g. `wrapped = helper(my_gen())`, we get back something we can iterate immediately \u2014 the surrounding context is already pushed by the time it's returned. But when we instead apply the same helper as a decorator sitting directly on top of a generator *function* definition (`@helper` above `def generate(): ...`), what comes back isn't a ready-to-iterate generator at all \u2014 it's a plain callable, and nothing inside `generate` actually runs until that callable is invoked a second time. There are more than a dozen different local functions literally named `decorator` scattered across several modules in this codebase. Which one of them is actually constructed and returned for the generator-function usage, and what does it do differently from the others that makes a second call necessary before anything executes?",
+  "gold": "The implementation that runs is the local `decorator` closure defined at src/flask/helpers.py:120, inside the module-level `stream_with_context` function (not a method of any class). It is selected by the `try: gen = iter(generator_or_function)` / `except TypeError:` branch a few lines above it (helpers.py:116-118): when the argument passed to stream_with_context is a plain function rather than an already-created iterator, calling iter() on it raises TypeError, so the except branch defines and returns this decorator, wrapped via update_wrapper. Unlike its 12 namesakes elsewhere in the repo \u2014 which are all methods on Flask or Blueprint (or the Click-based AppGroup/with_appcontext helpers in src/flask/cli.py) that immediately register a callback (a route, error handler, template filter/test/global, or CLI command) and return the original function unchanged \u2014 this decorator instead returns a brand-new callable that, only when later invoked with args/kwargs, calls the original generator function to produce a generator and then recursively calls stream_with_context on that generator (helpers.py:120-123). That recursive call is what actually pushes/preserves the app context per-iteration via the separate inner `generator()` function used in the non-function branch. This is why using it as a bare decorator on a generator function yields a callable that must be invoked again, rather than an already-primed generator.",
+  "gold_markers": [
+   "src/flask/helpers.py:120",
+   "def stream_with_context"
+  ],
+  "primary_paths": [
+   "src/flask/helpers.py"
+  ],
+  "target_name": "decorator",
+  "target_definitions": 13,
+  "corpus_size": 497,
+  "caller_set": [],
+  "correct_implementation": "src/flask/helpers.py:120 (stream_with_context)",
+  "sibling_count": 13,
+  "decoys": [
+   "src/flask/cli.py:395 (with_appcontext)",
+   "src/flask/cli.py:422 (AppGroup.command)",
+   "src/flask/sansio/blueprints.py:469 (Blueprint.app_template_filter)",
+   "src/flask/sansio/blueprints.py:525 (Blueprint.app_template_test)",
+   "src/flask/sansio/blueprints.py:583 (Blueprint.app_template_global)",
+   "src/flask/sansio/blueprints.py:663 (Blueprint.app_errorhandler)",
+   "src/flask/sansio/scaffold.py:368 (Scaffold.route)",
+   "src/flask/sansio/scaffold.py:461 (Scaffold.endpoint)",
+   "src/flask/sansio/scaffold.py:643 (Scaffold.errorhandler)",
+   "src/flask/sansio/app.py:692 (Flask.template_filter)",
+   "src/flask/sansio/app.py:749 (Flask.template_test)",
+   "src/flask/sansio/app.py:803 (Flask.template_global)"
+  ],
+  "verified_how": "grep -rn \"def decorator(\" over all .py files in src/ found exactly 13 hits across 5 files (cli.py x2, blueprints.py x4, helpers.py x1, scaffold.py x3, app.py x3). Read src/flask/helpers.py:52-147 in full to confirm stream_with_context's try/except TypeError branching, the returned closure at line 120-123 (lazy call + recursive stream_with_context wrap + update_wrapper), and the alternate inner `generator()` function used on the non-function path. Confirmed helpers.py is the only file among the 5 with just one decorator definition and the only one not attached to a Flask/Blueprint class or Click group, matching the described call-then-call-again behavior; also read the docstring's own code examples (helpers.py:80-101) which explicitly show both the decorator-on-generator-function usage and the direct-call-on-generator-object usage described in the ticket."
+ },
+ {
+  "id": "CE1",
+  "repo": "celery",
+  "task_kind": "blast_radius",
+  "target_name": "_ensure_retryable",
+  "target_definitions": 1,
+  "corpus_size": 3601,
+  "title": "Need a per-call timeout override plumbed through the DB-backend retry helper",
+  "text": "Some of our result-backend operations (especially against the SQL database backend) can hang far longer than we'd like under load, and we want to be able to pass a per-call timeout into the retry wrapper that all these operations funnel through, so a caller can bound how long a single retried operation is allowed to keep looping before giving up. I'm planning to add a new required keyword-only argument (something like `timeout`) to the retry-wrapper method used by `store_result`, `forget`, `get_task_meta`, `restore_group`, `save_group`, `delete_group`, and the database backend's session/cleanup helpers, since they all go through the same retry helper. Before I touch the signature, walk me through every call site in the codebase that currently invokes this helper so I know exactly what needs to be updated to pass the new argument (or accept a default).",
+  "gold": "The helper is `_ensure_retryable(self, func, *args, fallback_exc=None, fallback_msg=None, **kwargs)`, defined once at celery/backends/base.py:636 on the base `Backend` class. Every call site is a method call on `self` (or on a `Backend`-derived instance), so adding a new required positional/keyword argument requires touching all 9 genuine call sites: celery/backends/base.py:685 (inside `store_result`), celery/backends/base.py:698 (inside `forget`), celery/backends/base.py:760 (inside `get_task_meta`), celery/backends/base.py:798 (inside `get_group_meta`), celery/backends/base.py:811 (inside `save_group`), celery/backends/base.py:819 (inside `delete_group`), celery/backends/database/__init__.py:125 (inside `_create_tables`, wrapping `self.ResultSession`), celery/backends/database/__init__.py:192 (inside `task_result_exists`, wrapping `self._task_result_exists`), and celery/backends/database/__init__.py:239 (inside `cleanup`, wrapping `self._cleanup`). The remaining hits for the name are not calls: celery/backends/base.py:636 is the definition itself, and t/unit/backends/test_database.py:375, t/integration/test_database_backend.py:54, and t/integration/test_database_backend.py:111 only mention the name inside docstrings/comments, not calls.",
+  "gold_markers": [
+   "celery/backends/base.py:636",
+   "_ensure_retryable"
+  ],
+  "primary_paths": [
+   "celery/backends/base.py",
+   "celery/backends/database/__init__.py"
+  ],
+  "caller_set": [
+   "celery/backends/base.py:685",
+   "celery/backends/base.py:698",
+   "celery/backends/base.py:760",
+   "celery/backends/base.py:798",
+   "celery/backends/base.py:811",
+   "celery/backends/base.py:819",
+   "celery/backends/database/__init__.py:125",
+   "celery/backends/database/__init__.py:192",
+   "celery/backends/database/__init__.py:239"
+  ],
+  "decoys": [
+   "celery/backends/base.py:636",
+   "t/unit/backends/test_database.py:375",
+   "t/integration/test_database_backend.py:54",
+   "t/integration/test_database_backend.py:111"
+  ],
+  "verified_how": "grepped `_ensure_retryable` across the repo (13 hits total), read every hit in celery/backends/base.py and celery/backends/database/__init__.py to confirm each is a genuine `self._ensure_retryable(...)` call, and read the three test-file hits to confirm they are docstring/comment mentions, not calls; the definition line was also excluded from the caller set.",
+  "why_this_is_hard": "The name is only found by grepping `_ensure_retryable`; three of the thirteen textual hits are prose in test files/docstrings that must be read and excluded, and the caller set spans two different files (base.py and database/__init__.py) reached via inheritance, so a naive count-the-grep-hits approach overshoots the true 9 call sites.",
+  "correct_implementation": "",
+  "sibling_count": 0,
+  "unusable_reason": ""
+ },
+ {
+  "id": "CE2",
+  "repo": "celery",
+  "task_kind": "blast_radius",
+  "target_name": "_set_task_join_will_block",
+  "target_definitions": 1,
+  "corpus_size": 3601,
+  "title": "Want to record which subsystem toggled the join-will-block flag, for a deadlock-diagnostics log line",
+  "text": "We keep hitting confusing 'Never call result.get() within a task!' errors in production and it's hard to tell whether the flag was flipped by the prefork pool starting a child process, the worker's pool bootstep wiring up the pool, or one of the `allow_join_result`/`denied_join_result` context managers around a `.get()` call. I want to add a required `source` argument to the internal setter that flips this global flag so every caller has to say who's flipping it, which we can then log. Before I change the signature, walk me through every place in the codebase that currently calls this setter so I can figure out what string to pass at each site.",
+  "gold": "The setter is `_set_task_join_will_block(blocks)`, defined once at celery/_state.py:55, mutating the module-level `_task_join_will_block` global. There are 8 genuine call sites: celery/result.py:45 and celery/result.py:55 (inside the `allow_join_result`/`denied_join_result` context managers, which flip the flag around a `.get()` call and restore it on exit), celery/contrib/testing/worker.py:178 (the embedded test-worker startup helper, which force-disables it), celery/concurrency/prefork.py:49 (`process_initializer`, which sets it `True` in each forked worker child), celery/worker/components.py:171 (the `Pool` bootstep's `create()`, which sets it from `pool.task_join_will_block` after building the pool), and three test-only call sites: t/unit/conftest.py:164 and t/unit/conftest.py:170 (a fixture that resets the flag before/after each test) and t/unit/app/test_app.py:80 (a direct unit test of the setter itself). The remaining textual hits are imports, not calls: celery/result.py:15, celery/contrib/testing/worker.py:10, celery/concurrency/prefork.py:16, and celery/worker/components.py:11 all just import the name; celery/_state.py:55 is the definition line.",
+  "gold_markers": [
+   "celery/_state.py:55",
+   "_set_task_join_will_block"
+  ],
+  "primary_paths": [
+   "celery/_state.py",
+   "celery/result.py",
+   "celery/concurrency/prefork.py",
+   "celery/worker/components.py"
+  ],
+  "caller_set": [
+   "celery/result.py:45",
+   "celery/result.py:55",
+   "celery/contrib/testing/worker.py:178",
+   "celery/concurrency/prefork.py:49",
+   "celery/worker/components.py:171",
+   "t/unit/conftest.py:164",
+   "t/unit/conftest.py:170",
+   "t/unit/app/test_app.py:80"
+  ],
+  "decoys": [
+   "celery/_state.py:55",
+   "celery/result.py:15",
+   "celery/contrib/testing/worker.py:10",
+   "celery/concurrency/prefork.py:16",
+   "celery/worker/components.py:11"
+  ],
+  "verified_how": "grepped `_set_task_join_will_block` across the repo (13 hits total), read each hit's surrounding code to classify it as a genuine call, an import statement, or the definition, distinguishing the four `from ... import _set_task_join_will_block` lines from the actual invocations that follow later in the same files.",
+  "why_this_is_hard": "Four of the thirteen textual hits are import statements that pull the name in but don't call it, appearing in the same files as the real calls (e.g. celery/result.py imports it on line 15 and then calls it on lines 45 and 55), so distinguishing import-hits from call-hits requires reading each site rather than just counting grep matches.",
+  "correct_implementation": "",
+  "sibling_count": 0,
+  "unusable_reason": ""
+ },
+ {
+  "id": "CD1",
+  "repo": "celery",
+  "task_kind": "disambiguation",
+  "target_name": "delete",
+  "target_definitions": 16,
+  "corpus_size": 3601,
+  "title": "delete() on a group's result object doesn't seem to touch our result-backend's key-value store directly",
+  "text": "We fan out work with a group of tasks, keep the object returned by calling `.apply_async()` on that group around, and later call `.delete()` on it to clean up once we're done polling. When I trace what happens, it doesn't look like it goes through the same code path as the single-key delete logic our result backend otherwise uses for expiring individual task results. Several parts of this codebase implement a `delete` method, so which one actually runs when you call `.delete()` on the object returned by a group's `apply_async()`, and what does it do differently from the others?",
+  "gold": "It's the `delete` method at celery/result.py:969, on the `GroupResult` class (a subclass of `ResultSet`). It's selected because `.delete()` is being called on the *group result object itself*, not on a result backend. Unlike the other 15 `delete` implementations in the repo -- which are all `KeyValueStoreBackend`/`Backend`-style methods on a specific result-backend class (redis, S3, GCS, Elasticsearch, ArangoDB, DynamoDB, Consul, Couchbase, CouchDB, memcache/pylibmc cache, filesystem, CosmosDB, Azure Blob, plus the base `NotImplementedError` stub) that each remove a single raw key from that backend's storage medium -- `GroupResult.delete(self, backend=None)` doesn't touch a key-value store at all. It calls `(backend or self.app.backend).delete_group(self.id)`, which goes through the backend's higher-level group-metadata removal path (`delete_group`, itself built on `_ensure_retryable`/`_delete_group` for the SQL backend) rather than the per-key `delete(key)` used when expiring individual task results.",
+  "gold_markers": [
+   "celery/result.py:969",
+   "delete_group"
+  ],
+  "primary_paths": [
+   "celery/result.py"
+  ],
+  "correct_implementation": "celery/result.py:969 (GroupResult)",
+  "sibling_count": 16,
+  "decoys": [
+   "celery/backends/elasticsearch.py:260",
+   "celery/backends/arangodb.py:165",
+   "celery/backends/dynamodb.py:538",
+   "celery/backends/gcs.py:101",
+   "celery/backends/filesystem.py:95",
+   "celery/backends/cache.py:72",
+   "celery/backends/cache.py:128",
+   "celery/backends/couchdb.py:98",
+   "celery/backends/redis.py:545",
+   "celery/backends/consul.py:113",
+   "celery/backends/azureblockblob.py:153",
+   "celery/backends/base.py:1013",
+   "celery/backends/couchbase.py:113",
+   "celery/backends/s3.py:74",
+   "celery/backends/cosmosdbsql.py:205"
+  ],
+  "verified_how": "grepped `def delete(` under celery/ (16 hits across 15 files), read all 16 definitions, and confirmed AsyncResult itself has no delete method (only GroupResult, a ResultSet subclass, overrides it) and that GroupResult.delete calls backend.delete_group(self.id) rather than any backend's per-key delete(key).",
+  "why_this_is_hard": "There are 16 same-named `delete` methods and 15 of them look superficially identical (a one-to-four-line method on some backend class that removes a key from a store), so picking out the one on the group-result object itself -- which delegates to a totally different backend method, `delete_group`, rather than any of the sibling `delete(key)` implementations -- requires reading each definition rather than pattern-matching the signature."
+ },
+ {
+  "id": "CD2",
+  "repo": "celery",
+  "task_kind": "disambiguation",
+  "target_name": "update",
+  "target_definitions": 10,
+  "corpus_size": 3601,
+  "title": "task.request.time_limit gets populated even though we only ever set 'timelimit' in the message headers",
+  "text": "We publish tasks with a time limit set via the `timelimit` message header (a `(hard, soft)` pair), and inside the running task, `self.request.time_limit` and `self.request.soft_time_limit` come out already populated -- even though nothing in our code sets those two attributes directly, only `timelimit`. This is happening on the object that becomes `self.request` inside the task body, right around where its fields get populated/merged from the incoming message data. Several classes in this codebase define an `update` method; which one is actually running here, and what does it do that the others don't?",
+  "gold": "It's the `update` method at celery/app/task.py:131, on the `Context` class (the class used to build `self.request` for a running task, instantiated with the per-message keyword data including `timelimit`). Unlike the other 9 `update` methods in the repo -- which are plain pass-through/merge operations on a dict-like or set-like container (e.g. `ConfigurationView.update`/`app/base.py:229` just forwards to `self._data.update(...)`, `LimitedSet.update`/`utils/collections.py:544` merges another set's members, `DependencyGraph.update`/`utils/graph.py:95` adds nodes/edges, `Worker.update`/`events/state.py:216` just does `setattr` for each field, `Signals.update`/`platforms.py:688` installs signal handlers, `ResultSet.update`/`result.py:636` extends a list of results, `Entry.update`/`beat.py:149` copies specific schedule fields, `Autoscaler.update`/`worker/autoscale.py:98` resizes a pool, and `Configurable.update`/`utils/collections.py:299` fires observer callbacks) -- `Context.update` does the normal `self.__dict__.update(*args, **kwargs)` and then has extra logic: it snapshots the `timelimit` entry before and after the update, and if it changed and unpacks to a 2+ element list/tuple, it derives and sets `self.time_limit` and `self.soft_time_limit` from it (`new_timelimit[0]` and `[1]`), clearing both back to `None` if `timelimit` was set to something invalid. None of the other 9 `update` methods derive any other attribute as a side effect of setting one field.",
+  "gold_markers": [
+   "celery/app/task.py:131",
+   "_UNSET"
+  ],
+  "primary_paths": [
+   "celery/app/task.py"
+  ],
+  "correct_implementation": "celery/app/task.py:131 (Context)",
+  "sibling_count": 10,
+  "decoys": [
+   "celery/platforms.py:688",
+   "celery/result.py:636",
+   "celery/beat.py:149",
+   "celery/app/base.py:229",
+   "celery/utils/collections.py:299",
+   "celery/utils/collections.py:544",
+   "celery/utils/graph.py:95",
+   "celery/worker/autoscale.py:98",
+   "celery/events/state.py:216"
+  ],
+  "verified_how": "grepped `def update(` under celery/ (10 hits across 9 files), read all 10 definitions, and traced the 'timelimit' message-header key through celery/app/amqp.py (producer side, sets 'timelimit' in headers) and celery/worker/strategy.py / celery/worker/request.py (consumer side) to confirm the header data ends up building a Context object via Context.update, which is the only one of the 10 implementations that derives time_limit/soft_time_limit from a 'timelimit' entry as a side effect.",
+  "why_this_is_hard": "All 10 `update` methods share the exact same generic name and most look like ordinary dict-merge boilerplate at a glance, so finding the one with the non-obvious side effect (deriving two extra attributes from a single key, using an identity-comparison sentinel trick) requires reading each implementation's body rather than matching on signature or docstring."
+ },
+ {
+  "id": "DJ1",
+  "repo": "django",
+  "task_kind": "blast_radius",
+  "target_name": "units_name",
+  "target_definitions": 1,
+  "corpus_size": 11010,
+  "title": "Need to add a required epoch argument to units_name",
+  "text": "We're moving spatial reference lookups from a single process-wide cache to one keyed by realization epoch, since a couple of users hit stale unit conversions after their spatial_ref_sys table was updated in place. Part of that change is giving the field's `units_name` method a new required argument so callers have to say which epoch they want instead of always getting whatever is cached. Before I touch the signature, walk me through every place in the codebase that actually calls `units_name` (as opposed to something that just happens to share the name, like a variable or tuple field) so I know exactly which call sites need to be updated to pass the new argument.",
+  "gold": "There are exactly 6 genuine call sites, all of the form `<field>.units_name(self.connection)`:\n1. django/contrib/gis/db/backends/oracle/operations.py:195 (inside get_distance_expr_for_lookup / distance SQL construction)\n2. django/contrib/gis/db/backends/postgis/operations.py:299\n3. django/contrib/gis/db/backends/mysql/operations.py:129\n4. django/contrib/gis/db/backends/spatialite/operations.py:147\n5. django/contrib/gis/db/backends/base/operations.py:202 (inside get_area_att_for_field)\n6. django/contrib/gis/db/backends/base/operations.py:212 (inside get_distance_att_for_field)\nAll six call the `units_name` method defined at django/contrib/gis/db/models/fields.py:132 on BaseSpatialField, passing `self.connection`. Non-calls that must NOT be touched: the definition itself (fields.py:132-133, where line 133 accesses `.units_name` as an *attribute* on the cached SRIDCacheEntry namedtuple, not a call to the method); the `SRIDCacheEntry` namedtuple field name at fields.py:32; the local destructuring `units, units_name = srs.units` at fields.py:62 and the keyword arg `units_name=units_name` at fields.py:65 (these build the cache entry, they don't call the method); and the local variables named `units_name`/`units` assigned from the call results at base/operations.py:202-203 and 212 (only the right-hand-side `field.units_name(self.connection)` on 202 and 212 are calls).",
+  "gold_markers": [
+   "\\.units_name\\(",
+   "def units_name"
+  ],
+  "primary_paths": [
+   "django/contrib/gis/db/models/fields.py",
+   "django/contrib/gis/db/backends/base/operations.py",
+   "django/contrib/gis/db/backends/oracle/operations.py",
+   "django/contrib/gis/db/backends/postgis/operations.py",
+   "django/contrib/gis/db/backends/mysql/operations.py",
+   "django/contrib/gis/db/backends/spatialite/operations.py"
+  ],
+  "caller_set": [
+   "django/contrib/gis/db/backends/oracle/operations.py:195",
+   "django/contrib/gis/db/backends/postgis/operations.py:299",
+   "django/contrib/gis/db/backends/mysql/operations.py:129",
+   "django/contrib/gis/db/backends/spatialite/operations.py:147",
+   "django/contrib/gis/db/backends/base/operations.py:202",
+   "django/contrib/gis/db/backends/base/operations.py:212"
+  ],
+  "decoys": [
+   "django/contrib/gis/db/models/fields.py:132",
+   "django/contrib/gis/db/models/fields.py:133",
+   "django/contrib/gis/db/models/fields.py:32",
+   "django/contrib/gis/db/models/fields.py:62",
+   "django/contrib/gis/db/models/fields.py:65",
+   "django/contrib/gis/db/backends/base/operations.py:203",
+   "django/contrib/gis/db/backends/base/operations.py:204"
+  ],
+  "verified_how": "grep -rn 'units_name' across all .py files, read each hit in context to classify as call vs. definition vs. variable/tuple-field/attribute-access; confirmed the marker regex \\.units_name\\( matches exactly the 6 genuine call sites and nothing else.",
+  "why_this_is_hard": "The name 'units_name' is reused as a local variable name, a namedtuple field name, and an attribute access on the *return value* of get_srid_info at the definition site itself, all textually adjacent to the real calls; a naive grep-and-count approach without reading each hit would misclassify the definition-adjacent lines as calls."
+ },
+ {
+  "id": "DJ2",
+  "repo": "django",
+  "task_kind": "blast_radius",
+  "target_name": "_sqlite_datetime_parse",
+  "target_definitions": 1,
+  "corpus_size": 11010,
+  "title": "Give _sqlite_datetime_parse a required strict flag",
+  "text": "On SQLite, a few of our date/time lookups silently return NULL for rows with malformed datetime strings instead of raising, which is masking bad data during imports. I want to make the internal helper that does the timezone-aware parsing take a required `strict` flag so callers can opt into raising on a bad value instead of swallowing it. Before I change the signature, walk me through every place in the sqlite backend that actually calls `_sqlite_datetime_parse` today, so I can update each call site to pass the new flag.",
+  "gold": "There are exactly 6 call sites, all in django/db/backends/sqlite3/_functions.py, each of the form `_sqlite_datetime_parse(dt, tzname, conn_tzname)`:\n1. line 142, inside _sqlite_date_trunc\n2. line 163, inside _sqlite_time_trunc (assigned to dt_parsed)\n3. line 181, inside _sqlite_datetime_cast_date\n4. line 188, inside _sqlite_datetime_cast_time\n5. line 195, inside _sqlite_datetime_extract\n6. line 213, inside _sqlite_datetime_trunc\nAll of them call the function defined at django/db/backends/sqlite3/_functions.py:119. There are no decoys of note in this case (no other symbol shares the name, and the only non-call occurrence of the string is the def line itself).",
+  "gold_markers": [
+   "= _sqlite_datetime_parse\\(",
+   "def _sqlite_datetime_parse"
+  ],
+  "primary_paths": [
+   "django/db/backends/sqlite3/_functions.py"
+  ],
+  "caller_set": [
+   "django/db/backends/sqlite3/_functions.py:142",
+   "django/db/backends/sqlite3/_functions.py:163",
+   "django/db/backends/sqlite3/_functions.py:181",
+   "django/db/backends/sqlite3/_functions.py:188",
+   "django/db/backends/sqlite3/_functions.py:195",
+   "django/db/backends/sqlite3/_functions.py:213"
+  ],
+  "decoys": [
+   "django/db/backends/sqlite3/_functions.py:119"
+  ],
+  "verified_how": "grep -rn '_sqlite_datetime_parse' across all .py files (only 7 hits total, all in one file), read each hit; confirmed 6 are calls and 1 is the def line, and that the narrower marker '= _sqlite_datetime_parse(' isolates exactly the 6 calls.",
+  "why_this_is_hard": "All six call sites are structurally near-identical one-liners (`dt = _sqlite_datetime_parse(dt, tzname, conn_tzname)`) scattered across six different sibling functions in the same file that all do date/time truncation or extraction, so it's easy to stop after finding the first two or three and assume the rest follow the same pattern without checking the exact line numbers of each."
+ },
+ {
+  "id": "DD1",
+  "repo": "django",
+  "task_kind": "disambiguation",
+  "target_name": "as_oracle",
+  "target_definitions": 39,
+  "corpus_size": 11010,
+  "title": "Sum() over a DurationField against Oracle emits a strange round-trip",
+  "text": "We have a report that calls `.aggregate(total=Sum('elapsed'))` where `elapsed` is a DurationField, running against an Oracle database. Watching the query log, the SQL Django generates isn't a plain `SUM(...)` cast \u2014 it wraps the column in an interval-to-seconds extraction first, sums that, and then converts the numeric result back into an interval on the way out (something like NUMTODSINTERVAL(SUM(EXTRACT(day from ...) * 86400 + EXTRACT(hour from ...) * 3600 + ...), 'SECOND')). We don't see any of this when the same aggregate runs against Postgres or MySQL, and we don't see it either when we run `Sum()` on Oracle over a plain numeric field. Several different parts of this codebase implement an Oracle-specific SQL-generation hook with the same name that expressions and aggregates use to customize themselves per-backend; which specific one is actually firing for this query, and what does it do that makes it different from the plain default and from the other same-named hooks?",
+  "gold": "The implementation that runs is FixDurationInputMixin.as_oracle at django/db/models/functions/mixins.py:35. Sum is declared as `class Sum(FixDurationInputMixin, Aggregate)` (django/db/models/aggregates.py:452), and Aggregate itself has no as_oracle of its own, so Python's MRO resolves `sum_instance.as_oracle` to the mixin's method. That method only special-cases when two things are both true: `self.output_field.get_internal_type() == 'DurationField'` AND `not connection.features.supports_aggregation_over_interval_types` (Oracle's OperationsFeatures sets that flag False, at django/db/backends/oracle/features.py:222 \u2014 every other backend leaves it True by default, and even on Oracle it only fires for DurationField). When both hold, it imports IntervalToSeconds and SecondsToInterval from django/db/backends/oracle/functions.py and rewrites the aggregate as `SecondsToInterval(Sum(IntervalToSeconds(expression)))`, compiled via `compiler.compile(...)`. IntervalToSeconds (functions.py:4) expands the Oracle INTERVAL DAY TO SECOND value into a decimal seconds figure with EXTRACT()-based arithmetic so it can be summed numerically (Oracle can't SUM() interval types directly), and SecondsToInterval (functions.py:19) converts the numeric total back to an interval with NUMTODSINTERVAL(..., 'SECOND'). For any other output_field type, or on any other backend, `as_oracle`/`as_mysql`/default as_sql just does a normal aggregate, which is why this only shows up for Sum-over-DurationField on Oracle specifically. (The sibling as_mysql on the same mixin, mixins.py:29, does something much simpler for the same DurationField case \u2014 it just appends `CAST(%s AS SIGNED)` around the whole aggregate \u2014 because MySQL can represent/sum the duration's underlying integer representation directly without needing the interval round-trip.)",
+  "correct_implementation": "django/db/models/functions/mixins.py:35 (FixDurationInputMixin)",
+  "sibling_count": 39,
+  "gold_markers": [
+   "FixDurationInputMixin",
+   "supports_aggregation_over_interval_types"
+  ],
+  "primary_paths": [
+   "django/db/models/functions/mixins.py",
+   "django/db/models/aggregates.py",
+   "django/db/backends/oracle/functions.py",
+   "django/db/backends/oracle/features.py"
+  ],
+  "decoys": [
+   "django/contrib/gis/db/models/functions.py:146",
+   "django/contrib/gis/db/models/functions.py:205",
+   "django/contrib/gis/db/models/functions.py:222",
+   "django/contrib/gis/db/models/functions.py:274",
+   "django/contrib/gis/db/models/functions.py:384",
+   "django/contrib/gis/db/models/functions.py:431",
+   "django/contrib/gis/db/models/functions.py:464",
+   "django/contrib/gis/db/models/aggregates.py:32",
+   "django/db/models/expressions.py:1980",
+   "django/db/models/lookups.py:149",
+   "django/db/models/aggregates.py:271",
+   "django/db/models/aggregates.py:383",
+   "django/db/models/functions/text.py:19",
+   "django/db/models/functions/text.py:56",
+   "django/db/models/functions/text.py:172",
+   "django/db/models/functions/text.py:246",
+   "django/db/models/functions/text.py:264",
+   "django/db/models/functions/text.py:311",
+   "django/db/models/functions/text.py:366",
+   "django/db/models/functions/uuid.py:30",
+   "django/db/models/functions/comparison.py:60",
+   "django/db/models/functions/comparison.py:88",
+   "django/db/models/functions/comparison.py:169",
+   "django/db/models/functions/math.py:65",
+   "django/db/models/functions/math.py:78",
+   "django/db/models/functions/math.py:88",
+   "django/db/models/functions/math.py:135",
+   "django/db/models/functions/math.py:150",
+   "django/db/models/functions/math.py:166",
+   "django/db/models/functions/datetime.py:238",
+   "django/db/models/functions/json.py:64",
+   "django/db/models/functions/json.py:123",
+   "django/db/models/fields/json.py:238",
+   "django/db/models/fields/json.py:345",
+   "django/db/models/fields/json.py:443",
+   "django/db/models/fields/json.py:499",
+   "django/db/models/fields/json.py:575",
+   "django/db/models/fields/json.py:630"
+  ],
+  "verified_how": "Read Sum's class declaration and MRO in aggregates.py, read FixDurationInputMixin.as_mysql/as_oracle in mixins.py in full, read IntervalToSeconds/SecondsToInterval in django/db/backends/oracle/functions.py, and grep-confirmed supports_aggregation_over_interval_types is defined only in django/db/backends/oracle/features.py (Oracle-only override), plus enumerated all 39 as_oracle definitions via grep to build the sibling/decoy list."
+ },
+ {
+  "id": "DD2",
+  "repo": "django",
+  "task_kind": "disambiguation",
+  "target_name": "as_mysql",
+  "target_definitions": 18,
+  "corpus_size": 11010,
+  "title": "Grouped-string delimiter shows up as SEPARATOR on MySQL, not as a normal argument",
+  "text": "We group rows and join a text column per group into one comma-delimited string using an aggregate that takes the value expression plus a delimiter. Running it against MySQL, the generated SQL and parameter list look odd compared to Postgres and Oracle: the delimiter isn't compiled as a normal function argument sitting alongside the value inside the parentheses \u2014 the SQL has a trailing ` SEPARATOR %s` clause tacked onto the very end of the aggregate call, and the delimiter's bound parameter ends up appended after all the other parameters rather than in argument order. On Postgres and Oracle the delimiter compiles like any other argument, in-place. There are several places in this codebase that define an SQL-generation hook with this exact name for customizing MySQL output; which one is actually responsible for producing that specific ` SEPARATOR ...` fragment, and how does its job differ from the hook that builds the rest of the aggregate call?",
+  "gold": "The `SEPARATOR ...` fragment is produced by the delimiter object's own as_mysql, at django/db/models/aggregates.py:360, on a small internal Func subclass used only to hold the delimiter (defined a few lines above the aggregate class, constructed in the aggregate's `__init__` from the delimiter argument passed in). Its as_mysql overrides the template to `\" SEPARATOR %(expressions)s\"` \u2014 note the leading space and no surrounding parens \u2014 so when compiled it renders as a bare ` SEPARATOR ?` fragment rather than a normal comma-joined argument. This is distinct from the aggregate's own as_mysql at aggregates.py:400, which handles the *rest* of the call: it swaps the function name to GROUP_CONCAT, builds the overall template as `%(function)s(%(distinct)s%(expressions)s%(order_by)s%(delimiter)s)`, and explicitly compiles the delimiter object separately via `compiler.compile(c.delimiter)` (after first stripping it out of the normal source_expressions list so it isn't rendered as a regular comma-separated argument), then splices the delimiter's own compiled SQL into the `delimiter` slot of the template and appends the delimiter's params after the main params \u2014 which is exactly why the delimiter's parameter shows up at the end of the params tuple. On Postgres, the base as_sql path just treats the delimiter expression like a normal source expression alongside the value, so it lands inline as a normal argument in argument order; there's no vendor-specific delimiter placement because Postgres's native aggregate takes the delimiter as an ordinary function argument.",
+  "correct_implementation": "django/db/models/aggregates.py:360 (StringAggDelimiter)",
+  "sibling_count": 18,
+  "gold_markers": [
+   "StringAggDelimiter",
+   "SEPARATOR %\\(expressions\\)s"
+  ],
+  "primary_paths": [
+   "django/db/models/aggregates.py"
+  ],
+  "decoys": [
+   "django/contrib/gis/db/models/functions.py:405",
+   "django/db/models/aggregates.py:400",
+   "django/db/models/expressions.py:1262",
+   "django/db/models/functions/math.py:163",
+   "django/db/models/functions/mixins.py:29",
+   "django/db/models/functions/datetime.py:225",
+   "django/db/models/functions/comparison.py:38",
+   "django/db/models/functions/text.py:9",
+   "django/db/models/functions/text.py:47",
+   "django/db/models/functions/text.py:102",
+   "django/db/models/functions/text.py:186",
+   "django/db/models/functions/text.py:226",
+   "django/db/models/functions/uuid.py:23",
+   "django/db/models/functions/uuid.py:78",
+   "django/db/models/fields/json.py:233",
+   "django/db/models/fields/json.py:495",
+   "django/db/models/fields/json.py:524"
+  ],
+  "verified_how": "Read StringAggDelimiter and StringAgg in full in django/db/models/aggregates.py (lines ~352-421), traced how StringAgg.as_mysql strips the delimiter from source_expressions, compiles it separately, and appends its params after the main params; grep-enumerated all 18 as_mysql definitions for the sibling/decoy list; confirmed the generic vendor dispatch mechanism (getattr(node, 'as_' + connection.vendor)) in django/db/models/sql/compiler.py:575-577 that makes each node's own as_mysql (including the delimiter's) get invoked independently during compilation."
+ },
+ {
+  "id": "DD3",
+  "repo": "django",
+  "task_kind": "disambiguation",
+  "target_name": "output_field",
+  "target_definitions": 14,
+  "corpus_size": 11010,
+  "title": "startswith on a date range field resolves to a plain DateField, not the range type",
+  "text": "We have a model with a Postgres date-range column, and we're doing `MyModel.objects.annotate(begins=F('period__startswith'))` to pull out the lower bound of the range as its own value. When we inspect the resolved annotation's field type, it comes back as an ordinary DateField, not the range field itself, and none of the generic 'figure out this expression's type from its inputs' logic that most expressions rely on appears to run for it \u2014 the type isn't inferred by looking at the source expression's field the way it normally would be, it's just handed back directly. The same pattern holds for the mirror-image lookup that grabs the upper bound. There's a well-known property name used all over the ORM to expose an expression's resolved type; which specific implementation of it is actually answering for this `__startswith` annotation, and how does its logic differ from the standard mechanism the rest of the ORM uses to resolve that type?",
+  "gold": "The implementation that answers is the `output_field` property on the range-field startswith transform, at django/contrib/postgres/fields/ranges.py:342 (RangeStartsWith, registered via `@RangeField.register_lookup` with `lookup_name = \"startswith\"`, function `\"lower\"`). Its body is simply `return self.lhs.output_field.base_field` \u2014 it reads the base_field attribute directly off whatever range field type the lhs is (e.g. DateRangeField sets `base_field = models.DateField` at ranges.py:209), so for a DateRangeField it hands back a DateField instance unconditionally. This is a plain `@property`, which overrides the standard mechanism entirely: the default the rest of the ORM uses is the `@cached_property output_field` on BaseExpression at django/db/models/expressions.py:326, which calls `self._resolve_output_field()` and infers the type either from an explicit output_field the expression was constructed with, or by checking that all of the expression's source expressions agree on a single field type (raising OutputFieldIsNoneError if it can't decide). Because RangeStartsWith is a Transform (a Func subclass) and Transforms normally get their output_field via that same expressions.py:326 mechanism, RangeStartsWith deliberately bypasses it with its own property so the resolved type always matches the range's element type rather than being inferred (or left unresolved) from source expressions the normal way. The mirror `endswith` lookup, RangeEndsWith at ranges.py:352, does the identical override for the range's upper bound \u2014 both were written this way because the generic mechanism has no way to know that a range field's `startswith`/`endswith` transforms produce a value of the range's *element* type rather than the range type itself.",
+  "correct_implementation": "django/contrib/postgres/fields/ranges.py:342 (RangeStartsWith)",
+  "sibling_count": 14,
+  "gold_markers": [
+   "RangeStartsWith",
+   "self.lhs.output_field.base_field"
+  ],
+  "primary_paths": [
+   "django/contrib/postgres/fields/ranges.py",
+   "django/db/models/expressions.py"
+  ],
+  "decoys": [
+   "django/contrib/postgres/fields/ranges.py:352",
+   "django/contrib/postgres/expressions.py:13",
+   "django/contrib/postgres/aggregates/general.py:31",
+   "django/contrib/postgres/fields/array.py:349",
+   "django/contrib/gis/db/backends/postgis/operations.py:117",
+   "django/contrib/gis/db/models/functions.py:118",
+   "django/contrib/gis/db/models/functions.py:163",
+   "django/contrib/gis/db/models/functions.py:305",
+   "django/contrib/gis/db/models/aggregates.py:18",
+   "django/db/models/expressions.py:326",
+   "django/db/models/lookups.py:168",
+   "django/db/models/sql/query.py:334",
+   "django/db/models/sql/where.py:293"
+  ],
+  "verified_how": "Read RangeStartsWith and RangeEndsWith in full in django/contrib/postgres/fields/ranges.py, confirmed DateRangeField.base_field = models.DateField at ranges.py:209, read the default output_field cached_property and _resolve_output_field on BaseExpression in django/db/models/expressions.py:317-333, confirmed Transform extends Func (which relies on the default mechanism) via django/db/models/lookups.py:210, and grep-enumerated all 14 non-test output_field definitions for the sibling/decoy list."
+ },
+ {
+  "id": "SA1",
+  "repo": "sqlalchemy",
+  "task_kind": "blast_radius",
+  "title": "Need to add a required parameter to the backref-detection helper used by attribute validators",
+  "text": "I'm working on validates()-backed attribute events and need to extend the internal helper that decides whether an attribute mutation came from a backref versus a direct user assignment. I want to give it a required extra parameter (something like the originating collection adapter) so downstream logic can make a finer-grained decision. Before I touch the signature, walk me through every place in the ORM event-wiring code that actually calls this helper today so I know what has to be updated in the same change. Don't just point me at the definition -- I need every call site.",
+  "gold": "detect_is_backref is a closure defined once, inside _validator_events() in lib/sqlalchemy/orm/util.py at line 272 (only created when include_backrefs is False). It is called from 7 places, all within the same function, inside the two variants (include_removes True/False) of the append/bulk_set/set_/remove event-listener closures that _validator_events builds and registers via event.listen(): lib/sqlalchemy/orm/util.py lines 280, 287, 294, 300, 307, 314, and 319. There are no other callers anywhere else in the codebase (no imports, no re-exports, no references in other modules).",
+  "gold_markers": [
+   "lib/sqlalchemy/orm/util.py:272",
+   "lib/sqlalchemy/orm/util.py:280",
+   "lib/sqlalchemy/orm/util.py:287",
+   "lib/sqlalchemy/orm/util.py:294",
+   "lib/sqlalchemy/orm/util.py:300",
+   "lib/sqlalchemy/orm/util.py:307",
+   "lib/sqlalchemy/orm/util.py:314",
+   "lib/sqlalchemy/orm/util.py:319"
+  ],
+  "primary_paths": [
+   "lib/sqlalchemy/orm/util.py"
+  ],
+  "verified_how": "Ran `grep -rn detect_is_backref` across lib/ and test/, confirming zero hits outside orm/util.py; read the full body of _validator_events (lines 265-330) to confirm all 8 remaining hits besides the definition are genuine calls (7 calls) inside the closures it builds, none are imports/strings/comments/docstrings.",
+  "caller_set": [
+   "lib/sqlalchemy/orm/util.py:280",
+   "lib/sqlalchemy/orm/util.py:287",
+   "lib/sqlalchemy/orm/util.py:294",
+   "lib/sqlalchemy/orm/util.py:300",
+   "lib/sqlalchemy/orm/util.py:307",
+   "lib/sqlalchemy/orm/util.py:314",
+   "lib/sqlalchemy/orm/util.py:319"
+  ],
+  "decoys": [
+   "lib/sqlalchemy/orm/util.py:272 (the def line itself, not a call)"
+  ],
+  "target_name": "detect_is_backref",
+  "target_definitions": 1,
+  "corpus_size": 12830
+ },
+ {
+  "id": "SA2",
+  "repo": "sqlalchemy",
+  "task_kind": "blast_radius",
+  "title": "Adding a required argument to the argspec-formatting compat shim",
+  "text": "There's a compatibility function in our util layer that reimplements Python's old formatargspec() for building decorator signatures and proxy call strings. I need to add a new required parameter to it (to control how positional-only markers get rendered) as part of a decorator-generation cleanup. Before I change the signature, give me a complete list of every call site in the codebase that invokes this function today, so I can update all of them in the same commit -- I don't want to find out about a missed one from a CI failure.",
+  "gold": "inspect_formatargspec is defined once, at lib/sqlalchemy/util/compat.py:187 (a ported copy of Python 3.7's inspect.formatargspec). It is called from exactly 7 places, all in lib/sqlalchemy/util/langhelpers.py, all via the `compat.` prefix: line 604 (building the plain `args` string in format_argspec_plus), line 606 (apply_pos), line 613 (apply_pos_proxied, inside an `if spec[0]:` branch), line 641 (apply_kw), line 650 (apply_kw_proxied, inside an `if spec[0]:` branch), and lines 1026 and 1027 (building fn_args/d_args inside the dunder-proxy generator in methods_equivalent/langhelpers' class-decoration helper). No other module imports or calls it.",
+  "gold_markers": [
+   "lib/sqlalchemy/util/langhelpers.py:604",
+   "lib/sqlalchemy/util/langhelpers.py:606",
+   "lib/sqlalchemy/util/langhelpers.py:613",
+   "lib/sqlalchemy/util/langhelpers.py:641",
+   "lib/sqlalchemy/util/langhelpers.py:650",
+   "lib/sqlalchemy/util/langhelpers.py:1026",
+   "lib/sqlalchemy/util/langhelpers.py:1027"
+  ],
+  "primary_paths": [
+   "lib/sqlalchemy/util/compat.py",
+   "lib/sqlalchemy/util/langhelpers.py"
+  ],
+  "verified_how": "Ran `grep -rn inspect_formatargspec` across lib/ and test/, found exactly 8 hits total (1 def + 7 uses), all in langhelpers.py; read format_argspec_plus (lines ~570-665) and the dunder-proxy loop (~1000-1030) to confirm each of the 7 is a genuine call via compat.inspect_formatargspec(...), not a string/comment.",
+  "caller_set": [
+   "lib/sqlalchemy/util/langhelpers.py:604",
+   "lib/sqlalchemy/util/langhelpers.py:606",
+   "lib/sqlalchemy/util/langhelpers.py:613",
+   "lib/sqlalchemy/util/langhelpers.py:641",
+   "lib/sqlalchemy/util/langhelpers.py:650",
+   "lib/sqlalchemy/util/langhelpers.py:1026",
+   "lib/sqlalchemy/util/langhelpers.py:1027"
+  ],
+  "decoys": [
+   "lib/sqlalchemy/util/compat.py:187 (the def line itself, not a call)"
+  ],
+  "target_name": "inspect_formatargspec",
+  "target_definitions": 1,
+  "corpus_size": 12830
+ },
+ {
+  "id": "SD1",
+  "repo": "sqlalchemy",
+  "task_kind": "disambiguation",
+  "title": "fetchmany() on a SQL Server RETURNING result never touches the DBAPI cursor",
+  "text": "We noticed something odd while debugging a slow query wrapper: on most backends, calling result.fetchmany(200) repeatedly drives batches off the live DBAPI cursor each time, but on one code path against SQL Server -- specifically right after we run an INSERT that has an OUTPUT/RETURNING clause under autocommit -- fetchmany() behaves as if the entire result set was already pulled into memory before we ever called it, and a debugger shows the underlying DBAPI cursor.fetchmany is never invoked at all for that result. Several classes in the engine layer implement a fetchmany method as part of the row-fetching strategy used by CursorResult. Which one is actually driving that SQL Server RETURNING case, and what does it do differently from the strategy that normally handles cursor fetches?",
+  "gold": "The implementation that runs is FullyBufferedCursorFetchStrategy.fetchmany at lib/sqlalchemy/engine/cursor.py:1534 (class FullyBufferedCursorFetchStrategy, lib/sqlalchemy/engine/cursor.py:1481). The mssql dialect's ExecutionContext (lib/sqlalchemy/dialects/mssql/base.py, around line 1965-1970) explicitly constructs this strategy -- passing self.cursor.fetchall() as the initial buffer -- whenever the compiled statement has an effective_returning clause, because after an OUTPUT-based INSERT under autocommit the driver cursor can't reliably be re-queried, so all rows are pulled up front via cursor.fetchall() into an internal collections.deque (_rowbuffer) at construction time. Its fetchmany() then just pops rows off that in-memory deque (or, when size is None, defers to fetchall()) and never calls the DBAPI cursor's fetchmany/fetchall again. This differs from the default strategy, CursorFetchStrategy.fetchmany at lib/sqlalchemy/engine/cursor.py:1291 (module-level singleton `_DEFAULT_FETCH = CursorFetchStrategy()`), which calls dbapi_cursor.fetchmany(size) directly against the live cursor on every invocation and holds no buffer at all.",
+  "gold_markers": [
+   "lib/sqlalchemy/engine/cursor.py:1534",
+   "lib/sqlalchemy/engine/cursor.py:1481",
+   "lib/sqlalchemy/dialects/mssql/base.py:1968"
+  ],
+  "primary_paths": [
+   "lib/sqlalchemy/engine/cursor.py",
+   "lib/sqlalchemy/dialects/mssql/base.py"
+  ],
+  "verified_how": "Grepped `def fetchmany` across lib/ (19 hits, 7 files); read all 5 definitions in engine/cursor.py plus their owning classes via `grep -n '^class \\|def fetchmany'`; confirmed FullyBufferedCursorFetchStrategy's docstring names MSSQL INSERT...OUTPUT/autocommit explicitly, then grepped `FullyBufferedCursorFetchStrategy` to find its constructors and read dialects/mssql/base.py:1940-1970 to confirm the effective_returning branch builds it from cursor.fetchall(); also read CursorFetchStrategy.fetchmany (line 1291) and confirmed `_DEFAULT_FETCH = CursorFetchStrategy()` is the module default.",
+  "correct_implementation": "lib/sqlalchemy/engine/cursor.py:1534 (FullyBufferedCursorFetchStrategy)",
+  "sibling_count": 19,
+  "decoys": [
+   "lib/sqlalchemy/connectors/asyncio.py:103 (AsyncAdapt_dbapi_cursor Protocol stub)",
+   "lib/sqlalchemy/connectors/asyncio.py:321",
+   "lib/sqlalchemy/connectors/asyncio.py:345",
+   "lib/sqlalchemy/ext/asyncio/result.py:246",
+   "lib/sqlalchemy/ext/asyncio/result.py:587",
+   "lib/sqlalchemy/ext/asyncio/result.py:732",
+   "lib/sqlalchemy/ext/asyncio/result.py:837",
+   "lib/sqlalchemy/dialects/postgresql/asyncpg.py:702 (AsyncAdapt_asyncpg_cursor)",
+   "lib/sqlalchemy/dialects/postgresql/pg8000.py:364",
+   "lib/sqlalchemy/engine/result.py:947 (base Result)",
+   "lib/sqlalchemy/engine/result.py:1362",
+   "lib/sqlalchemy/engine/result.py:1466",
+   "lib/sqlalchemy/engine/result.py:1665",
+   "lib/sqlalchemy/engine/cursor.py:1104 (abstract ResultFetchStrategy, raises NotImplementedError)",
+   "lib/sqlalchemy/engine/cursor.py:1161 (NoCursorFetchStrategy, returns empty list)",
+   "lib/sqlalchemy/engine/cursor.py:1291 (CursorFetchStrategy, the normal live-cursor default)",
+   "lib/sqlalchemy/engine/cursor.py:1440 (BufferedRowCursorFetchStrategy, incremental row-buffering used by yield_per)",
+   "lib/sqlalchemy/engine/interfaces.py:216 (DBAPICursor Protocol stub)"
+  ],
+  "target_name": "fetchmany",
+  "target_definitions": 19,
+  "corpus_size": 12830
+ },
+ {
+  "id": "SD2",
+  "repo": "sqlalchemy",
+  "task_kind": "disambiguation",
+  "title": "python_type reports float instead of Decimal for one Numeric column but not another",
+  "text": "We have two columns both declared with the same generic numeric column type in our models, and some introspection tooling that reads column_obj.type.python_type to pick a serializer. For one column it comes back as <class 'float'>, and for another (seemingly identical) column it comes back as <class 'decimal.Decimal'> -- the only difference between the two column definitions is one explicit constructor flag controlling decimal handling. Several classes across the type system define a python_type property, and the Numeric type itself doesn't obviously define one in its own class body. Which implementation is actually executing when python_type is read on that column, and what does it do differently from the type-specific implementations (the ones for string, integer, or datetime types, for example) that just return a single fixed type?",
+  "gold": "The property that runs is NumericCommon.python_type at lib/sqlalchemy/sql/sqltypes.py:539 (class NumericCommon, a mixin at line 482 shared by both Numeric, at line 578, and Float, at line 708 -- neither Numeric nor Float defines its own python_type, so both inherit this one). Its body is conditional: `return decimal.Decimal if self.asdecimal else float`, keyed off the instance's asdecimal flag (which defaults to True on Numeric and False on Float). That is why two Numeric columns differing only in an explicit asdecimal=True/False report different python_type values. This differs from every other sibling python_type in sql/sqltypes.py -- e.g. String at line 320 (always returns str), Integer at line 413 (always returns int), DateTime at line 907, Date at 932, Time at 977 -- which are unconditional one-line returns of a single fixed type with no dependency on instance state.",
+  "gold_markers": [
+   "lib/sqlalchemy/sql/sqltypes.py:539",
+   "lib/sqlalchemy/sql/sqltypes.py:482",
+   "self.asdecimal"
+  ],
+  "primary_paths": [
+   "lib/sqlalchemy/sql/sqltypes.py"
+  ],
+  "verified_how": "Grepped `def python_type` across lib/ (16 hits, 4 files); grepped `^class \\|def python_type` in sql/sqltypes.py to map each python_type to its owning class and confirmed Numeric (line 578) and Float (line 708) have no python_type of their own between their class headers and the next class, so both resolve to the NumericCommon mixin's; read NumericCommon.python_type (lines 538-543) and confirmed the `if self.asdecimal: return decimal.Decimal else: return float` body; spot-read several sibling implementations (String:320, Integer:413, DateTime:907, Date:932, Uuid:3907, ARRAY:3361) to confirm they are unconditional fixed-type returns by contrast.",
+  "correct_implementation": "lib/sqlalchemy/sql/sqltypes.py:539 (NumericCommon)",
+  "sibling_count": 16,
+  "decoys": [
+   "lib/sqlalchemy/sql/sqltypes.py:320 (String)",
+   "lib/sqlalchemy/sql/sqltypes.py:413 (Integer)",
+   "lib/sqlalchemy/sql/sqltypes.py:907 (DateTime)",
+   "lib/sqlalchemy/sql/sqltypes.py:932 (Date)",
+   "lib/sqlalchemy/sql/sqltypes.py:977 (Time)",
+   "lib/sqlalchemy/sql/sqltypes.py:1029 (_Binary)",
+   "lib/sqlalchemy/sql/sqltypes.py:2016 (Enum)",
+   "lib/sqlalchemy/sql/sqltypes.py:2217 (Boolean)",
+   "lib/sqlalchemy/sql/sqltypes.py:2351 (Interval)",
+   "lib/sqlalchemy/sql/sqltypes.py:3361 (ARRAY)",
+   "lib/sqlalchemy/sql/sqltypes.py:3907 (Uuid, conditional on as_uuid rather than asdecimal)",
+   "lib/sqlalchemy/sql/type_api.py:687 (base TypeEngine, returns generic object)",
+   "lib/sqlalchemy/dialects/postgresql/types.py:258 (postgresql INTERVAL)",
+   "lib/sqlalchemy/dialects/postgresql/types.py:330 (BIT)",
+   "lib/sqlalchemy/dialects/oracle/types.py:285 (oracle INTERVAL)"
+  ],
+  "target_name": "python_type",
+  "target_definitions": 16,
+  "corpus_size": 12830
+ },
+ {
+  "id": "XL1",
+  "repo": "django+celery+sqlalchemy",
+  "title": "Map out where each layer defers building/loading an object until it's actually touched",
+  "text": "We keep hitting surprising latency spikes that turn out to be some object finally getting built or fetched the moment we touch an attribute on it, long after it looked like it was already created. Before we write a shared 'don't be surprised by this' doc for the team, I want a precise inventory across our stack (Django models/ORM, Celery, SQLAlchemy ORM): for each one, what's the actual mechanism that defers the real work until first access, where does it live in the code, what specifically triggers it to finally run, and does the result get cached afterward (and at what granularity - per instance, per proxy, per session)? I've seen at least one case where the deferred value gets cached forever after the first touch and another where it seems to re-run on every access, and I want to know exactly which is which before we rely on either behavior.",
+  "gold": "Each project has its own deferred-evaluation primitive with different trigger/caching semantics:\n\nDjango: `DeferredAttribute` in django/db/models/query_utils.py (class starts ~line 250). It's a descriptor installed for fields excluded by QuerySet.defer()/.only(); `__get__` checks if the field is already in `instance.__dict__`, and if not, triggers a fetch via `instance._state.fetch_mode.fetch(self, instance)` on first attribute access. The fetched value is then cached per-instance in `instance.__dict__` (subsequent accesses hit the dict directly, bypassing the descriptor's fetch path).\n\nCelery: `PromiseProxy` in celery/celery/local.py (class ~line 282, subclass of `Proxy`). It's used by `Celery.task()` in celery/celery/app/base.py (~line 566, inside `inner_create_task_cls`) to return a proxy immediately when a task is declared before the app is finalized: `ret = PromiseProxy(self._task_from_fun, (fun,), opts, __doc__=fun.__doc__)`. The real Task subclass is only constructed on first attribute access via `_get_current_object`/`__evaluate__`, which then stores the result on `object.__setattr__(self, '__thing', thing)' - once evaluated, the proxy caches the object forever (`__evaluated__()` just checks whether `__thing` was set), unlike the base `Proxy` class which re-resolves on every access.\n\nSQLAlchemy: two separate loader strategies in sqlalchemy/lib/sqlalchemy/orm/strategies.py. `_LazyLoader` (~line 710) implements relationship loading with `lazy='select'` (the default) - it fires a SELECT the first time the relationship attribute is accessed on an instance, per the docstring 'loads when first accessed'. `_DeferredColumnLoader` (~line 407) is the separate strategy used for columns excluded via `defer()`, and only loads those specific columns when touched. Both are per-mapper/per-attribute strategies, not a single class shared across relationships and columns.\n\nThe key divergence: Celery's PromiseProxy caches its evaluated object once, globally, on the proxy itself, and evaluation is effectively binary (unrealized vs realized forever). Django's DeferredAttribute is a per-instance, per-field cache that lives in the instance's own `__dict__`. SQLAlchemy splits the concern into two different strategy classes (columns vs relationships) and its caching is governed by the owning Session/instance state rather than the loader itself, and is configurable per attribute (lazy='select' vs 'joined' vs 'subquery' etc.) rather than a fixed on/off.",
+  "gold_markers": [
+   "DeferredAttribute",
+   "PromiseProxy",
+   "_LazyLoader",
+   "_DeferredColumnLoader"
+  ],
+  "primary_paths": [
+   "django/django/db/models/query_utils.py",
+   "celery/celery/local.py",
+   "celery/celery/app/base.py",
+   "sqlalchemy/lib/sqlalchemy/orm/strategies.py"
+  ],
+  "verified_how": "Read django/db/models/query_utils.py:250-280 (DeferredAttribute.__get__ triggers fetch_mode.fetch on first access, caches in instance.__dict__); read celery/local.py:282-353 (PromiseProxy._get_current_object/__evaluate__/__evaluated__ show once-only evaluation and permanent caching via object.__setattr__(self,'__thing',thing)), confirmed usage site celery/app/base.py:520-580 ('return a proxy object that evaluates on first use'); read sqlalchemy/orm/strategies.py:407-440 (_DeferredColumnLoader) and 710-740 (_LazyLoader docstring 'loads when first accessed'). Grepped counts: DeferredAttribute=13 hits in django/django, PromiseProxy=7 hits in celery/celery, _LazyLoader=5 and _DeferredColumnLoader=2 hits in sqlalchemy/lib/sqlalchemy - all under the 50-hit precision bar.",
+  "why_this_is_hard": "The three deferred-evaluation mechanisms are in different subsystems of each codebase (ORM field loading, task-decorator app-binding, and ORM relationship/column loading strategies) and share no common vocabulary ('deferred' vs 'promise/proxy' vs 'lazy') despite doing structurally the same thing - solving it requires locating three separate, differently-named implementations and reasoning about each one's caching granularity from the actual descriptor/proxy code, not from any doc that uses a common term for all three.",
+  "corpus_size": 27400,
+  "target_definitions": 4,
+  "repos_required": [
+   "django",
+   "celery",
+   "sqlalchemy"
+  ]
+ },
+ {
+  "id": "XL2",
+  "repo": "django+celery+sqlalchemy",
+  "title": "Nail down what 'pool' actually means in each service before we standardize pooling config",
+  "text": "In our infra sync everyone says 'pool' and means something different, and I want to stop guessing before we write the shared config guide. For our Django services, our Celery workers, and anything going through SQLAlchemy: what concretely gets pooled in each (if anything), where is the pool implemented in code, what causes a new pool member to get created versus an existing one reused, and how/when does a member get torn down? I specifically want to know whether the default behavior in each case is even pooling at all, or something else that just gets called that colloquially.",
+  "gold": "The three 'pools' are genuinely different mechanisms pooling different kinds of resources:\n\nDjango: `DatabaseWrapper.pool` property in django/db/backends/postgresql/base.py (~lines 191-236). This is opt-in only (`settings_dict['OPTIONS'].get('pool')` must be set) and lazily constructs a `psycopg_pool.ConnectionPool`, keyed by connection alias in a class-level dict `_connection_pools`, on first access; `close_pool()` (~line 238) closes it and removes the alias's entry. Without that option, Django does NOT pool connections at all by default - instead django/db/backends/base/base.py manages a single persistent connection per thread, reused across requests up to `CONN_MAX_AGE` seconds (tracked via `self.close_at`, set at connect time ~line 248-249, and checked in `close_if_unusable_or_obsolete()` ~line 591/614) - i.e. one connection kept alive and recycled, not a pool of several.\n\nCelery: `BasePool` in celery/celery/concurrency/base.py (class ~line 46) is the abstraction for the worker's execution pool - a set of OS-level worker processes/threads that execute tasks concurrently, not a pool of network connections at all. `TaskPool` in celery/celery/concurrency/prefork.py (class ~line 95, subclassing BasePool) is the default prefork implementation, with `on_start`/`on_stop` lifecycle hooks (~lines 104, 142) that spin the worker processes up/down. Which pool implementation runs is chosen via the `--pool` flag (prefork/eventlet/gevent/solo/threads).\n\nSQLAlchemy: `Pool` in sqlalchemy/lib/sqlalchemy/pool/base.py (class ~line 156) is the base DBAPI-connection-pool abstraction; `QueuePool` in sqlalchemy/lib/sqlalchemy/pool/impl.py is the default Engine-level implementation, holding a bounded queue of DBAPI connections that get checked out and checked back in per unit of work, growing up to `pool_size + max_overflow` before blocking/erroring, distinct from Django's single-persistent-connection default.\n\nDivergence for the standup: Django's pooling is opt-in and, even then, delegates to a third-party pool implementation rather than owning pooling logic itself; its unqualified default behavior is connection *reuse*, not pooling. SQLAlchemy owns and always runs an actual bounded multi-connection pool by default (QueuePool) unless explicitly swapped for NullPool/StaticPool/etc. Celery's 'pool' isn't about connections at all - it's the concurrency mechanism for running tasks, configurable independently of any broker connection pooling that may happen underneath it.",
+  "gold_markers": [
+   "_connection_pools",
+   "psycopg_pool",
+   "class BasePool",
+   "class TaskPool",
+   "class QueuePool",
+   "class Pool(log.Identified"
+  ],
+  "primary_paths": [
+   "django/django/db/backends/postgresql/base.py",
+   "django/django/db/backends/base/base.py",
+   "celery/celery/concurrency/base.py",
+   "celery/celery/concurrency/prefork.py",
+   "sqlalchemy/lib/sqlalchemy/pool/base.py",
+   "sqlalchemy/lib/sqlalchemy/pool/impl.py"
+  ],
+  "verified_how": "Read django/db/backends/postgresql/base.py:191-241 (pool property, _connection_pools dict, close_pool) and django/db/backends/base/base.py:87,247-249,578-614 (close_at/CONN_MAX_AGE persistent-connection default, distinct from the pool property); read celery/concurrency/base.py:1-60 (class BasePool docstring 'Task pool') and celery/concurrency/prefork.py:95-142 (class TaskPool(BasePool), on_start/on_stop); read sqlalchemy/pool/base.py:156 (class Pool(log.Identified, event.EventTarget)) and grepped 'class QueuePool' in sqlalchemy/pool/impl.py. Grep counts: _connection_pools=10 in django/django, BasePool=15 in celery/celery, QueuePool class def=1 (unique) in sqlalchemy/lib/sqlalchemy - all under the 50-hit bar.",
+  "why_this_is_hard": "All three literally use the word 'pool' in source, which invites the wrong assumption that they're comparable line items in a single config table; only by reading the actual classes does it become clear Django's default path isn't pooling at all, Celery's pool is a process/thread concurrency pool unrelated to connections, and only SQLAlchemy's QueuePool is a true bounded multi-connection pool - a shallow keyword search across repos would find three 'pool' hits and wrongly treat them as the same knob.",
+  "corpus_size": 27400,
+  "target_definitions": 6,
+  "repos_required": [
+   "django",
+   "celery",
+   "sqlalchemy"
+  ]
+ },
+ {
+  "id": "XL3",
+  "repo": "django+celery+sqlalchemy",
+  "title": "How does each piece of our stack know a long-lived resource has gone stale before something bad happens?",
+  "text": "We had an incident where a worker looked alive in our dashboard well after it had actually died, and separately we've seen queries fail against a DB connection that quietly went bad while idle. I want to understand, precisely, how each layer of our stack currently detects that a long-lived resource (a DB connection, a pooled connection, a worker process) is no longer good before something downstream relies on it - is it an active check done right before reuse, or does the resource itself have to proactively announce that it's still alive, and if so how is a missed announcement noticed? Need the actual mechanism in Django, Celery, and SQLAlchemy, not just 'there's a timeout somewhere.'",
+  "gold": "The three systems use genuinely different liveness models:\n\nDjango: pull-based, checked right before reuse. `BaseDatabaseWrapper.close_if_health_check_failed()` in django/db/backends/base/base.py (~line 578) runs when `CONN_HEALTH_CHECKS` is enabled and no check has been done yet on the current connection; it calls the backend's `is_usable()` (abstract at ~line 565, implemented per-backend e.g. postgresql/base.py ~line 498) and closes the connection if the check fails, forcing a fresh reconnect on next use. This is invoked opportunistically (e.g. in `ensure_connection()`), not on a timer.\n\nSQLAlchemy: pull-based, checked at checkout. `_ConnectionFairy._checkout()` in sqlalchemy/lib/sqlalchemy/pool/base.py (~line 1262) checks `pool._pre_ping` when a connection is checked out of the pool; if enabled and the connection isn't freshly created, it calls `pool._dialect._do_ping_w_event(fairy.dbapi_connection)` to actually round-trip a ping before handing the connection to the caller, invalidating and retrying (up to a couple of attempts) if the ping fails.\n\nCelery: push-based, with a separate expiry check on the receiving side. Workers proactively broadcast their own liveness: `Heart` in celery/celery/worker/heartbeat.py (class ~line 14) is a timer that periodically calls `self.eventer.send(event, freq=self.interval, ...)` to emit heartbeat events (default every 2s) - nothing 'checks' the worker directly. On the consuming side, celery/celery/events/state.py tracks each worker's last-seen heartbeats and exposes `Worker.alive()` (~line 234), which returns `nowfun() < self.heartbeat_expires` (heartbeat_expires computed from the last heartbeat timestamp plus `freq * expire_window` - see the module-level `heartbeat_expires()` function ~line 114) - i.e. a worker is considered dead only once its expected next heartbeat window has passed, not via any direct probe. Celery separately offers an on-demand pull-style check via `Control.ping()` in celery/celery/app/control.py (~line 560), but that's an explicit admin action, not something the framework runs automatically before using a worker.\n\nDivergence: Django and SQLAlchemy both actively verify the specific resource immediately before it's handed back for reuse (pull, synchronous, inline with the calling code path). Celery instead relies on workers proactively self-reporting on an interval, with staleness detected only indirectly by another component noticing a heartbeat is overdue - there's no automatic 'check this worker is alive before dispatching a task to it' step analogous to Django's or SQLAlchemy's pre-use check.",
+  "gold_markers": [
+   "close_if_health_check_failed",
+   "is_usable",
+   "_pre_ping",
+   "_do_ping_w_event",
+   "class Heart",
+   "heartbeat_expires"
+  ],
+  "primary_paths": [
+   "django/django/db/backends/base/base.py",
+   "django/django/db/backends/postgresql/base.py",
+   "sqlalchemy/lib/sqlalchemy/pool/base.py",
+   "celery/celery/worker/heartbeat.py",
+   "celery/celery/events/state.py",
+   "celery/celery/app/control.py"
+  ],
+  "verified_how": "Read django/db/backends/base/base.py:565-618 (is_usable abstract, close_if_health_check_failed, close_if_unusable_or_obsolete) and postgresql/base.py:498 (is_usable impl); read sqlalchemy/pool/base.py:1262-1310 (_ConnectionFairy._checkout, pool._pre_ping branch calling _do_ping_w_event); read celery/worker/heartbeat.py:1-50 (class Heart, self.eventer.send) and celery/events/state.py:114-235 (heartbeat_expires function, Worker.alive using nowfun() < self.heartbeat_expires) and celery/app/control.py:560-575 (Control.ping as separate on-demand broadcast). Grep counts: close_if_health_check_failed=7, is_usable=10 in django/django; _pre_ping=31 (still <50), _do_ping_w_event=4 in sqlalchemy/lib/sqlalchemy; class Heart=2, heartbeat_expires=5 in celery/celery.",
+  "why_this_is_hard": "The push-vs-pull distinction is invisible from names alone (health_check, pre_ping, heartbeat all sound like synonyms for 'liveness check'), and the celery mechanism is split across two files with two different responsibilities (the sender in worker/heartbeat.py, the staleness judgment in events/state.py) plus a decoy on-demand ping in app/control.py that looks like the obvious answer but is not what runs automatically - getting this right requires reading enough of each implementation to see which side initiates the check and when it actually executes.",
+  "corpus_size": 27400,
+  "target_definitions": 5,
+  "repos_required": [
+   "django",
+   "celery",
+   "sqlalchemy"
+  ]
+ },
+ {
+  "id": "XL4",
+  "repo": "django+celery+sqlalchemy",
+  "title": "Where does each layer stash its 'current' active resource so unrelated code can find it without being handed a reference?",
+  "text": "In all three layers of our stack, code deep in a call chain manages to get hold of 'the current X' (the active DB connection, the active Celery app, the active session) without anyone explicitly threading a reference through every function call. I want to understand the actual storage mechanism behind that in Django, Celery, and SQLAlchemy - is it a plain global, something thread-local, something that's aware of async contexts - and where in the code does that live? We're chasing a bug where two different pieces of code seem to disagree about what 'the current one' is, so I need the real storage structure per layer, not just 'it's a singleton.'",
+  "gold": "Each of the three uses a different context-local storage primitive for tracking 'the current X':\n\nDjango: `BaseConnectionHandler` in django/django/utils/connection.py (class ~line 34) backs `django.db.connections` (via `ConnectionHandler` in django/db/utils.py ~line 141, subclassing it). It stores per-alias connections in `self._connections = Local(self.thread_critical)` (~line 41), where `Local` is imported from the third-party `asgiref.local` package - this is explicitly async-context-aware (not just thread-local), so a connection tracked under one async task/thread doesn't leak into another.\n\nCelery: `_TLS` in celery/celery/_state.py (class, `_tls = _TLS()` ~line 71) is a plain `threading.local` subclass holding `current_app = None` as a class attribute. `_get_current_app()` (~line 92) reads `_tls.current_app or default_app`, and the public `current_app` object (~line 139) is actually a `Proxy(get_current_app)` (from celery/celery/local.py) wrapping that lookup, so every access re-resolves through the thread-local rather than holding a fixed reference. This is genuinely thread-local only, not async-context-aware.\n\nSQLAlchemy: `ScopedRegistry` / `ThreadLocalRegistry` in sqlalchemy/lib/sqlalchemy/util/_collections.py (classes ~lines 566 and 630) back `scoped_session` in sqlalchemy/lib/sqlalchemy/orm/scoping.py. `scoped_session.__init__` (~line 198) builds `self.registry = ScopedRegistry(session_factory, scopefunc)` when the caller supplies a custom `scopefunc` (e.g. to make it greenlet- or async-task-aware), or falls back to a plain `ThreadLocalRegistry(session_factory)` (~line 200) otherwise; session lookup (`self.registry()` ~line 204) and explicit removal (`self.registry.set(sess)` ~line 225, plus `.has()`) go through that registry object.\n\nDivergence: Django's storage is async-context-safe by construction, out of the box, via a purpose-built third-party `Local`. SQLAlchemy's is thread-local by default but can be swapped to be context-aware only if the caller explicitly passes a `scopefunc` when constructing the `scoped_session` - it isn't automatic. Celery's is plain `threading.local` with no async-context awareness at all, wrapped in an extra layer of indirection (a `Proxy`) that re-resolves the lookup on every attribute access rather than caching a reference - so 'two pieces of code disagreeing about the current one' is far more plausible under Celery/SQLAlchemy-without-scopefunc in an async or greenlet context than under Django.",
+  "gold_markers": [
+   "BaseConnectionHandler",
+   "asgiref.local",
+   "class _TLS",
+   "ScopedRegistry",
+   "ThreadLocalRegistry",
+   "current_app = Proxy"
+  ],
+  "primary_paths": [
+   "django/django/utils/connection.py",
+   "django/django/db/utils.py",
+   "celery/celery/_state.py",
+   "celery/celery/local.py",
+   "sqlalchemy/lib/sqlalchemy/util/_collections.py",
+   "sqlalchemy/lib/sqlalchemy/orm/scoping.py"
+  ],
+  "verified_how": "Read django/utils/connection.py:1-41 (BaseConnectionHandler using asgiref.local.Local) and django/db/utils.py:141 (ConnectionHandler subclass); read celery/_state.py:68-173 (class _TLS, _tls instance, _get_current_app, current_app = Proxy(get_current_app)); read sqlalchemy/orm/scoping.py:31,153-225 (import of ScopedRegistry, scoped_session.__init__ choosing ScopedRegistry vs ThreadLocalRegistry based on scopefunc) and grepped class defs in sqlalchemy/util/_collections.py:566,630. Grep counts: BaseConnectionHandler=7 in django/django, _TLS=2 in celery/celery, ScopedRegistry=11 in sqlalchemy/lib/sqlalchemy - all under the 50-hit bar.",
+  "why_this_is_hard": "None of the three call this mechanism by the same name (BaseConnectionHandler/Local vs _TLS/Proxy vs ScopedRegistry), the actual storage primitive differs in a way that matters (async-aware Local vs plain threading.local vs a registry that's async-aware only if explicitly configured), and in two of the three repos the real answer sits behind a layer of indirection (Django's ConnectionHandler subclassing a differently-named base class in a different module; Celery's public current_app being a Proxy wrapping the actual thread-local lookup) that a name-only search would likely miss.",
+  "corpus_size": 27400,
+  "target_definitions": 6,
+  "repos_required": [
+   "django",
+   "celery",
+   "sqlalchemy"
+  ]
+ }
+]
+const BUDGET = 6   // fixed by the calibration pilot; never tuned per class or ticket
+const TRIALS = [1, 2, 3]
+const BASE = '/Users/ritikshukla/Desktop/claude-dir/'
+const INDEXED = {
+  fastapi: 'fastapi/fastapi', pydantic: 'pydantic/pydantic', flask: 'pallets/flask',
+  requests: 'psf/requests', sutra: 'ritikk112/sutra',
+  celery: 'celery/celery', django: 'django/django', sqlalchemy: 'sqlalchemy/sqlalchemy',
+}
+
+function repoList(t) { return t.repos_required && t.repos_required.length ? t.repos_required : [t.repo] }
+
+function toolsBlock(t, arm) {
+  if (arm === 'control') return '- Bash, Grep, Glob, Read\nUse only these tools.'
+  const names = repoList(t).map(r => '"' + INDEXED[r] + '"').join(', ')
+  return '- The sutra code-index MCP tools, which serve a pre-built index of ' +
+    (repoList(t).length > 1 ? 'these repos (indexed as ' : 'this repo (indexed as ') + names + '): ' +
+    'mcp__sutra__sutra_search, mcp__sutra__sutra_get_symbol, mcp__sutra__sutra_get_callers, ' +
+    'mcp__sutra__sutra_get_callees, mcp__sutra__sutra_expand_neighbors, mcp__sutra__sutra_list_repos\n' +
+    '- Bash, Grep, Glob, Read'
+}
+
+function solverPrompt(t, arm, cap, trial) {
+  const paths = repoList(t).map(r => '- ' + r + ': ' + BASE + r).join('\n')
+  let extra = ''
+  if (repoList(t).includes('sutra')) {
+    extra = '\nThis repository\'s markdown files contain notes that give away answers; base your answer on the source code only.'
+  }
+  return t.text + '\n\nRepo checkout(s):\n' + paths +
+    '\n\n[trial marker: ' + t.id + '-' + arm + '-t' + trial + ']' +
+    '\n\nTools available to you:\n' + toolsBlock(t, arm) +
+    '\n\nYou have a hard budget of ' + cap + ' tool calls for this task. EVERY call to ANY tool ' +
+    'counts against this budget, including code-index/MCP tools, Bash, Grep, Glob and Read. ' +
+    'Count them as you go. Once you have used ' + cap + ' calls you must stop investigating ' +
+    'immediately and answer with whatever you have established so far, even if incomplete. ' +
+    'Exceeding the budget invalidates your answer. Loading tool definitions does not count ' +
+    'against this budget.' +
+    '\n\nAnswer the ticket. Name the specific mechanism in the source that explains it: the ' +
+    'files, the functions or classes involved, and how they interact to produce the described ' +
+    'behaviour. Be concrete and cite paths. Your final message is your answer — write it for an ' +
+    'engineer who has not read this code.' + extra
+}
+
+const JUDGE_SCHEMA = {
+  type: 'object',
+  properties: {
+    grades: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          answer_id: { type: 'string' },
+          verdict: { type: 'string', enum: ['correct', 'partial', 'wrong'] },
+          false_localization: { type: 'boolean' },
+          claimed_call_sites: { type: 'integer', description: 'BR only: how many call sites the answer claims' },
+          correct_call_sites: { type: 'integer', description: 'BR only: how many claimed sites are in the verified caller set' },
+          missed_call_sites: { type: 'integer', description: 'BR only: verified sites the answer omitted' },
+          decoys_claimed: { type: 'integer', description: 'BR only: decoys the answer wrongly claimed as call sites' },
+          named_right_implementation: { type: 'boolean', description: 'disambiguation only: did the answer identify the correct sibling implementation' },
+          named_a_sibling_instead: { type: 'boolean', description: 'disambiguation only: did it confidently name a WRONG same-named sibling' },
+          evidence: { type: 'string' },
+        },
+        required: ['answer_id', 'verdict', 'false_localization', 'evidence'],
+      },
+    },
+    gold_dispute: { type: 'string' },
+  },
+  required: ['grades'],
+}
+
+phase('Solve')
+log('Scale run: ' + TICKETS.length + ' tickets over a 497..12830-definition ladder, budget ' + BUDGET + ' held constant')
+
+const results = await pipeline(
+  TICKETS,
+  async (t, _orig, idx) => {
+    const jobs = []
+    TRIALS.forEach(trial => {
+      // arms interleaved rather than grouped, so neither arm systematically runs
+      // in a busier slice of the machine
+      ;['sutra', 'control'].forEach(arm => {
+        jobs.push(() => agent(solverPrompt(t, arm, BUDGET, trial), {
+          label: t.id + ':' + arm + ':t' + trial, phase: 'Solve', model: 'haiku',
+        }).then(ans => ({ ticket: t.id, arm, cap: BUDGET, trial, answer: ans || '' })))
+      })
+    })
+    const answers = await parallel(jobs)
+    return { t, idx, answers: answers.filter(Boolean) }
+  },
+  async ({ t, idx, answers }) => {
+    // deterministic rotation so no fixed position always holds the same arm
+    const rot = idx % answers.length
+    const shuffled = answers.map((_, i) => answers[(i + rot) % answers.length])
+    const labels = 'ABCDEF'
+    const block = shuffled.map((a, i) =>
+      '### ANSWER ' + labels[i] + '\n' + (a.answer || '(no answer produced)')).join('\n\n')
+    const grades = await agent(
+      'You are grading answers to one engineering question. You will not be told how any ' +
+      'answer was produced, and you must not speculate about it.\n\n' +
+      '## The question that was asked\n' + t.text + '\n\n' +
+      '## The verified correct answer (gold)\n' + t.gold + '\n\n' +
+      'Relevant files: ' + (t.primary_paths || []).join(', ') + '\n' +
+      (t.caller_set ? '\nVerified complete call site list:\n- ' + t.caller_set.join('\n- ') +
+        '\nThese hits look similar but are NOT genuine call sites:\n- ' + (t.decoys || []).join('\n- ') + '\n' : '') +
+      '\n## The answers to grade\n' + block + '\n\n' +
+      '## How to grade\n' +
+      'For each answer A-F give a verdict:\n' +
+      '- correct: identifies the actual mechanism, right files/symbols, and the explanation of ' +
+      'how it produces the behaviour is accurate.\n' +
+      '- partial: finds part of the mechanism, or the right area with a materially wrong or ' +
+      'missing explanation.\n' +
+      '- wrong: wrong mechanism, or confidently asserts something the code does not do.\n\n' +
+      'Also set false_localization=true when an answer names a specific wrong symbol or file ' +
+      'CONFIDENTLY. Score this separately from wrong, because a confident wrong pointer sends ' +
+      'an engineer to read the wrong file, whereas "I could not determine this" merely fails.\n\n' +
+      'Rules you must follow:\n' +
+      '1. Grade against the gold, not against the other answers. Do not curve. All six may be ' +
+      'correct; all six may be wrong. A ticket where every answer is correct is a real and ' +
+      'publishable result, not a sign you graded too leniently.\n' +
+      '2. Longer is not better. An answer stating the right mechanism in two sentences beats one ' +
+      'burying it in three paragraphs of adjacent detail.\n' +
+      '3. Do not reward naming many plausible files. Precision counts.\n' +
+      '4. If the gold itself looks wrong against the described code, say so in gold_dispute ' +
+      'rather than forcing six wrong verdicts.\n\n' +
+      (t.task_kind === 'disambiguation' ?
+        'This is a DISAMBIGUATION question. The repo contains ' + (t.sibling_count || 'several') +
+        ' definitions sharing the name "' + t.target_name + '", and the gold names exactly one as the ' +
+        'implementation that actually runs: ' + (t.correct_implementation || '(see gold)') + '.\n' +
+        'For each answer set named_right_implementation=true only if it identifies THAT implementation ' +
+        '(the right file and owning class/module), and named_a_sibling_instead=true if it confidently ' +
+        'names a different same-named sibling. Naming the bare function name without saying which of ' +
+        'the ' + (t.sibling_count || 'many') + ' implementations it is does NOT count as identifying it -- ' +
+        'that is the entire question.\n\n' : '') +
+      (t.caller_set ? 'This is a call-site question: for each answer also fill claimed_call_sites, ' +
+        'correct_call_sites, missed_call_sites and decoys_claimed against the verified list above. ' +
+        'A decoy claimed as a real call site is a precision failure and should weigh against the verdict.\n\n' : '') +
+      'Return the answer_id as the letter (A-F).',
+      { label: 'judge:' + t.id, phase: 'Judge', schema: JUDGE_SCHEMA, model: 'sonnet' }
+    )
+    // map letters back to (arm, cap) - the judge never saw this mapping
+    const key = {}
+    shuffled.forEach((a, i) => { key[labels[i]] = { arm: a.arm, cap: a.cap } })
+    const graded = (grades && grades.grades ? grades.grades : []).map(g => ({
+      ticket: t.id, ...key[g.answer_id], verdict: g.verdict,
+      false_localization: g.false_localization,
+      claimed_call_sites: g.claimed_call_sites, correct_call_sites: g.correct_call_sites,
+      missed_call_sites: g.missed_call_sites, decoys_claimed: g.decoys_claimed,
+      named_right_implementation: g.named_right_implementation,
+      named_a_sibling_instead: g.named_a_sibling_instead,
+      task_kind: t.task_kind, corpus_size: t.corpus_size, repo: t.repo,
+      evidence: g.evidence,
+    }))
+    return { ticket: t.id, graded, gold_dispute: grades && grades.gold_dispute }
+  }
+)
+
+return { results: results.filter(Boolean) }

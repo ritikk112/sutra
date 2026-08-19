@@ -1,0 +1,845 @@
+{
+ "tickets": [
+  {
+   "id": "FL1",
+   "repo": "flask",
+   "title": "init_db() needs a required schema-path argument",
+   "text": "The tutorial example app's init_db() always loads schema.sql from the app's resource folder. I want to change it to take a required argument (the path to the schema file) instead of hardcoding it. Before I touch the signature, walk me through every place in this codebase that actually calls init_db() today, and tell me what each call site would need to pass in.",
+   "gold": "init_db() is defined once, at examples/tutorial/flaskr/db.py:33. It has exactly two genuine callers in the repo: (1) examples/tutorial/tests/conftest.py:25, inside the `app` pytest fixture, called as `init_db()` under `with app.app_context():` while seeding the test database; and (2) examples/tutorial/flaskr/db.py:44, inside `init_db_command` (the Click CLI command registered via `app.cli.add_command(init_db_command)` in `init_app`), which calls `init_db()` before printing 'Initialized the database.'. Both call sites would need to be updated to pass the new required argument. Everything else that textually matches 'init_db' is a decoy: the import `from flaskr.db import init_db` at conftest.py:8; the `init_db()` line inside a `.. code-block::` docstring example under `Flask.app_context()` in src/flask/app.py:1496, which is documentation prose, not executable code; and in examples/tutorial/tests/test_db.py, the `test_init_db_command` test (line 19) which defines its own stand-in function `fake_init_db` (line 23) and monkeypatches it over `flaskr.db.init_db` via the string `\"flaskr.db.init_db\"` (line 26) \u2014 none of that is a real call to init_db. The `init_db_command` function definition (db.py:42) and its registration via `app.cli.add_command(init_db_command)` (db.py:56) reference a different function, init_db_command, not init_db itself.",
+   "gold_markers": [
+    "examples/tutorial/tests/conftest.py:25",
+    "examples/tutorial/flaskr/db.py:44",
+    "init_db_command",
+    "docstring",
+    "fake_init_db"
+   ],
+   "primary_paths": [
+    "examples/tutorial/flaskr/db.py",
+    "examples/tutorial/tests/conftest.py"
+   ],
+   "verified_how": "grep -rn 'init_db' --include='*.py' across the whole repo (9 hits), then Read each hit's surrounding context (conftest.py, test_db.py, db.py, app.py:1490-1500) to confirm which were real calls to the module-level init_db() function versus an import, a differently-named function (init_db_command / fake_init_db), a monkeypatch string target, a CLI registration of a different function, or a docstring code example.",
+   "stratum": "unique",
+   "target_name": "init_db",
+   "target_definitions": 1,
+   "corpus_size": 497,
+   "caller_set": [
+    "examples/tutorial/tests/conftest.py:25",
+    "examples/tutorial/flaskr/db.py:44"
+   ],
+   "decoys": [
+    "examples/tutorial/tests/conftest.py:8 (import statement)",
+    "examples/tutorial/tests/test_db.py:19 (def test_init_db_command \u2014 different function, not a call)",
+    "examples/tutorial/tests/test_db.py:23 (def fake_init_db \u2014 stand-in function, not the real init_db)",
+    "examples/tutorial/tests/test_db.py:26 (monkeypatch.setattr string target, not an actual call)",
+    "examples/tutorial/flaskr/db.py:33 (the definition itself)",
+    "examples/tutorial/flaskr/db.py:42 (def init_db_command \u2014 different function)",
+    "examples/tutorial/flaskr/db.py:56 (app.cli.add_command(init_db_command) \u2014 registers a different function)",
+    "src/flask/app.py:1496 (init_db() inside a docstring code-block example, not real code)"
+   ],
+   "why_this_is_hard": "The raw grep hit count (9) is dominated by non-calls: an import, a monkeypatched stand-in function with a matching-looking name, a same-file sibling function (init_db_command) whose name contains init_db as a substring twice over (definition + CLI registration), and a call that only exists inside a Sphinx docstring example in an unrelated module (app.py) that never actually executes. Only 2 of the 9 hits are real invocations."
+  },
+  {
+   "id": "FL2",
+   "repo": "flask",
+   "title": "from_prefixed_env() loader should be a required argument",
+   "text": "I'd like Config.from_prefixed_env() to require callers to explicitly pass the value-loading function instead of quietly defaulting to json.loads. That means every existing call needs to be updated to pass it explicitly. Can you walk me through every call site of from_prefixed_env() in this repo and what each one would need to change?",
+   "gold": "from_prefixed_env is defined once, as a method on the Config class at src/flask/config.py:126. It has 4 genuine callers, all invoked as `app.config.from_prefixed_env(...)`: tests/test_config.py:58 (inside test_from_prefixed_env, no-arg call), tests/test_config.py:74 (inside test_from_prefixed_env_custom_prefix, called with a custom prefix string 'NOT_FLASK'), tests/test_config.py:79 -> actually the call is at line 87 (inside test_from_prefixed_env_nested, no-arg call), and examples/celery/src/task_app/__init__.py:16 inside create_app(). Each of these four call sites would need the new required loader argument added. The `def test_from_prefixed_env...` lines (48, 69, 79) are just the enclosing test function names/definitions and are not calls themselves.",
+   "gold_markers": [
+    "tests/test_config.py:58",
+    "tests/test_config.py:74",
+    "tests/test_config.py:87",
+    "examples/celery/src/task_app/__init__.py:16",
+    "Config"
+   ],
+   "primary_paths": [
+    "src/flask/config.py",
+    "tests/test_config.py",
+    "examples/celery/src/task_app/__init__.py"
+   ],
+   "verified_how": "grep -rn 'from_prefixed_env' --include='*.py' across the repo (8 hits), then Read src/flask/config.py:100-175 to confirm the single definition and its owning class, and Read tests/test_config.py and examples/celery/src/task_app/__init__.py to distinguish the three test-function definitions from the actual method invocations.",
+   "stratum": "unique",
+   "target_name": "from_prefixed_env",
+   "target_definitions": 1,
+   "corpus_size": 497,
+   "caller_set": [
+    "tests/test_config.py:58",
+    "tests/test_config.py:74",
+    "tests/test_config.py:87",
+    "examples/celery/src/task_app/__init__.py:16"
+   ],
+   "decoys": [
+    "tests/test_config.py:48 (def test_from_prefixed_env \u2014 test function definition, not a call)",
+    "tests/test_config.py:69 (def test_from_prefixed_env_custom_prefix \u2014 test function definition, not a call)",
+    "tests/test_config.py:79 (def test_from_prefixed_env_nested \u2014 test function definition, not a call)",
+    "src/flask/config.py:126 (the definition itself)"
+   ],
+   "why_this_is_hard": "Three of the eight raw hits are test-function names that echo the method name (test_from_prefixed_env, test_from_prefixed_env_custom_prefix, test_from_prefixed_env_nested); it's easy to over- or under-count these as calls versus the three actual invocations inside those same test bodies."
+  },
+  {
+   "id": "FL3",
+   "repo": "flask",
+   "title": "dispatch_request needs an extra required argument",
+   "text": "I'm considering changing dispatch_request so it takes a mandatory extra argument instead of relying only on self (plus whatever URL keyword arguments get forwarded). Before I make that change, walk me through every actual call site of dispatch_request in the codebase today, and tell me what each one would need to be updated to pass.",
+   "gold": "dispatch_request names two unrelated things in this codebase. (1) Flask.dispatch_request (src/flask/app.py:969) is the core WSGI request-dispatch method; it has exactly one caller, src/flask/app.py:1019 (`rv = self.dispatch_request(ctx)` inside full_dispatch_request). (2) The class-based-views hierarchy in src/flask/views.py defines it twice: View.dispatch_request (line 78) is an abstract stub that just raises NotImplementedError, and MethodView.dispatch_request (line 182) is the concrete override that routes to the matching per-HTTP-method handler. This version is called twice, both inside the `view()` closure that View.as_view() builds and returns (views.py:110 for the init_every_request=True branch, and views.py:116 for the else branch), both as `current_app.ensure_sync(self.dispatch_request)(**kwargs)` \u2014 which concrete method actually runs depends on which View subclass was instantiated. A fourth apparent 'definition' at views.py:30 is inside the View class's own docstring code example (a `.. code-block::`) and is not real code. Updating dispatch_request for a required new argument therefore means touching three real call sites across two unrelated class hierarchies: app.py:1019, views.py:110, and views.py:116.",
+   "gold_markers": [
+    "src/flask/app.py:1019",
+    "src/flask/views.py:110",
+    "src/flask/views.py:116",
+    "MethodView",
+    "full_dispatch_request",
+    "NotImplementedError"
+   ],
+   "primary_paths": [
+    "src/flask/app.py",
+    "src/flask/views.py"
+   ],
+   "verified_how": "grep -rn 'dispatch_request' --include='*.py' across the repo (23 hits), Read src/flask/app.py:955-1020 and src/flask/sansio around the Flask class to confirm the app-level definition and its single caller, Read src/flask/views.py in full to establish that one of the four apparent definitions is inside a docstring, and that the real View/MethodView definitions are both invoked polymorphically from the same two lines in as_view()'s generated closure; also identified that several hits (app.py:266-267,977,995,1600) belong to the differently-named full_dispatch_request method, and that test/type-check files only define, never call, dispatch_request overrides.",
+   "stratum": "ambiguous",
+   "target_name": "dispatch_request",
+   "target_definitions": 4,
+   "corpus_size": 497,
+   "caller_set": [
+    "src/flask/app.py:1019",
+    "src/flask/views.py:110",
+    "src/flask/views.py:116"
+   ],
+   "decoys": [
+    "src/flask/views.py:30 (inside the View class docstring code-block example \u2014 not real code, not a 4th real definition)",
+    "src/flask/views.py:17 (docstring prose mentioning dispatch_request)",
+    "src/flask/views.py:20 (docstring prose mentioning dispatch_request)",
+    "src/flask/views.py:94 (docstring prose mentioning dispatch_request)",
+    "src/flask/app.py:266 (cls.dispatch_request collected into a tuple for a deprecation-signature check in __init_subclass__ \u2014 a reference, not a call)",
+    "src/flask/app.py:267 (cls.full_dispatch_request \u2014 a different method, name only shares a substring)",
+    "src/flask/app.py:977 (docstring mention of :meth:`full_dispatch_request` \u2014 different method)",
+    "src/flask/app.py:995 (def full_dispatch_request \u2014 different method's definition)",
+    "src/flask/app.py:1600 (self.full_dispatch_request(ctx) \u2014 call to the different method)",
+    "tests/test_async.py:25 (def dispatch_request override in a test fixture class \u2014 a definition, not a call)",
+    "tests/test_views.py:21,92,109,128,144,188,266 (def dispatch_request overrides in test fixture classes \u2014 definitions, not calls)",
+    "tests/type_check/typing_route.py:105 (def dispatch_request in a typing fixture \u2014 a definition, not a call)"
+   ],
+   "why_this_is_hard": "dispatch_request is defined four times (one of which is actually just docstring prose) across two entirely unrelated class hierarchies (Flask's core dispatcher vs. the View/MethodView class-based-views feature), and the name is also a literal substring of the unrelated full_dispatch_request method, which itself has a definition, a docstring mention, and a real call. Correctly answering requires separating these into the right buckets and recognizing that the View-hierarchy calls are polymorphic (dispatch through self, resolved at runtime to whichever subclass is instantiated) rather than pointing at one line of code."
+  },
+  {
+   "id": "FL4",
+   "repo": "flask",
+   "title": "wrapper closures need an extra required argument",
+   "text": "The decorator helpers in this codebase each build a small inner function called wrapper before returning it as the decorated callable. I want to give wrapper an additional required parameter everywhere it's used. Walk me through every place in the codebase that calls wrapper() so I know what needs to change.",
+   "gold": "There is no genuine call site of a function literally named `wrapper` anywhere outside its own defining scope. `wrapper` is independently reused as the name of a private nested closure inside four unrelated decorator factories: remove_ctx (src/flask/app.py:87) and add_ctx (src/flask/app.py:99), copy_current_request_context (src/flask/ctx.py:201), and record_once (src/flask/sansio/blueprints.py:240, a Blueprint method). In every one of the four cases, the only thing that happens to the name `wrapper` after its `def` line is that it is passed once, on the very next few lines, to `functools.update_wrapper(wrapper, ...)` \u2014 a reference, not an invocation \u2014 and the object that `update_wrapper` returns (still the same function, just with its `__name__`/`__doc__`/etc. copied from the original) is what actually gets called later, under whatever name it ends up bound to (e.g. as the decorator applied to Flask.handle_http_exception, or as the return value of copy_current_request_context(f)) \u2014 never as `wrapper`. So there is nothing to walk through: adding a required parameter to any of these four wrapper closures is a self-contained edit to that one function body plus its one update_wrapper line; none of them has an external caller that invokes it by the name `wrapper`.",
+   "gold_markers": [
+    "update_wrapper",
+    "remove_ctx",
+    "add_ctx",
+    "copy_current_request_context",
+    "record_once",
+    "no call sites",
+    "reference, not a call"
+   ],
+   "primary_paths": [
+    "src/flask/app.py",
+    "src/flask/ctx.py",
+    "src/flask/sansio/blueprints.py"
+   ],
+   "verified_how": "grep -rn '\\\\bwrapper\\\\b' --include='*.py' across the repo (12 hits total); Read the surrounding function in each of src/flask/app.py, src/flask/ctx.py, and src/flask/sansio/blueprints.py to confirm each `wrapper` is a locally-scoped closure passed exactly once to functools.update_wrapper() and then returned/reassigned, never invoked by the literal name `wrapper` anywhere else in the repo; the remaining hits in src/flask/helpers.py are unrelated prose ('wrapper' used as an English word in docstrings/comments).",
+   "stratum": "ambiguous",
+   "target_name": "wrapper",
+   "target_definitions": 4,
+   "corpus_size": 497,
+   "caller_set": [],
+   "decoys": [
+    "src/flask/app.py:93 (update_wrapper(wrapper, f) \u2014 a reference passed as an argument, not a call to wrapper)",
+    "src/flask/app.py:107 (update_wrapper(wrapper, f) \u2014 a reference, not a call)",
+    "src/flask/ctx.py:206 (update_wrapper(wrapper, f) \u2014 a reference, not a call)",
+    "src/flask/sansio/blueprints.py:244 (update_wrapper(wrapper, func) \u2014 a reference, not a call)",
+    "src/flask/helpers.py:99,441,487,577 (the word 'wrapper' used in prose/docstrings, unrelated to any of the four closures)"
+   ],
+   "unusable_reason": "wrapper is a name reused independently for private nested closures inside four unrelated decorator factories (remove_ctx, add_ctx, copy_current_request_context, record_once). None of the four is ever invoked by the literal name `wrapper` outside its own defining function \u2014 each is passed once to functools.update_wrapper() and returned/reassigned under an entirely different name, and it is that other name which callers actually use. There is no real 'call site' set to trace, so a blast-radius question about wrapper's callers has an empty, degenerate answer rather than a meaningful list to walk through.",
+   "why_this_is_hard": "The generic decorator idiom (def wrapper(...): ...; return update_wrapper(wrapper, f)) shows up four separate times with no relationship between the instances, and grepping the bare word 'wrapper' also pulls in unrelated English-language uses of the word in docstrings elsewhere in the codebase. The correct answer is to recognize that none of the four closures has any real external caller under that name at all."
+  },
+  {
+   "id": "CE1",
+   "repo": "celery",
+   "title": "Add a reason code to in_sighandler() before touching the shutdown path",
+   "text": "I want to change celery/utils/log.py's `in_sighandler()` context manager so it takes a required `reason` argument (a short string describing why we're entering signal-handler mode), instead of taking no arguments. Before I touch its signature, walk me through every place in the codebase that actually enters this context manager with a `with in_sighandler():` (or equivalent) call so I know exactly which call sites need a `reason=...` added. Please don't just grep the bare word \"in_sighandler\" and hand me the list -- I know there's at least one other, unrelated thing in the worker module that happens to share this name as a plain boolean flag, and I don't want to touch that by mistake. Give me the real call sites only, with file and line.",
+   "gold": "The four genuine call sites are celery/apps/worker.py:302, 497, 507, and 520 -- each a `with in_sighandler():` block inside a signal-handler installer (the request-shutdown handler, the cry handler, the rdb handler, and the HUP-not-supported handler).",
+   "gold_markers": [
+    "celery/apps/worker.py:302",
+    "celery/apps/worker.py:497",
+    "celery/apps/worker.py:507",
+    "celery/apps/worker.py:520"
+   ],
+   "primary_paths": [
+    "celery/utils/log.py",
+    "celery/apps/worker.py"
+   ],
+   "verified_how": "grep -rn 'in_sighandler' across all non-test .py files in the repo; read celery/utils/log.py to confirm the sole @contextmanager definition is at line 63 (with a companion set_in_sighandler(value) setter and a module-level _in_sighandler flag); read every hit in celery/apps/worker.py to confirm each is a literal `with in_sighandler():` invocation of that same context manager, versus the import line and the one direct set_in_sighandler(True) call; read celery/worker/worker.py to confirm its four occurrences are an unrelated boolean keyword parameter named in_sighandler on WorkController.stop() and WorkController.terminate().",
+   "caller_set": [
+    "celery/apps/worker.py:302",
+    "celery/apps/worker.py:497",
+    "celery/apps/worker.py:507",
+    "celery/apps/worker.py:520"
+   ],
+   "decoys": [
+    "celery/apps/worker.py:27 (import statement, not a call)",
+    "celery/apps/worker.py:480 (calls set_in_sighandler(True), a different function, not the context manager)",
+    "celery/worker/worker.py:244 (in_sighandler is a bool keyword parameter of WorkController.stop, unrelated symbol)",
+    "celery/worker/worker.py:250 (reads that local parameter, not a call to the context manager)",
+    "celery/worker/worker.py:254 (in_sighandler is a bool keyword parameter of WorkController.terminate, unrelated symbol)",
+    "celery/worker/worker.py:258 (reads that local parameter, not a call to the context manager)"
+   ],
+   "stratum": "unique",
+   "target_name": "in_sighandler",
+   "target_definitions": 1,
+   "corpus_size": 3601,
+   "why_this_is_hard": "The identical name in_sighandler also exists as an ordinary boolean keyword argument on WorkController.stop()/terminate() in a completely different module, and the module that genuinely uses the context manager sets the underlying flag directly (bypassing the context manager) in one of its handlers -- so a bare-name search over- or under-counts real call sites unless each hit is read in context."
+  },
+  {
+   "id": "CE2",
+   "repo": "celery",
+   "title": "Turn Celery.loader into a method instead of a cached property",
+   "text": "The `loader` cached_property on the Celery app class (celery/app/base.py) currently just does `get_loader_cls(self.loader_cls)(app=self)` with no arguments. I want to convert it into a regular method that requires an explicit `strict` boolean argument, so every place in the codebase that currently reads `app.loader` (or `self.loader`, `self.app.loader`, `current_app.loader`, etc.) as a bare attribute will need to become a call with that argument instead. Before I make the change, give me a complete list of every place in the source that actually reads this property on a Celery application instance, so I can convert each one to a call. I don't want the list polluted with unrelated things like the loader_cls config attribute or the loader classes themselves -- just genuine reads of the app's `loader` property.",
+   "gold": "celery/app/base.py:1587 defines the sole `loader` cached_property on the Celery class; it is read as `app.loader` / `self.loader` / `self.app.loader` / `self._app.loader` / `current_app.loader` in 28 places across celery/app/, celery/bin/, celery/contrib/, celery/fixups/, celery/concurrency/, celery/worker/, and celery/apps/.",
+   "gold_markers": [
+    "celery/app/base.py:724",
+    "celery/app/base.py:747",
+    "celery/app/base.py:835",
+    "celery/app/base.py:1227",
+    "celery/app/base.py:1254",
+    "celery/app/base.py:1257",
+    "celery/app/trace.py:379",
+    "celery/app/backends.py:45",
+    "celery/app/utils.py:374",
+    "celery/bin/shell.py:138",
+    "celery/bin/celery.py:171",
+    "celery/contrib/pytest.py:99",
+    "celery/contrib/pytest.py:206",
+    "celery/fixups/django.py:82",
+    "celery/concurrency/prefork.py:56",
+    "celery/concurrency/prefork.py:57",
+    "celery/concurrency/prefork.py:78",
+    "celery/worker/worker.py:94",
+    "celery/worker/worker.py:158",
+    "celery/worker/worker.py:189",
+    "celery/worker/worker.py:284",
+    "celery/worker/worker.py:291",
+    "celery/worker/request.py:399",
+    "celery/worker/consumer/consumer.py:717",
+    "celery/apps/beat.py:132",
+    "celery/apps/beat.py:142",
+    "celery/apps/worker.py:216",
+    "celery/apps/worker.py:217"
+   ],
+   "primary_paths": [
+    "celery/app/base.py"
+   ],
+   "verified_how": "grep -rn '\\.loader\\b|def loader|_loader\\b' across all non-test .py files; confirmed celery/app/base.py:1587 (@cached_property def loader) is the only definition named exactly `loader` anywhere in the repo (checked with grep -rn 'def loader(' and 'def _loader('); read every hit's surrounding lines to confirm the receiver is a Celery app instance (self, app, self.app, self._app, current_app, or a pytest app fixture) rather than something else, and excluded the separately-defined loader_cls attribute, _get_default_loader/get_loader_cls helpers, and the AppLoader/BaseLoader/Loader classes.",
+   "caller_set": [
+    "celery/app/base.py:724",
+    "celery/app/base.py:747",
+    "celery/app/base.py:835",
+    "celery/app/base.py:1227",
+    "celery/app/base.py:1254",
+    "celery/app/base.py:1257",
+    "celery/app/trace.py:379",
+    "celery/app/backends.py:45",
+    "celery/app/utils.py:374",
+    "celery/bin/shell.py:138",
+    "celery/bin/celery.py:171",
+    "celery/contrib/pytest.py:99",
+    "celery/contrib/pytest.py:206",
+    "celery/fixups/django.py:82",
+    "celery/concurrency/prefork.py:56",
+    "celery/concurrency/prefork.py:57",
+    "celery/concurrency/prefork.py:78",
+    "celery/worker/worker.py:94",
+    "celery/worker/worker.py:158",
+    "celery/worker/worker.py:189",
+    "celery/worker/worker.py:284",
+    "celery/worker/worker.py:291",
+    "celery/worker/request.py:399",
+    "celery/worker/consumer/consumer.py:717",
+    "celery/apps/beat.py:132",
+    "celery/apps/beat.py:142",
+    "celery/apps/worker.py:216",
+    "celery/apps/worker.py:217"
+   ],
+   "decoys": [
+    "celery/app/base.py:357 (self.loader_cls assignment, a different attribute)",
+    "celery/app/base.py:436 (_get_default_loader method, a different name)",
+    "celery/app/base.py:1411 (self.loader_cls read, a different attribute)",
+    "celery/app/base.py:1426 (self.loader_cls read, a different attribute)",
+    "celery/fixups/django.py:55 (app.loader_cls string check, a different attribute)",
+    "celery/loaders/__init__.py:16 (get_loader_cls function, a different name)",
+    "celery/loaders/app.py:7 (class AppLoader definition, not this property)",
+    "celery/loaders/base.py:33 (class BaseLoader definition, not this property)",
+    "celery/loaders/default.py:19 (class Loader definition, not this property)"
+   ],
+   "stratum": "unique",
+   "target_name": "loader",
+   "target_definitions": 1,
+   "corpus_size": 3601,
+   "why_this_is_hard": "Because it's a property, every genuine use is a bare attribute access (`app.loader`) with no parentheses, so a search for calls like `loader(` misses nearly all of them, while a bare search for the word `loader` also pulls in the unrelated `loader_cls` config attribute, the `_get_default_loader`/`get_loader_cls` helper functions, and the `AppLoader`/`BaseLoader`/`Loader` classes that the property instantiates -- all of which sit right next to the real usages in the same files."
+  },
+  {
+   "id": "CE3",
+   "repo": "celery",
+   "title": "Add a required strict flag to the --autoscale CLI value parser",
+   "text": "In celery/bin/worker.py there's an `Autoscale` click parameter type whose `convert(self, value, param, ctx)` method turns the raw `--autoscale` string into a `(max, min)` tuple. I want to add a required `strict` argument to that convert method so it can reject ambiguous input instead of silently falling back. Before I do, walk me through every place in the codebase that calls this particular convert method so I know what has to be updated to pass the new argument. There are several other classes in the CLI code with their own same-named convert() method for other options, so please make sure whatever you point me to is actually a call into this Autoscale one and not one of the others.",
+   "gold": "There is no in-repo call site for Autoscale.convert (celery/bin/worker.py:80). It is a click.ParamType override invoked polymorphically by click's own option-parsing internals when the AUTOSCALE type object (instantiated at celery/bin/worker.py:103) is used as `type=AUTOSCALE` on the --autoscale click.option (celery/bin/worker.py:286) -- click calls `.convert()` on the type object itself, not through any name the repo's source calls directly.",
+   "gold_markers": [],
+   "primary_paths": [
+    "celery/bin/worker.py",
+    "celery/bin/base.py"
+   ],
+   "verified_how": "grep -rn 'def convert\\(' found 10 definitions across celery/bin/worker.py (4) and celery/bin/base.py (6); grep -rn 'convert\\(' found only 4 call-shaped hits total: two `super().convert(...)` delegations (inside WorkersPool.convert and LogLevel.convert) and two unrelated hits in celery/app/utils.py where `convert` is a local parameter name defaulting to a dict.get method; read each of the 10 definitions to record its owning class; read the two super().convert() sites and confirmed WorkersPool/LogLevel both subclass click.Choice, so those calls resolve to click's own library code, not to any of the 10 celery-defined convert() methods, and specifically not to Autoscale.convert; grepped for AUTOSCALE and confirmed the only Autoscale() instance is referenced solely via `type=AUTOSCALE` in a click.option decorator.",
+   "caller_set": [],
+   "decoys": [
+    "celery/bin/worker.py:27 (CeleryBeat.convert -- different class)",
+    "celery/bin/worker.py:44 (WorkersPool.convert -- different class)",
+    "celery/bin/worker.py:71 (Hostname.convert -- different class)",
+    "celery/bin/base.py:235 (CommaSeparatedList.convert -- different class)",
+    "celery/bin/base.py:244 (JsonArray.convert -- different class)",
+    "celery/bin/base.py:264 (JsonObject.convert -- different class)",
+    "celery/bin/base.py:284 (ISO8601DateTime.convert -- different class)",
+    "celery/bin/base.py:296 (ISO8601DateTimeOrFloat.convert -- different class)",
+    "celery/bin/base.py:315 (LogLevel.convert -- different class)",
+    "celery/bin/worker.py:50 (WorkersPool.convert calling super().convert(), i.e. click.Choice.convert, not Autoscale.convert)",
+    "celery/bin/base.py:320 (LogLevel.convert calling super().convert(), i.e. click.Choice.convert, not Autoscale.convert)",
+    "celery/app/utils.py:213 (local parameter named convert, a dict.get default -- unrelated function)",
+    "celery/app/utils.py:217 (same pattern -- unrelated function)"
+   ],
+   "stratum": "ambiguous",
+   "target_name": "convert",
+   "target_definitions": 10,
+   "corpus_size": 3601,
+   "unusable_reason": "Autoscale.convert (and every other click.ParamType.convert override in this file) is only ever invoked by the click library's internal option-parsing machinery via polymorphic dispatch on the type object; there is no line anywhere in celery's own source that calls it by name, so there is no traceable in-repo caller_set to walk through -- the correct answer is that the blast radius from source alone is empty.",
+   "why_this_is_hard": "Ten unrelated classes across two files each define their own convert(self, value, param, ctx) method as part of the same click.ParamType idiom, two of them delegate to their own superclass via an identically-shaped super().convert() call that only looks like it might reach a sibling definition, and a completely unrelated function elsewhere in the codebase happens to use convert as a local variable name -- so every text match for this name is a decoy, and recognizing that requires reading the class hierarchy of each hit rather than just counting occurrences."
+  },
+  {
+   "id": "CE4",
+   "repo": "celery",
+   "title": "Pass the consumer instance into WorkController's event-loop registration hook",
+   "text": "celery/worker/worker.py's WorkController class has a `register_with_event_loop(self, hub)` method that fires when the async event loop starts up. I want to add a required second argument (the active Consumer instance) to that method's signature. Before I touch it, walk me through every place in the codebase that actually calls WorkController's register_with_event_loop so I can update the call site(s). I'm aware several other unrelated classes in the worker/pool code define their own method with this exact same name for their own purposes -- I only want the callers that reach WorkController's version specifically.",
+   "gold": "The only genuine caller of WorkController.register_with_event_loop (celery/worker/worker.py:214) is celery/worker/loops.py:62 -- `obj.controller.register_with_event_loop(hub)` inside the asynloop() event loop, where obj is the Consumer (per its controller=... constructor parameter, set from celery/worker/consumer/consumer.py:198) and obj.controller is the WorkController. The synloop() loop in the same file never calls it.",
+   "gold_markers": [
+    "celery/worker/loops.py:62"
+   ],
+   "primary_paths": [
+    "celery/worker/worker.py",
+    "celery/worker/loops.py"
+   ],
+   "verified_how": "grep -rn 'register_with_event_loop' across all non-test .py files found 8 'def register_with_event_loop' definitions and about a dozen call-shaped hits; read all 8 definitions to record their owning class (WorkController, Consumer, the Pool bootstep, BasePool, TaskPool/prefork, AsynPool, ResultHandler, Autoscaler); read celery/worker/loops.py to confirm obj is the Consumer (via obj.create_task_handler()/obj.on_ready()) and that Consumer.__init__ (celery/worker/consumer/consumer.py:194-198) assigns self.controller from its controller= argument, which is the WorkController -- confirming loops.py:62 is a genuine call into WorkController.register_with_event_loop; read synloop() in the same file and confirmed it has no such call; read each remaining hit to confirm it resolves to one of the other 7 definitions or to an unrelated library object (kombu's transport.register_with_event_loop).",
+   "caller_set": [
+    "celery/worker/loops.py:62"
+   ],
+   "decoys": [
+    "celery/concurrency/base.py:94 (BasePool.register_with_event_loop -- different class)",
+    "celery/concurrency/prefork.py:135 (TaskPool.register_with_event_loop -- different class)",
+    "celery/worker/consumer/consumer.py:493 (Consumer.register_with_event_loop -- different class)",
+    "celery/worker/components.py:177 (Pool bootstep register_with_event_loop -- different class)",
+    "celery/concurrency/asynpool.py:344 (ResultHandler.register_with_event_loop -- different class)",
+    "celery/concurrency/asynpool.py:522 (AsynPool.register_with_event_loop -- different class)",
+    "celery/worker/autoscale.py:50 (Autoscaler.register_with_event_loop -- different class)",
+    "celery/worker/loops.py:63 (obj.register_with_event_loop(hub) calls Consumer's own method, not WorkController's)",
+    "celery/concurrency/prefork.py:137 (self._pool.register_with_event_loop -- calls the underlying pool implementation, not WorkController)",
+    "celery/concurrency/asynpool.py:524 (self._result_handler.register_with_event_loop(hub) -- calls ResultHandler's implementation)",
+    "celery/worker/components.py:178 (w.pool.register_with_event_loop(hub) -- calls whichever concurrency pool class is active, not WorkController)",
+    "celery/worker/consumer/consumer.py:557 (conn.transport.register_with_event_loop(...) -- a kombu transport method, unrelated)",
+    "celery/worker/worker.py:216 (WorkController's own blueprint.send_all('register_with_event_loop', ...) dispatch out to its bootsteps -- not a call INTO WorkController.register_with_event_loop)",
+    "celery/worker/consumer/consumer.py:495 (Consumer's own blueprint.send_all dispatch out to its bootsteps)"
+   ],
+   "stratum": "ambiguous",
+   "target_name": "register_with_event_loop",
+   "target_definitions": 8,
+   "corpus_size": 3601,
+   "why_this_is_hard": "Eight different classes spanning celery/worker/, celery/worker/consumer/, and celery/concurrency/ all define a method with this exact name and (self, hub)-shaped signature as part of one event-loop-registration hook pattern, and several of them call into each other by the same name (WorkController dispatches to its bootsteps by string via blueprint.send_all, the Pool bootstep calls into whichever concurrency pool is active, AsynPool calls its own ResultHandler) -- so pinning a given call site to WorkController's specific definition requires tracing the receiver (obj.controller) back to its constructor rather than pattern-matching the method name."
+  },
+  {
+   "id": "DJ1",
+   "repo": "django",
+   "title": "Add a required fallback argument to the OGR topology predicate wrapper",
+   "text": "In django/contrib/gis/gdal/prototypes/geom.py we have a small factory, topology_func, that wraps the raw OGR topology predicates (contains, crosses, disjoint, equals, intersects, overlaps, touches, within) so each one returns a Python bool instead of a raw ctypes int. I want to change its signature so it takes a required second argument - a default value to return if the underlying C call errors out - instead of always assuming False/bool(result). Before I touch it, walk me through every place in the codebase that calls topology_func so I know exactly which call sites need to be updated to pass the new argument, and what each one currently looks like.",
+   "gold": "topology_func is defined once, in django/contrib/gis/gdal/prototypes/geom.py:32. It has exactly 8 call sites, all in the same file, each assigning the wrapped predicate to a module-level name: geom.py:151 (ogr_contains = topology_func(lgdal.OGR_G_Contains)), :152 (ogr_crosses), :153 (ogr_disjoint), :154 (ogr_equals), :155 (ogr_intersects), :156 (ogr_overlaps), :157 (ogr_touches), :158 (ogr_within). Every one of them would need a second argument added. There are no other callers anywhere else in the repo (tests, other gdal/geos modules, etc. never call topology_func directly - they use the resulting ogr_* names instead).",
+   "gold_markers": [
+    "topology_func",
+    "geom.py:32",
+    "ogr_contains",
+    "ogr_crosses",
+    "ogr_disjoint",
+    "ogr_equals",
+    "ogr_intersects",
+    "ogr_overlaps",
+    "ogr_touches",
+    "ogr_within"
+   ],
+   "primary_paths": [
+    "django/contrib/gis/gdal/prototypes/geom.py"
+   ],
+   "verified_how": "grep -rn 'topology_func' across the full repo (source, tests, docs) returned hits only inside django/contrib/gis/gdal/prototypes/geom.py: the def at line 32 and 8 assignment call sites at lines 151-158. Each of the 8 was read in context to confirm it is a direct call topology_func(lgdal.OGR_G_*) and not a docstring/string/import. No other file references the name at all, so the caller set is exhaustive and there is no ambiguity about which definition owns it.",
+   "stratum": "unique",
+   "corpus_size": 11010,
+   "target_definitions": 1,
+   "target_name": "topology_func",
+   "caller_set": [
+    "django/contrib/gis/gdal/prototypes/geom.py:151",
+    "django/contrib/gis/gdal/prototypes/geom.py:152",
+    "django/contrib/gis/gdal/prototypes/geom.py:153",
+    "django/contrib/gis/gdal/prototypes/geom.py:154",
+    "django/contrib/gis/gdal/prototypes/geom.py:155",
+    "django/contrib/gis/gdal/prototypes/geom.py:156",
+    "django/contrib/gis/gdal/prototypes/geom.py:157",
+    "django/contrib/gis/gdal/prototypes/geom.py:158"
+   ],
+   "decoys": [
+    "django/contrib/gis/gdal/prototypes/geom.py:32 (the def line itself, not a call)"
+   ],
+   "why_this_is_hard": "All 8 calls are compressed into 8 consecutive, visually-similar one-liners in the same block, so an agent has to actually enumerate each line rather than eyeballing 'one call, done'; missing any of the 8 or double-counting the def line as a call are the likely slip-ups."
+  },
+  {
+   "id": "DJ2",
+   "repo": "django",
+   "title": "Make user_passes_test require an explicit raise_exception flag",
+   "text": "django/contrib/auth/decorators.py has user_passes_test(test_func, login_url=None, redirect_field_name=REDIRECT_FIELD_NAME), the decorator that redirects to login when a user fails a check. I want to give it a required raise_exception argument (no default) so every caller has to explicitly decide whether a failed check redirects or raises PermissionDenied, instead of silently always redirecting. Before I start, walk me through every place in the codebase - including anywhere it's used internally to build other decorators, and in the test suite - that calls user_passes_test, so I can see exactly which call sites need the new argument added.",
+   "gold": "user_passes_test is defined once, at django/contrib/auth/decorators.py:13. Production call sites: decorators.py:81 (inside login_required, building actual_decorator), decorators.py:136 (inside permission_required, return user_passes_test(check_perms, login_url=login_url)(view_func)), and django/contrib/admin/views/decorators.py:12 (inside staff_member_required). Test call sites: tests/auth_tests/test_decorators.py:344, :351, :360, :377, :396, :413; tests/decorators/tests.py:65, :106, :107; tests/urlpatterns_reverse/views.py:50. That is 13 genuine calls total; every one would need a raise_exception argument added to keep working.",
+   "gold_markers": [
+    "user_passes_test",
+    "decorators.py:13",
+    "login_required",
+    "permission_required",
+    "staff_member_required",
+    "actual_decorator"
+   ],
+   "primary_paths": [
+    "django/contrib/auth/decorators.py",
+    "django/contrib/admin/views/decorators.py"
+   ],
+   "verified_how": "grep -rn 'user_passes_test' across the whole repo (excluding docs/) returned 21 lines; each was read in context. Confirmed a single definition (decorators.py:13) and classified every remaining hit as either a genuine call (13, listed above), an import statement, a definition line, or a comment referencing the name (tests/decorators/tests.py:64).",
+   "stratum": "unique",
+   "corpus_size": 11010,
+   "target_definitions": 1,
+   "target_name": "user_passes_test",
+   "caller_set": [
+    "django/contrib/auth/decorators.py:81",
+    "django/contrib/auth/decorators.py:136",
+    "django/contrib/admin/views/decorators.py:12",
+    "tests/auth_tests/test_decorators.py:344",
+    "tests/auth_tests/test_decorators.py:351",
+    "tests/auth_tests/test_decorators.py:360",
+    "tests/auth_tests/test_decorators.py:377",
+    "tests/auth_tests/test_decorators.py:396",
+    "tests/auth_tests/test_decorators.py:413",
+    "tests/decorators/tests.py:65",
+    "tests/decorators/tests.py:106",
+    "tests/decorators/tests.py:107",
+    "tests/urlpatterns_reverse/views.py:50"
+   ],
+   "decoys": [
+    "django/contrib/auth/decorators.py:13 (the def line itself, not a call)",
+    "tests/auth_tests/test_decorators.py:9 (import statement)",
+    "tests/decorators/tests.py:10 (import statement)",
+    "tests/urlpatterns_reverse/views.py:3 (import statement)",
+    "django/contrib/admin/views/decorators.py:2 (import statement)",
+    "tests/decorators/tests.py:64 (comment mentioning the name, not a call)"
+   ],
+   "why_this_is_hard": "The function is called both directly (in tests) and indirectly through two other decorators built on top of it (login_required, permission_required) plus a third in a different module (staff_member_required) - an agent has to follow that it's a single shared implementation rather than three separate helpers, and not stop after finding the two calls inside decorators.py itself."
+  },
+  {
+   "id": "DJ3",
+   "repo": "django",
+   "title": "Require an explicit locking flag on QuerySet.aexists()",
+   "text": "QuerySet.aexists() in django/db/models/query.py currently just does `return await sync_to_async(self.exists)()`. I want to add a required argument to it - something like `for_update` - so every caller has to explicitly say whether the existence check should take a row lock, rather than it always delegating straight to the sync exists() with no options. This is specifically the QuerySet method (not the similarly-named aexists() on the session store classes, which is a separate, unrelated API). Walk me through every genuine call site of QuerySet.aexists() in our codebase so I know what needs to change, and flag anywhere the name aexists shows up that is NOT actually this QuerySet method, since I don't want to touch those.",
+   "gold": "QuerySet.aexists is defined once, at django/db/models/query.py:1505 (`async def aexists(self): return await sync_to_async(self.exists)()`). Its genuine call sites are: django/contrib/sessions/backends/db.py:66 (`return await self.model.objects.filter(session_key=session_key).aexists()` - calls it on a QuerySet returned by filter()), tests/async/test_async_queryset.py:222 and :225 (`await SimpleModel.objects.filter(...).aexists()`). That is 3 genuine calls. Everything else named aexists in the repo belongs to a completely different, unrelated hierarchy: SessionBase and its 6 subclasses (signed_cookies.py:59, db.py:65, cached_db.py:81, cache.py:120, file.py:192, base.py:463) each define their own async aexists(self, session_key) for checking whether a session exists in storage, and calls to those (cached_db.py:85 via super(), base.py:207 via self, and the six tests/sessions_tests/tests.py session.aexists(...) calls) must NOT be touched for this change.",
+   "gold_markers": [
+    "query.py:1505",
+    "async def aexists",
+    "sync_to_async(self.exists)",
+    "QuerySet"
+   ],
+   "primary_paths": [
+    "django/db/models/query.py",
+    "django/contrib/sessions/backends/db.py"
+   ],
+   "verified_how": "grep -rn '\\baexists\\b' across the repo (excluding docs/) found 7 definitions (query.py:1505 plus 6 SessionBase-family classes) and every use site. Read each hit in context: db.py:66's `.filter(...).aexists()` and the two test_async_queryset.py calls resolve to QuerySet.aexists via the QuerySet returned by .filter()/.objects; confirmed via the class hierarchy (cached_db.SessionStore(DBStore) imports db.py's SessionStore as DBStore) that cached_db.py:85's super().aexists() and base.py:207's self.aexists() resolve within the SessionBase family, not to QuerySet. tests/basic/tests.py:811 is a bare string literal in a list of method names, not a call.",
+   "stratum": "ambiguous",
+   "corpus_size": 11010,
+   "target_definitions": 7,
+   "target_name": "aexists",
+   "caller_set": [
+    "django/contrib/sessions/backends/db.py:66",
+    "tests/async/test_async_queryset.py:222",
+    "tests/async/test_async_queryset.py:225"
+   ],
+   "decoys": [
+    "django/db/models/query.py:1505 (the def line itself, not a call)",
+    "django/contrib/sessions/backends/signed_cookies.py:59 (different aexists, SessionStore)",
+    "django/contrib/sessions/backends/db.py:65 (different aexists, SessionStore)",
+    "django/contrib/sessions/backends/cached_db.py:81 (different aexists, SessionStore)",
+    "django/contrib/sessions/backends/cache.py:120 (different aexists, SessionStore)",
+    "django/contrib/sessions/backends/file.py:192 (different aexists, SessionStore)",
+    "django/contrib/sessions/backends/base.py:463 (different aexists, SessionBase base implementation)",
+    "django/contrib/sessions/backends/cached_db.py:85 (calls db.py's session aexists via super(), not QuerySet's)",
+    "django/contrib/sessions/backends/base.py:207 (calls the SessionBase-family aexists via self, not QuerySet's)",
+    "tests/sessions_tests/tests.py:244 (session aexists, not QuerySet's)",
+    "tests/sessions_tests/tests.py:254 (session aexists, not QuerySet's)",
+    "tests/sessions_tests/tests.py:272 (session aexists, not QuerySet's)",
+    "tests/sessions_tests/tests.py:295 (session aexists, not QuerySet's)",
+    "tests/sessions_tests/tests.py:614 (session aexists, not QuerySet's)",
+    "tests/sessions_tests/tests.py:1400 (session aexists, not QuerySet's)",
+    "tests/basic/tests.py:811 (string literal in a list of method names, not a call)"
+   ],
+   "why_this_is_hard": "The name aexists is defined 7 times across two entirely unrelated class families (QuerySet vs. the 6 session-store backends), all with the same async, no-required-args signature shape, so an agent must trace which concrete object each call site's receiver actually is (a QuerySet from .filter()/.objects vs. a SessionStore/self) rather than pattern-matching on the method name alone."
+  },
+  {
+   "id": "DJ4",
+   "repo": "django",
+   "title": "Require an explicit connect_timeout argument on the PostgreSQL backend's get_new_connection",
+   "text": "django/db/backends/postgresql/base.py has get_new_connection(self, conn_params) on the PostgreSQL DatabaseWrapper - the method that actually opens the DB-API connection (currently it just calls the psycopg connect() with conn_params and does some session setup). I want to add a required connect_timeout argument to it instead of pulling timeout-ish settings only from conn_params. This is specifically the PostgreSQL backend's implementation - other backends (sqlite3, mysql, oracle, and the base wrapper) define their own same-named get_new_connection that I'm not changing. Walk me through every genuine call site that ends up invoking this particular PostgreSQL implementation - direct calls and anything that reaches it polymorphically through inheritance - so I know what has to be updated.",
+   "gold": "The PostgreSQL backend's get_new_connection is defined at django/db/backends/postgresql/base.py:318. It is invoked from two places: django/contrib/gis/db/backends/postgis/base.py:126 (`connection = super().get_new_connection(conn_params)` - postgis.DatabaseWrapper subclasses postgresql.DatabaseWrapper directly via `from django.db.backends.postgresql.base import DatabaseWrapper as PsycopgDatabaseWrapper`, so super() here resolves straight to the postgresql implementation), and django/db/backends/base/base.py:256 (`self.connection = self.get_new_connection(conn_params)` inside BaseDatabaseWrapper.connect() - this is the single shared call site inherited by every backend, and it invokes the PostgreSQL override whenever self is a postgresql or postgis DatabaseWrapper instance). No other file calls get_new_connection anywhere in the repo (confirmed via full-repo search) - the other 5 definitions (oracle, sqlite3, mysql, the base abstract stub, and spatialite, which calls sqlite3's version via its own super()) are separate, unrelated implementations reached only for their own backend's instances.",
+   "gold_markers": [
+    "postgresql/base.py:318",
+    "get_new_connection",
+    "conn_params",
+    "PsycopgDatabaseWrapper",
+    "BaseDatabaseWrapper.connect"
+   ],
+   "primary_paths": [
+    "django/db/backends/postgresql/base.py",
+    "django/db/backends/base/base.py",
+    "django/contrib/gis/db/backends/postgis/base.py"
+   ],
+   "verified_how": "grep -rn 'get_new_connection' across the repo found 7 definitions (postgresql, oracle, sqlite3, mysql, base, postgis, and spatialite - spatialite not in the originally-supplied list, found by grepping 'def get_new_connection' directly) and only 3 real call expressions total in the entire codebase (no test calls it directly). Read each: base/base.py:256 is the sole call inside BaseDatabaseWrapper.connect(), inherited unmodified by every backend; postgis/base.py:126 and spatialite/base.py:41 both call super().get_new_connection(...), and their class headers (postgis.DatabaseWrapper(PsycopgDatabaseWrapper) importing postgresql's DatabaseWrapper, vs. spatialite.DatabaseWrapper(SQLiteDatabaseWrapper) importing sqlite3's) were read to confirm which parent implementation each super() call actually reaches.",
+   "stratum": "ambiguous",
+   "corpus_size": 11010,
+   "target_definitions": 7,
+   "target_name": "get_new_connection",
+   "caller_set": [
+    "django/contrib/gis/db/backends/postgis/base.py:126",
+    "django/db/backends/base/base.py:256"
+   ],
+   "decoys": [
+    "django/db/backends/postgresql/base.py:318 (the def line itself, not a call)",
+    "django/db/backends/oracle/base.py:301 (different backend's definition)",
+    "django/db/backends/sqlite3/base.py:204 (different backend's definition, called by spatialite not postgresql)",
+    "django/db/backends/mysql/base.py:254 (different backend's definition)",
+    "django/db/backends/base/base.py:215 (base abstract stub definition, not the target)",
+    "django/contrib/gis/db/backends/postgis/base.py:125 (postgis's own override definition line, not a call)",
+    "django/contrib/gis/db/backends/spatialite/base.py:40 (7th definition, different backend)",
+    "django/contrib/gis/db/backends/spatialite/base.py:41 (super() call that reaches sqlite3's version, not postgresql's)"
+   ],
+   "why_this_is_hard": "get_new_connection is overridden 7 times across the DB-backend class hierarchy with identical signatures, and the only call site inside the shared BaseDatabaseWrapper.connect() is polymorphic (self.get_new_connection), so an agent must read the class hierarchy (postgis subclasses postgresql, spatialite subclasses sqlite3) to work out which super()/self call actually reaches the PostgreSQL implementation versus a same-named sibling."
+  },
+  {
+   "id": "SA1",
+   "repo": "sqlalchemy",
+   "stratum": "unique",
+   "target_name": "CompileState",
+   "target_definitions": 1,
+   "corpus_size": 12830,
+   "title": "Add a required argument to CompileState.plugin_for()",
+   "text": "We're planning to extend how CompileState registers itself with the compiler. Currently, subclasses hook into the system with a decorator call like CompileState.plugin_for(<plugin_name>, <visit_name>) to register themselves against a (plugin, statement-type) pair. I want to add a required third argument to that decorator call so every registration has to declare something explicit up front, rather than relying on a default. Before I touch the decorator's signature, walk me through every place in the codebase that currently invokes CompileState.plugin_for(...), and tell me what plugin/visit-type pair each one is registering, so I know exactly what I need to update.",
+   "primary_paths": [
+    "lib/sqlalchemy/sql/base.py",
+    "lib/sqlalchemy/orm/bulk_persistence.py",
+    "lib/sqlalchemy/orm/context.py",
+    "lib/sqlalchemy/sql/dml.py",
+    "lib/sqlalchemy/sql/selectable.py"
+   ],
+   "repos_required": [
+    "sqlalchemy"
+   ],
+   "caller_set": [
+    "lib/sqlalchemy/orm/bulk_persistence.py:1198",
+    "lib/sqlalchemy/orm/bulk_persistence.py:1459",
+    "lib/sqlalchemy/orm/bulk_persistence.py:1944",
+    "lib/sqlalchemy/orm/context.py:773",
+    "lib/sqlalchemy/orm/context.py:1081",
+    "lib/sqlalchemy/orm/context.py:1088",
+    "lib/sqlalchemy/sql/dml.py:284",
+    "lib/sqlalchemy/sql/dml.py:355",
+    "lib/sqlalchemy/sql/dml.py:394",
+    "lib/sqlalchemy/sql/selectable.py:4605",
+    "lib/sqlalchemy/sql/selectable.py:4852"
+   ],
+   "decoys": [
+    "lib/sqlalchemy/sql/base.py:874 (_compile_state_factory = CompileState.create_for_statement \u2014 a different classmethod, not plugin_for)",
+    "lib/sqlalchemy/orm/session.py:2204 (CompileState._get_plugin_class_for_plugin(...) \u2014 a different classmethod)",
+    "lib/sqlalchemy/orm/session.py:89, lib/sqlalchemy/orm/context.py:55, lib/sqlalchemy/orm/bulk_persistence.py:51, lib/sqlalchemy/sql/compiler.py:96, lib/sqlalchemy/sql/selectable.py:81, lib/sqlalchemy/sql/dml.py:48 (plain imports of CompileState, not calls)",
+    "lib/sqlalchemy/sql/selectable.py:4606 class CompoundSelectState(CompileState): / lib/sqlalchemy/sql/selectable.py:4853 class SelectState(..., CompileState): / lib/sqlalchemy/sql/dml.py:123 class DMLState(CompileState): / lib/sqlalchemy/orm/context.py:233 class _AbstractORMCompileState(CompileState): (inheritance declarations, not calls to plugin_for)",
+    "lib/sqlalchemy/sql/base.py:731,736,740,743,746 (docstring prose mentioning CompileState)",
+    "Type[CompileState] / CompileState-typed annotations scattered through sql/base.py, sql/compiler.py, orm/context.py, orm/util.py, orm/interfaces.py, orm/strategy_options.py, orm/query.py, orm/strategies.py, orm/descriptor_props.py \u2014 all subclasses like _ORMCompileState, _BulkUDCompileState, _ORMFromStatementCompileState contain 'CompileState' as a substring but are separate, differently-named classes"
+   ],
+   "gold": "CompileState.plugin_for is defined exactly once, at lib/sqlalchemy/sql/base.py:825 inside the CompileState class (base.py:727). It is called as a class decorator at 11 sites: bulk_persistence.py:1198 (orm/insert), :1459 (orm/update), :1944 (orm/delete); context.py:773 (orm/orm_from_statement), :1081 (orm/compound_select), :1088 (orm/select); dml.py:284 (default/insert), :355 (default/update), :394 (default/delete); selectable.py:4605 (default/compound_select), :4852 (default/select). No other class defines a same-named plugin_for method, so all 11 hits belong to this one symbol; the difficulty is filtering these true calls out of the much larger set of CompileState imports, type annotations, and same-substring subclass names (_ORMCompileState, _BulkUDCompileState, etc.) that a naive scan for 'CompileState' also returns.",
+   "gold_markers": [
+    "lib/sqlalchemy/sql/base.py:727 class CompileState",
+    "lib/sqlalchemy/sql/base.py:825 def plugin_for",
+    "lib/sqlalchemy/orm/bulk_persistence.py:1198",
+    "lib/sqlalchemy/orm/bulk_persistence.py:1459",
+    "lib/sqlalchemy/orm/bulk_persistence.py:1944",
+    "lib/sqlalchemy/orm/context.py:773",
+    "lib/sqlalchemy/orm/context.py:1081",
+    "lib/sqlalchemy/orm/context.py:1088",
+    "lib/sqlalchemy/sql/dml.py:284",
+    "lib/sqlalchemy/sql/dml.py:355",
+    "lib/sqlalchemy/sql/dml.py:394",
+    "lib/sqlalchemy/sql/selectable.py:4605",
+    "lib/sqlalchemy/sql/selectable.py:4852"
+   ],
+   "verified_how": "grep -rn for '\\bCompileState\\b' and separately for 'CompileState\\.(create_for_statement|get_plugin_class|_get_plugin_class_for_plugin|plugin_for)\\b' across lib/, then read the CompileState class body (base.py:727-833) to enumerate its own methods, and read each hit in context to classify it as a genuine plugin_for call, a different classmethod call, an import, a subclass definition, or a type annotation.",
+   "why_this_is_hard": "CompileState is subclassed by many differently-named classes that all contain 'CompileState' as a substring (_ORMCompileState, _AbstractORMCompileState, _BulkUDCompileState, _ORMFromStatementCompileState, _ORMSelectCompileState, _AutoflushOnlyORMCompileState, _CompoundSelectCompileState), and the class itself is referenced in dozens of type annotations, imports, and docstrings across sql/base.py, sql/compiler.py, sql/selectable.py, sql/dml.py, and most of the orm/ package. Only 11 of those references are actual invocations of the base class's own plugin_for decorator; the rest must be excluded by reading each usage in context."
+  },
+  {
+   "id": "SA2",
+   "repo": "sqlalchemy",
+   "stratum": "unique",
+   "target_name": "common_parent",
+   "target_definitions": 1,
+   "corpus_size": 12830,
+   "title": "Change the return value of Mapper.common_parent()",
+   "text": "I want to change what Mapper.common_parent() gives back. Right now it just returns a bool telling you whether two mappers share the same base_mapper. I'm thinking of changing it to return the shared base mapper object itself (or None if there isn't one) instead of a plain boolean, so callers can use the result directly instead of re-deriving it. Before I make that change, can you find every place in the ORM code that calls Mapper.common_parent() today, and tell me exactly how each caller currently uses the return value (e.g. in an if-condition, negated with 'not', passed straight through as a return value)? I need to know what has to change at each site.",
+   "primary_paths": [
+    "lib/sqlalchemy/orm/mapper.py",
+    "lib/sqlalchemy/orm/util.py",
+    "lib/sqlalchemy/orm/context.py",
+    "lib/sqlalchemy/orm/relationships.py"
+   ],
+   "repos_required": [
+    "sqlalchemy"
+   ],
+   "caller_set": [
+    "lib/sqlalchemy/orm/util.py:2139",
+    "lib/sqlalchemy/orm/context.py:2319",
+    "lib/sqlalchemy/orm/context.py:3405",
+    "lib/sqlalchemy/orm/relationships.py:1683",
+    "lib/sqlalchemy/orm/relationships.py:2259",
+    "lib/sqlalchemy/orm/relationships.py:3267"
+   ],
+   "decoys": [],
+   "gold": "Mapper.common_parent (lib/sqlalchemy/orm/mapper.py:3326-3329, 'return self.base_mapper is other.base_mapper') is defined exactly once in the repo and has 6 call sites: util.py:2139 'return entity.common_parent(given)' (returned directly); context.py:2319 'not right_mapper.common_parent(prop.mapper)' (negated, feeds an if-raise); context.py:3405 'entity.common_parent(self.entity_zero)' (ANDed into a boolean return); relationships.py:1683 'if not other.mapper.common_parent(self.parent):' (negated, guards an ArgumentError); relationships.py:2259 'return self.mapper.common_parent(self.parent)' (returned directly, a memoized_property); relationships.py:3267 'not self.prop.parent.common_parent(pr.parent)' (negated, part of a compound boolean condition). No other function/method named common_parent exists in the repo.",
+   "gold_markers": [
+    "lib/sqlalchemy/orm/mapper.py:3326 def common_parent",
+    "lib/sqlalchemy/orm/util.py:2139",
+    "lib/sqlalchemy/orm/context.py:2319",
+    "lib/sqlalchemy/orm/context.py:3405",
+    "lib/sqlalchemy/orm/relationships.py:1683",
+    "lib/sqlalchemy/orm/relationships.py:2259",
+    "lib/sqlalchemy/orm/relationships.py:3267"
+   ],
+   "verified_how": "grep -rn 'common_parent' across lib/ confirmed a single 'def common_parent' and 6 non-def hits; read each hit's surrounding function to confirm the receiver (entity/right_mapper/other.mapper/self.mapper/self.prop.parent) is a Mapper and to characterize how the boolean return is consumed.",
+   "why_this_is_hard": "common_parent is invoked through several different attribute chains (entity.common_parent, right_mapper.common_parent, other.mapper.common_parent, self.mapper.common_parent, self.prop.parent.common_parent) rather than one canonical receiver name, so each call site needs its surrounding code read to confirm the receiver actually resolves to a Mapper instance rather than some other object with an unrelated method of the same name."
+  },
+  {
+   "id": "SA3",
+   "repo": "sqlalchemy",
+   "stratum": "ambiguous",
+   "target_name": "_accept_with",
+   "target_definitions": 11,
+   "corpus_size": 12830,
+   "title": "Add a required argument to MapperEvents._accept_with()",
+   "text": "Our event system has an internal _accept_with hook that each Events subclass (mapper events, session events, connection events, etc.) implements to normalize whatever 'target' object a user passed into event.listen() into the real dispatch target. I'm looking specifically at the _accept_with implementation on MapperEvents in orm/events.py \u2014 I want to give it a required new parameter so it can reject a target more explicitly instead of quietly returning None. Walk me through every call site that invokes MapperEvents._accept_with (or reaches it) so I can see exactly what needs to be updated when I add the parameter.",
+   "primary_paths": [
+    "lib/sqlalchemy/orm/events.py",
+    "lib/sqlalchemy/event/api.py",
+    "lib/sqlalchemy/event/base.py",
+    "lib/sqlalchemy/engine/events.py"
+   ],
+   "repos_required": [
+    "sqlalchemy"
+   ],
+   "caller_set": [
+    "lib/sqlalchemy/event/api.py:30"
+   ],
+   "decoys": [
+    "lib/sqlalchemy/orm/events.py:103 (InstrumentationEvents._accept_with \u2014 different class)",
+    "lib/sqlalchemy/orm/events.py:265 (InstanceEvents._accept_with \u2014 different class)",
+    "lib/sqlalchemy/orm/events.py:1582 (SessionEvents._accept_with \u2014 different class)",
+    "lib/sqlalchemy/orm/events.py:2485 (QueryEvents._accept_with \u2014 different class)",
+    "lib/sqlalchemy/orm/events.py:3277 (AttributeEvents._accept_with \u2014 different class)",
+    "lib/sqlalchemy/engine/events.py:134 (ConnectionEvents._accept_with \u2014 different class, different module)",
+    "lib/sqlalchemy/engine/events.py:666 (DialectEvents._accept_with \u2014 different class)",
+    "lib/sqlalchemy/pool/events.py:66 (PoolEvents._accept_with \u2014 different class, different module)",
+    "lib/sqlalchemy/event/base.py:248 (_HasEventsDispatch._accept_with \u2014 abstract stub, raises NotImplementedError)",
+    "lib/sqlalchemy/event/base.py:377 (Events._accept_with \u2014 the base implementation, not MapperEvents)",
+    "lib/sqlalchemy/orm/events.py:1609 (event.Events._accept_with(...) \u2014 explicit fallback call to the base class, not MapperEvents)",
+    "lib/sqlalchemy/engine/events.py:139 (super()._accept_with(...) \u2014 reaches the base Events implementation, not MapperEvents)",
+    "lib/sqlalchemy/orm/events.py:193 (docstring mention, '...from _accept_with() to...')"
+   ],
+   "gold": "MapperEvents._accept_with is defined at lib/sqlalchemy/orm/events.py:806. Unlike a normal method, it is never called by a statically-visible name anywhere in the codebase: the only call to any _accept_with, regardless of which of the 11 same-named definitions ends up running, is the single dynamic-dispatch line `tgt = evt_cls._accept_with(target, identifier)` in lib/sqlalchemy/event/api.py:30, where evt_cls is pulled at runtime from the `_registrars[identifier]` registry (populated via __init_subclass__ -> _create_dispatcher_class). Which concrete class's override actually runs is determined by which identifier string (e.g. 'before_insert') was registered for MapperEvents, not by anything visible at the call site itself. The only other bare-name '_accept_with(' calls in the repo are `super()._accept_with(...)` in engine/events.py:139 and the explicit `event.Events._accept_with(...)` fallback in orm/events.py:1609, both of which reach the base Events implementation (event/base.py:377), not MapperEvents.",
+   "gold_markers": [
+    "lib/sqlalchemy/orm/events.py:806 def _accept_with (MapperEvents)",
+    "lib/sqlalchemy/event/api.py:30 tgt = evt_cls._accept_with(target, identifier)",
+    "lib/sqlalchemy/event/base.py:377 Events._accept_with",
+    "lib/sqlalchemy/engine/events.py:139 super()._accept_with",
+    "lib/sqlalchemy/orm/events.py:1609 event.Events._accept_with"
+   ],
+   "verified_how": "grep -rn 'def _accept_with' found all 11 definitions (6 in orm/events.py, 2 in engine/events.py, 1 in pool/events.py, 2 in event/base.py); grep -rn '_accept_with' minus the def lines found only 4 remaining hits, read each in context: event/api.py:30 is the sole generic call site (inside _event_key, iterating _registrars[identifier]), engine/events.py:139 and orm/events.py:1609 are calls to the base Events implementation via super()/explicit reference, and orm/events.py:193 is a docstring sentence.",
+   "unusable_reason": "All 11 same-named _accept_with definitions are invoked through exactly one shared, dynamically-dispatched call site (event/api.py:30); no source-level call site names MapperEvents (or any other concrete subclass) directly, so 'which call sites call this specific override' cannot be answered by reading/searching source text at all -- it requires tracing which event identifier strings are registered against which class through the runtime _registrars dict, which is a different kind of question than call-site tracing."
+  },
+  {
+   "id": "SA4",
+   "repo": "sqlalchemy",
+   "stratum": "ambiguous",
+   "target_name": "partitions",
+   "target_definitions": 8,
+   "corpus_size": 12830,
+   "title": "Add a required argument to Result.partitions()",
+   "text": "I want to tighten up Result.partitions() (the synchronous engine result iterator that yields sub-lists of rows). Right now it takes an optional 'size' and yields lists of rows; I'm considering giving it a required argument instead, so callers can no longer rely on a default batch size. Before I touch the signature, can you find every place in the codebase that actually calls .partitions() on a Result (or its scalar/mapping/frozen/async counterparts), so I know exactly what would need to change?",
+   "primary_paths": [
+    "lib/sqlalchemy/engine/result.py",
+    "lib/sqlalchemy/ext/asyncio/result.py"
+   ],
+   "repos_required": [
+    "sqlalchemy"
+   ],
+   "caller_set": [],
+   "decoys": [
+    "lib/sqlalchemy/engine/result.py:862 def partitions (Result)",
+    "lib/sqlalchemy/engine/result.py:1339 def partitions (ScalarResult)",
+    "lib/sqlalchemy/engine/result.py:1440 def partitions (MappingResult)",
+    "lib/sqlalchemy/engine/result.py:1625 def partitions (FrozenResult-related)",
+    "lib/sqlalchemy/ext/asyncio/result.py:188 async def partitions (AsyncResult)",
+    "lib/sqlalchemy/ext/asyncio/result.py:562 async def partitions (AsyncMappingResult)",
+    "lib/sqlalchemy/ext/asyncio/result.py:692 async def partitions (AsyncScalarResult)",
+    "lib/sqlalchemy/ext/asyncio/result.py:811 async def partitions (nested/streaming variant)",
+    "lib/sqlalchemy/ext/asyncio/result.py:198 'async for partition in result.partitions(100):' -- inside AsyncResult.partitions's own docstring, illustrative prose not executable code",
+    "lib/sqlalchemy/engine/result.py:647,881,957,964,1342,1445,1630 and ext/asyncio/result.py:201,257,263,567,697,816 -- Sphinx ':meth:' cross-reference mentions in docstrings, not calls"
+   ],
+   "gold": "partitions is defined 8 times (4 sync overloads in engine/result.py at lines 862, 1339, 1440, 1625; 4 async overloads in ext/asyncio/result.py at lines 188, 562, 692, 811). Grepping the whole repo for any non-definition use of the word 'partitions' turns up nothing but Sphinx ':meth:' cross-reference links inside docstrings and one illustrative code line embedded in AsyncResult.partitions's own docstring (ext/asyncio/result.py:198) that is documentation prose, not code that executes. None of the 8 definitions has a single internal caller anywhere in the library source.",
+   "gold_markers": [
+    "lib/sqlalchemy/engine/result.py:862",
+    "lib/sqlalchemy/engine/result.py:1339",
+    "lib/sqlalchemy/engine/result.py:1440",
+    "lib/sqlalchemy/engine/result.py:1625",
+    "lib/sqlalchemy/ext/asyncio/result.py:188",
+    "lib/sqlalchemy/ext/asyncio/result.py:562",
+    "lib/sqlalchemy/ext/asyncio/result.py:692",
+    "lib/sqlalchemy/ext/asyncio/result.py:811",
+    "no internal callers found"
+   ],
+   "verified_how": "grep -rn 'def partitions' found all 8 definitions; grep -rn '\\bpartitions\\b' minus the def lines returned only Sphinx ':meth:' docstring cross-references and one line (ext/asyncio/result.py:198) read in context and confirmed to sit inside a triple-quoted docstring code example, not real code.",
+   "unusable_reason": "None of the 8 same-named partitions methods has any internal caller anywhere in the library source; the only non-definition hits are documentation cross-references and one docstring-embedded example line. A 'which call sites break' refactor question about this method has a genuinely empty, degenerate answer inside this repo -- it is a pure public API surface exercised only by external/user code, which defeats the purpose of a call-site blast-radius exercise."
+  },
+  {
+   "id": "XL1",
+   "repo": "django+celery+sqlalchemy",
+   "title": "Map out where each layer defers building/loading an object until it's actually touched",
+   "text": "We keep hitting surprising latency spikes that turn out to be some object finally getting built or fetched the moment we touch an attribute on it, long after it looked like it was already created. Before we write a shared 'don't be surprised by this' doc for the team, I want a precise inventory across our stack (Django models/ORM, Celery, SQLAlchemy ORM): for each one, what's the actual mechanism that defers the real work until first access, where does it live in the code, what specifically triggers it to finally run, and does the result get cached afterward (and at what granularity - per instance, per proxy, per session)? I've seen at least one case where the deferred value gets cached forever after the first touch and another where it seems to re-run on every access, and I want to know exactly which is which before we rely on either behavior.",
+   "gold": "Each project has its own deferred-evaluation primitive with different trigger/caching semantics:\n\nDjango: `DeferredAttribute` in django/db/models/query_utils.py (class starts ~line 250). It's a descriptor installed for fields excluded by QuerySet.defer()/.only(); `__get__` checks if the field is already in `instance.__dict__`, and if not, triggers a fetch via `instance._state.fetch_mode.fetch(self, instance)` on first attribute access. The fetched value is then cached per-instance in `instance.__dict__` (subsequent accesses hit the dict directly, bypassing the descriptor's fetch path).\n\nCelery: `PromiseProxy` in celery/celery/local.py (class ~line 282, subclass of `Proxy`). It's used by `Celery.task()` in celery/celery/app/base.py (~line 566, inside `inner_create_task_cls`) to return a proxy immediately when a task is declared before the app is finalized: `ret = PromiseProxy(self._task_from_fun, (fun,), opts, __doc__=fun.__doc__)`. The real Task subclass is only constructed on first attribute access via `_get_current_object`/`__evaluate__`, which then stores the result on `object.__setattr__(self, '__thing', thing)' - once evaluated, the proxy caches the object forever (`__evaluated__()` just checks whether `__thing` was set), unlike the base `Proxy` class which re-resolves on every access.\n\nSQLAlchemy: two separate loader strategies in sqlalchemy/lib/sqlalchemy/orm/strategies.py. `_LazyLoader` (~line 710) implements relationship loading with `lazy='select'` (the default) - it fires a SELECT the first time the relationship attribute is accessed on an instance, per the docstring 'loads when first accessed'. `_DeferredColumnLoader` (~line 407) is the separate strategy used for columns excluded via `defer()`, and only loads those specific columns when touched. Both are per-mapper/per-attribute strategies, not a single class shared across relationships and columns.\n\nThe key divergence: Celery's PromiseProxy caches its evaluated object once, globally, on the proxy itself, and evaluation is effectively binary (unrealized vs realized forever). Django's DeferredAttribute is a per-instance, per-field cache that lives in the instance's own `__dict__`. SQLAlchemy splits the concern into two different strategy classes (columns vs relationships) and its caching is governed by the owning Session/instance state rather than the loader itself, and is configurable per attribute (lazy='select' vs 'joined' vs 'subquery' etc.) rather than a fixed on/off.",
+   "gold_markers": [
+    "DeferredAttribute",
+    "PromiseProxy",
+    "_LazyLoader",
+    "_DeferredColumnLoader"
+   ],
+   "primary_paths": [
+    "django/django/db/models/query_utils.py",
+    "celery/celery/local.py",
+    "celery/celery/app/base.py",
+    "sqlalchemy/lib/sqlalchemy/orm/strategies.py"
+   ],
+   "verified_how": "Read django/db/models/query_utils.py:250-280 (DeferredAttribute.__get__ triggers fetch_mode.fetch on first access, caches in instance.__dict__); read celery/local.py:282-353 (PromiseProxy._get_current_object/__evaluate__/__evaluated__ show once-only evaluation and permanent caching via object.__setattr__(self,'__thing',thing)), confirmed usage site celery/app/base.py:520-580 ('return a proxy object that evaluates on first use'); read sqlalchemy/orm/strategies.py:407-440 (_DeferredColumnLoader) and 710-740 (_LazyLoader docstring 'loads when first accessed'). Grepped counts: DeferredAttribute=13 hits in django/django, PromiseProxy=7 hits in celery/celery, _LazyLoader=5 and _DeferredColumnLoader=2 hits in sqlalchemy/lib/sqlalchemy - all under the 50-hit precision bar.",
+   "why_this_is_hard": "The three deferred-evaluation mechanisms are in different subsystems of each codebase (ORM field loading, task-decorator app-binding, and ORM relationship/column loading strategies) and share no common vocabulary ('deferred' vs 'promise/proxy' vs 'lazy') despite doing structurally the same thing - solving it requires locating three separate, differently-named implementations and reasoning about each one's caching granularity from the actual descriptor/proxy code, not from any doc that uses a common term for all three.",
+   "corpus_size": 27400,
+   "target_definitions": 4,
+   "repos_required": [
+    "django",
+    "celery",
+    "sqlalchemy"
+   ]
+  },
+  {
+   "id": "XL2",
+   "repo": "django+celery+sqlalchemy",
+   "title": "Nail down what 'pool' actually means in each service before we standardize pooling config",
+   "text": "In our infra sync everyone says 'pool' and means something different, and I want to stop guessing before we write the shared config guide. For our Django services, our Celery workers, and anything going through SQLAlchemy: what concretely gets pooled in each (if anything), where is the pool implemented in code, what causes a new pool member to get created versus an existing one reused, and how/when does a member get torn down? I specifically want to know whether the default behavior in each case is even pooling at all, or something else that just gets called that colloquially.",
+   "gold": "The three 'pools' are genuinely different mechanisms pooling different kinds of resources:\n\nDjango: `DatabaseWrapper.pool` property in django/db/backends/postgresql/base.py (~lines 191-236). This is opt-in only (`settings_dict['OPTIONS'].get('pool')` must be set) and lazily constructs a `psycopg_pool.ConnectionPool`, keyed by connection alias in a class-level dict `_connection_pools`, on first access; `close_pool()` (~line 238) closes it and removes the alias's entry. Without that option, Django does NOT pool connections at all by default - instead django/db/backends/base/base.py manages a single persistent connection per thread, reused across requests up to `CONN_MAX_AGE` seconds (tracked via `self.close_at`, set at connect time ~line 248-249, and checked in `close_if_unusable_or_obsolete()` ~line 591/614) - i.e. one connection kept alive and recycled, not a pool of several.\n\nCelery: `BasePool` in celery/celery/concurrency/base.py (class ~line 46) is the abstraction for the worker's execution pool - a set of OS-level worker processes/threads that execute tasks concurrently, not a pool of network connections at all. `TaskPool` in celery/celery/concurrency/prefork.py (class ~line 95, subclassing BasePool) is the default prefork implementation, with `on_start`/`on_stop` lifecycle hooks (~lines 104, 142) that spin the worker processes up/down. Which pool implementation runs is chosen via the `--pool` flag (prefork/eventlet/gevent/solo/threads).\n\nSQLAlchemy: `Pool` in sqlalchemy/lib/sqlalchemy/pool/base.py (class ~line 156) is the base DBAPI-connection-pool abstraction; `QueuePool` in sqlalchemy/lib/sqlalchemy/pool/impl.py is the default Engine-level implementation, holding a bounded queue of DBAPI connections that get checked out and checked back in per unit of work, growing up to `pool_size + max_overflow` before blocking/erroring, distinct from Django's single-persistent-connection default.\n\nDivergence for the standup: Django's pooling is opt-in and, even then, delegates to a third-party pool implementation rather than owning pooling logic itself; its unqualified default behavior is connection *reuse*, not pooling. SQLAlchemy owns and always runs an actual bounded multi-connection pool by default (QueuePool) unless explicitly swapped for NullPool/StaticPool/etc. Celery's 'pool' isn't about connections at all - it's the concurrency mechanism for running tasks, configurable independently of any broker connection pooling that may happen underneath it.",
+   "gold_markers": [
+    "_connection_pools",
+    "psycopg_pool",
+    "class BasePool",
+    "class TaskPool",
+    "class QueuePool",
+    "class Pool(log.Identified"
+   ],
+   "primary_paths": [
+    "django/django/db/backends/postgresql/base.py",
+    "django/django/db/backends/base/base.py",
+    "celery/celery/concurrency/base.py",
+    "celery/celery/concurrency/prefork.py",
+    "sqlalchemy/lib/sqlalchemy/pool/base.py",
+    "sqlalchemy/lib/sqlalchemy/pool/impl.py"
+   ],
+   "verified_how": "Read django/db/backends/postgresql/base.py:191-241 (pool property, _connection_pools dict, close_pool) and django/db/backends/base/base.py:87,247-249,578-614 (close_at/CONN_MAX_AGE persistent-connection default, distinct from the pool property); read celery/concurrency/base.py:1-60 (class BasePool docstring 'Task pool') and celery/concurrency/prefork.py:95-142 (class TaskPool(BasePool), on_start/on_stop); read sqlalchemy/pool/base.py:156 (class Pool(log.Identified, event.EventTarget)) and grepped 'class QueuePool' in sqlalchemy/pool/impl.py. Grep counts: _connection_pools=10 in django/django, BasePool=15 in celery/celery, QueuePool class def=1 (unique) in sqlalchemy/lib/sqlalchemy - all under the 50-hit bar.",
+   "why_this_is_hard": "All three literally use the word 'pool' in source, which invites the wrong assumption that they're comparable line items in a single config table; only by reading the actual classes does it become clear Django's default path isn't pooling at all, Celery's pool is a process/thread concurrency pool unrelated to connections, and only SQLAlchemy's QueuePool is a true bounded multi-connection pool - a shallow keyword search across repos would find three 'pool' hits and wrongly treat them as the same knob.",
+   "corpus_size": 27400,
+   "target_definitions": 6,
+   "repos_required": [
+    "django",
+    "celery",
+    "sqlalchemy"
+   ]
+  },
+  {
+   "id": "XL3",
+   "repo": "django+celery+sqlalchemy",
+   "title": "How does each piece of our stack know a long-lived resource has gone stale before something bad happens?",
+   "text": "We had an incident where a worker looked alive in our dashboard well after it had actually died, and separately we've seen queries fail against a DB connection that quietly went bad while idle. I want to understand, precisely, how each layer of our stack currently detects that a long-lived resource (a DB connection, a pooled connection, a worker process) is no longer good before something downstream relies on it - is it an active check done right before reuse, or does the resource itself have to proactively announce that it's still alive, and if so how is a missed announcement noticed? Need the actual mechanism in Django, Celery, and SQLAlchemy, not just 'there's a timeout somewhere.'",
+   "gold": "The three systems use genuinely different liveness models:\n\nDjango: pull-based, checked right before reuse. `BaseDatabaseWrapper.close_if_health_check_failed()` in django/db/backends/base/base.py (~line 578) runs when `CONN_HEALTH_CHECKS` is enabled and no check has been done yet on the current connection; it calls the backend's `is_usable()` (abstract at ~line 565, implemented per-backend e.g. postgresql/base.py ~line 498) and closes the connection if the check fails, forcing a fresh reconnect on next use. This is invoked opportunistically (e.g. in `ensure_connection()`), not on a timer.\n\nSQLAlchemy: pull-based, checked at checkout. `_ConnectionFairy._checkout()` in sqlalchemy/lib/sqlalchemy/pool/base.py (~line 1262) checks `pool._pre_ping` when a connection is checked out of the pool; if enabled and the connection isn't freshly created, it calls `pool._dialect._do_ping_w_event(fairy.dbapi_connection)` to actually round-trip a ping before handing the connection to the caller, invalidating and retrying (up to a couple of attempts) if the ping fails.\n\nCelery: push-based, with a separate expiry check on the receiving side. Workers proactively broadcast their own liveness: `Heart` in celery/celery/worker/heartbeat.py (class ~line 14) is a timer that periodically calls `self.eventer.send(event, freq=self.interval, ...)` to emit heartbeat events (default every 2s) - nothing 'checks' the worker directly. On the consuming side, celery/celery/events/state.py tracks each worker's last-seen heartbeats and exposes `Worker.alive()` (~line 234), which returns `nowfun() < self.heartbeat_expires` (heartbeat_expires computed from the last heartbeat timestamp plus `freq * expire_window` - see the module-level `heartbeat_expires()` function ~line 114) - i.e. a worker is considered dead only once its expected next heartbeat window has passed, not via any direct probe. Celery separately offers an on-demand pull-style check via `Control.ping()` in celery/celery/app/control.py (~line 560), but that's an explicit admin action, not something the framework runs automatically before using a worker.\n\nDivergence: Django and SQLAlchemy both actively verify the specific resource immediately before it's handed back for reuse (pull, synchronous, inline with the calling code path). Celery instead relies on workers proactively self-reporting on an interval, with staleness detected only indirectly by another component noticing a heartbeat is overdue - there's no automatic 'check this worker is alive before dispatching a task to it' step analogous to Django's or SQLAlchemy's pre-use check.",
+   "gold_markers": [
+    "close_if_health_check_failed",
+    "is_usable",
+    "_pre_ping",
+    "_do_ping_w_event",
+    "class Heart",
+    "heartbeat_expires"
+   ],
+   "primary_paths": [
+    "django/django/db/backends/base/base.py",
+    "django/django/db/backends/postgresql/base.py",
+    "sqlalchemy/lib/sqlalchemy/pool/base.py",
+    "celery/celery/worker/heartbeat.py",
+    "celery/celery/events/state.py",
+    "celery/celery/app/control.py"
+   ],
+   "verified_how": "Read django/db/backends/base/base.py:565-618 (is_usable abstract, close_if_health_check_failed, close_if_unusable_or_obsolete) and postgresql/base.py:498 (is_usable impl); read sqlalchemy/pool/base.py:1262-1310 (_ConnectionFairy._checkout, pool._pre_ping branch calling _do_ping_w_event); read celery/worker/heartbeat.py:1-50 (class Heart, self.eventer.send) and celery/events/state.py:114-235 (heartbeat_expires function, Worker.alive using nowfun() < self.heartbeat_expires) and celery/app/control.py:560-575 (Control.ping as separate on-demand broadcast). Grep counts: close_if_health_check_failed=7, is_usable=10 in django/django; _pre_ping=31 (still <50), _do_ping_w_event=4 in sqlalchemy/lib/sqlalchemy; class Heart=2, heartbeat_expires=5 in celery/celery.",
+   "why_this_is_hard": "The push-vs-pull distinction is invisible from names alone (health_check, pre_ping, heartbeat all sound like synonyms for 'liveness check'), and the celery mechanism is split across two files with two different responsibilities (the sender in worker/heartbeat.py, the staleness judgment in events/state.py) plus a decoy on-demand ping in app/control.py that looks like the obvious answer but is not what runs automatically - getting this right requires reading enough of each implementation to see which side initiates the check and when it actually executes.",
+   "corpus_size": 27400,
+   "target_definitions": 5,
+   "repos_required": [
+    "django",
+    "celery",
+    "sqlalchemy"
+   ]
+  },
+  {
+   "id": "XL4",
+   "repo": "django+celery+sqlalchemy",
+   "title": "Where does each layer stash its 'current' active resource so unrelated code can find it without being handed a reference?",
+   "text": "In all three layers of our stack, code deep in a call chain manages to get hold of 'the current X' (the active DB connection, the active Celery app, the active session) without anyone explicitly threading a reference through every function call. I want to understand the actual storage mechanism behind that in Django, Celery, and SQLAlchemy - is it a plain global, something thread-local, something that's aware of async contexts - and where in the code does that live? We're chasing a bug where two different pieces of code seem to disagree about what 'the current one' is, so I need the real storage structure per layer, not just 'it's a singleton.'",
+   "gold": "Each of the three uses a different context-local storage primitive for tracking 'the current X':\n\nDjango: `BaseConnectionHandler` in django/django/utils/connection.py (class ~line 34) backs `django.db.connections` (via `ConnectionHandler` in django/db/utils.py ~line 141, subclassing it). It stores per-alias connections in `self._connections = Local(self.thread_critical)` (~line 41), where `Local` is imported from the third-party `asgiref.local` package - this is explicitly async-context-aware (not just thread-local), so a connection tracked under one async task/thread doesn't leak into another.\n\nCelery: `_TLS` in celery/celery/_state.py (class, `_tls = _TLS()` ~line 71) is a plain `threading.local` subclass holding `current_app = None` as a class attribute. `_get_current_app()` (~line 92) reads `_tls.current_app or default_app`, and the public `current_app` object (~line 139) is actually a `Proxy(get_current_app)` (from celery/celery/local.py) wrapping that lookup, so every access re-resolves through the thread-local rather than holding a fixed reference. This is genuinely thread-local only, not async-context-aware.\n\nSQLAlchemy: `ScopedRegistry` / `ThreadLocalRegistry` in sqlalchemy/lib/sqlalchemy/util/_collections.py (classes ~lines 566 and 630) back `scoped_session` in sqlalchemy/lib/sqlalchemy/orm/scoping.py. `scoped_session.__init__` (~line 198) builds `self.registry = ScopedRegistry(session_factory, scopefunc)` when the caller supplies a custom `scopefunc` (e.g. to make it greenlet- or async-task-aware), or falls back to a plain `ThreadLocalRegistry(session_factory)` (~line 200) otherwise; session lookup (`self.registry()` ~line 204) and explicit removal (`self.registry.set(sess)` ~line 225, plus `.has()`) go through that registry object.\n\nDivergence: Django's storage is async-context-safe by construction, out of the box, via a purpose-built third-party `Local`. SQLAlchemy's is thread-local by default but can be swapped to be context-aware only if the caller explicitly passes a `scopefunc` when constructing the `scoped_session` - it isn't automatic. Celery's is plain `threading.local` with no async-context awareness at all, wrapped in an extra layer of indirection (a `Proxy`) that re-resolves the lookup on every attribute access rather than caching a reference - so 'two pieces of code disagreeing about the current one' is far more plausible under Celery/SQLAlchemy-without-scopefunc in an async or greenlet context than under Django.",
+   "gold_markers": [
+    "BaseConnectionHandler",
+    "asgiref.local",
+    "class _TLS",
+    "ScopedRegistry",
+    "ThreadLocalRegistry",
+    "current_app = Proxy"
+   ],
+   "primary_paths": [
+    "django/django/utils/connection.py",
+    "django/django/db/utils.py",
+    "celery/celery/_state.py",
+    "celery/celery/local.py",
+    "sqlalchemy/lib/sqlalchemy/util/_collections.py",
+    "sqlalchemy/lib/sqlalchemy/orm/scoping.py"
+   ],
+   "verified_how": "Read django/utils/connection.py:1-41 (BaseConnectionHandler using asgiref.local.Local) and django/db/utils.py:141 (ConnectionHandler subclass); read celery/_state.py:68-173 (class _TLS, _tls instance, _get_current_app, current_app = Proxy(get_current_app)); read sqlalchemy/orm/scoping.py:31,153-225 (import of ScopedRegistry, scoped_session.__init__ choosing ScopedRegistry vs ThreadLocalRegistry based on scopefunc) and grepped class defs in sqlalchemy/util/_collections.py:566,630. Grep counts: BaseConnectionHandler=7 in django/django, _TLS=2 in celery/celery, ScopedRegistry=11 in sqlalchemy/lib/sqlalchemy - all under the 50-hit bar.",
+   "why_this_is_hard": "None of the three call this mechanism by the same name (BaseConnectionHandler/Local vs _TLS/Proxy vs ScopedRegistry), the actual storage primitive differs in a way that matters (async-aware Local vs plain threading.local vs a registry that's async-aware only if explicitly configured), and in two of the three repos the real answer sits behind a layer of indirection (Django's ConnectionHandler subclassing a differently-named base class in a different module; Celery's public current_app being a Proxy wrapping the actual thread-local lookup) that a name-only search would likely miss.",
+   "corpus_size": 27400,
+   "target_definitions": 6,
+   "repos_required": [
+    "django",
+    "celery",
+    "sqlalchemy"
+   ]
+  }
+ ]
+}

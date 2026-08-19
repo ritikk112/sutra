@@ -1,0 +1,733 @@
+{
+ "flask": {
+  "size": 497,
+  "blast": [
+   {
+    "name": "_CollectErrors",
+    "definitions": 1,
+    "def_site": "src/flask/helpers.py:654",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   },
+   {
+    "name": "_find_error_handler",
+    "definitions": 1,
+    "def_site": "src/flask/sansio/app.py:868",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   },
+   {
+    "name": "_get_session",
+    "definitions": 1,
+    "def_site": "src/flask/ctx.py:381",
+    "in_scope_calls": 4,
+    "total_calls": 4
+   },
+   {
+    "name": "_untag_scan",
+    "definitions": 1,
+    "def_site": "src/flask/json/tag.py:309",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   },
+   {
+    "name": "_split_blueprint_path",
+    "definitions": 1,
+    "def_site": "src/flask/helpers.py:645",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   },
+   {
+    "name": "_copy_environ",
+    "definitions": 1,
+    "def_site": "src/flask/testing.py:185",
+    "in_scope_calls": 4,
+    "total_calls": 4
+   },
+   {
+    "name": "record_once",
+    "definitions": 1,
+    "def_site": "src/flask/sansio/blueprints.py:233",
+    "in_scope_calls": 10,
+    "total_calls": 10
+   },
+   {
+    "name": "raise_any",
+    "definitions": 1,
+    "def_site": "src/flask/helpers.py:676",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   },
+   {
+    "name": "_method_route",
+    "definitions": 1,
+    "def_site": "src/flask/sansio/scaffold.py:284",
+    "in_scope_calls": 6,
+    "total_calls": 7
+   },
+   {
+    "name": "async_to_sync",
+    "definitions": 1,
+    "def_site": "src/flask/app.py:1082",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   }
+  ],
+  "disamb": [
+   {
+    "name": "decorator",
+    "definitions": 13,
+    "distinct_files": 5,
+    "def_sites": [
+     "src/flask/cli.py:395",
+     "src/flask/cli.py:422",
+     "src/flask/helpers.py:120",
+     "src/flask/sansio/blueprints.py:469",
+     "src/flask/sansio/blueprints.py:525",
+     "src/flask/sansio/blueprints.py:583",
+     "src/flask/sansio/blueprints.py:663",
+     "src/flask/sansio/app.py:692"
+    ]
+   }
+  ]
+ },
+ "celery": {
+  "size": 3601,
+  "blast": [
+   {
+    "name": "_ensure_retryable",
+    "definitions": 1,
+    "def_site": "celery/backends/base.py:636",
+    "in_scope_calls": 9,
+    "total_calls": 9
+   },
+   {
+    "name": "_verify_seconds",
+    "definitions": 1,
+    "def_site": "celery/app/amqp.py:480",
+    "in_scope_calls": 4,
+    "total_calls": 4
+   },
+   {
+    "name": "_payload",
+    "definitions": 1,
+    "def_site": "celery/worker/request.py:785",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   },
+   {
+    "name": "_filename",
+    "definitions": 1,
+    "def_site": "celery/backends/filesystem.py:77",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   },
+   {
+    "name": "precedence",
+    "definitions": 1,
+    "def_site": "celery/states.py:81",
+    "in_scope_calls": 5,
+    "total_calls": 6
+   },
+   {
+    "name": "replace_module_value",
+    "definitions": 1,
+    "def_site": "t/unit/conftest.py:415",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   },
+   {
+    "name": "_unpack_args",
+    "definitions": 1,
+    "def_site": "celery/canvas.py:2060",
+    "in_scope_calls": 7,
+    "total_calls": 7
+   },
+   {
+    "name": "_set_task_join_will_block",
+    "definitions": 1,
+    "def_site": "celery/_state.py:55",
+    "in_scope_calls": 8,
+    "total_calls": 10
+   },
+   {
+    "name": "_make_id",
+    "definitions": 1,
+    "def_site": "celery/utils/dispatch/signal.py:21",
+    "in_scope_calls": 6,
+    "total_calls": 6
+   },
+   {
+    "name": "detach",
+    "definitions": 1,
+    "def_site": "celery/bin/worker.py:108",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   }
+  ],
+  "disamb": [
+   {
+    "name": "delete",
+    "definitions": 16,
+    "distinct_files": 15,
+    "def_sites": [
+     "celery/result.py:969",
+     "celery/backends/elasticsearch.py:260",
+     "celery/backends/arangodb.py:165",
+     "celery/backends/dynamodb.py:538",
+     "celery/backends/gcs.py:101",
+     "celery/backends/filesystem.py:95",
+     "celery/backends/cache.py:72",
+     "celery/backends/cache.py:128"
+    ]
+   },
+   {
+    "name": "shutdown",
+    "definitions": 9,
+    "distinct_files": 8,
+    "def_sites": [
+     "celery/bootsteps.py:404",
+     "celery/app/control.py:714",
+     "celery/worker/pidbox.py:74",
+     "celery/worker/control.py:593",
+     "celery/worker/consumer/tasks.py:91",
+     "celery/worker/consumer/events.py:70",
+     "celery/worker/consumer/connection.py:36",
+     "celery/worker/consumer/consumer.py:188"
+    ]
+   },
+   {
+    "name": "as_uri",
+    "definitions": 8,
+    "distinct_files": 7,
+    "def_sites": [
+     "celery/backends/cassandra.py:228",
+     "celery/backends/mongodb.py:326",
+     "celery/backends/cache.py:157",
+     "celery/backends/rpc.py:280",
+     "celery/backends/redis.py:742",
+     "celery/backends/azureblockblob.py:170",
+     "celery/backends/base.py:168",
+     "celery/backends/base.py:1280"
+    ]
+   },
+   {
+    "name": "TaskPool",
+    "definitions": 5,
+    "distinct_files": 5,
+    "def_sites": [
+     "celery/concurrency/thread.py:30",
+     "celery/concurrency/gevent.py:85",
+     "celery/concurrency/solo.py:11",
+     "celery/concurrency/eventlet.py:88",
+     "celery/concurrency/prefork.py:95"
+    ]
+   },
+   {
+    "name": "_forget",
+    "definitions": 5,
+    "distinct_files": 4,
+    "def_sites": [
+     "celery/backends/mongodb.py:261",
+     "celery/backends/rpc.py:275",
+     "celery/backends/base.py:700",
+     "celery/backends/base.py:1116",
+     "celery/backends/database/__init__.py:230"
+    ]
+   },
+   {
+    "name": "AsyncResult",
+    "definitions": 5,
+    "distinct_files": 5,
+    "def_sites": [
+     "celery/result.py:70",
+     "celery/canvas.py:853",
+     "celery/app/task.py:964",
+     "celery/app/base.py:1467",
+     "celery/contrib/abortable.py:143"
+    ]
+   },
+   {
+    "name": "client",
+    "definitions": 7,
+    "distinct_files": 7,
+    "def_sites": [
+     "celery/backends/dynamodb.py:520",
+     "celery/backends/gcs.py:112",
+     "celery/backends/cache.py:144",
+     "celery/backends/consul.py:65",
+     "celery/backends/redis.py:706",
+     "t/smoke/workers/latest.py:17",
+     "t/smoke/workers/dev.py:18"
+    ]
+   },
+   {
+    "name": "update",
+    "definitions": 10,
+    "distinct_files": 9,
+    "def_sites": [
+     "celery/platforms.py:688",
+     "celery/result.py:636",
+     "celery/beat.py:149",
+     "celery/app/task.py:131",
+     "celery/app/base.py:229",
+     "celery/utils/graph.py:95",
+     "celery/utils/collections.py:299",
+     "celery/utils/collections.py:544"
+    ]
+   },
+   {
+    "name": "_inner",
+    "definitions": 8,
+    "distinct_files": 5,
+    "def_sites": [
+     "celery/canvas.py:305",
+     "celery/bin/multi.py:146",
+     "celery/bin/multi.py:155",
+     "celery/bin/multi.py:163",
+     "celery/backends/asynchronous.py:60",
+     "celery/utils/deprecated.py:50",
+     "celery/utils/deprecated.py:68",
+     "celery/worker/control.py:56"
+    ]
+   },
+   {
+    "name": "_after_fork",
+    "definitions": 5,
+    "distinct_files": 5,
+    "def_sites": [
+     "celery/app/control.py:454",
+     "celery/app/base.py:1282",
+     "celery/backends/asynchronous.py:384",
+     "celery/backends/rpc.py:207",
+     "celery/backends/database/session.py:41"
+    ]
+   }
+  ]
+ },
+ "django": {
+  "size": 11010,
+  "blast": [
+   {
+    "name": "units_name",
+    "definitions": 1,
+    "def_site": "django/contrib/gis/db/models/fields.py:132",
+    "in_scope_calls": 6,
+    "total_calls": 6
+   },
+   {
+    "name": "_sqlite_datetime_parse",
+    "definitions": 1,
+    "def_site": "django/db/backends/sqlite3/_functions.py:119",
+    "in_scope_calls": 6,
+    "total_calls": 6
+   },
+   {
+    "name": "avalidate_number",
+    "definitions": 1,
+    "def_site": "django/core/paginator.py:228",
+    "in_scope_calls": 5,
+    "total_calls": 6
+   },
+   {
+    "name": "_get_from_db",
+    "definitions": 1,
+    "def_site": "django/db/models/query.py:70",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   },
+   {
+    "name": "IContains",
+    "definitions": 1,
+    "def_site": "django/db/models/lookups.py:628",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   },
+   {
+    "name": "_delete_constraint_sql",
+    "definitions": 1,
+    "def_site": "django/db/backends/base/schema.py:2025",
+    "in_scope_calls": 6,
+    "total_calls": 6
+   },
+   {
+    "name": "GEOSGeometryBase",
+    "definitions": 1,
+    "def_site": "django/contrib/gis/geos/geometry.py:30",
+    "in_scope_calls": 4,
+    "total_calls": 4
+   },
+   {
+    "name": "BadHeaderError",
+    "definitions": 1,
+    "def_site": "django/http/response.py:106",
+    "in_scope_calls": 4,
+    "total_calls": 4
+   },
+   {
+    "name": "_set_field_new_type",
+    "definitions": 1,
+    "def_site": "django/db/backends/mysql/schema.py:194",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   },
+   {
+    "name": "has_composite_fields",
+    "definitions": 1,
+    "def_site": "django/db/models/sql/compiler.py:1552",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   }
+  ],
+  "disamb": [
+   {
+    "name": "get_transform",
+    "definitions": 7,
+    "distinct_files": 7,
+    "def_sites": [
+     "django/db/models/expressions.py:406",
+     "django/db/models/query_utils.py:357",
+     "django/db/models/fields/reverse_related.py:121",
+     "django/db/models/fields/json.py:123",
+     "django/contrib/gis/db/models/fields.py:455",
+     "django/contrib/postgres/fields/array.py:184",
+     "django/contrib/postgres/fields/hstore.py:25"
+    ]
+   },
+   {
+    "name": "is_hidden",
+    "definitions": 5,
+    "distinct_files": 4,
+    "def_sites": [
+     "django/forms/boundfield.py:239",
+     "django/forms/widgets.py:337",
+     "django/forms/widgets.py:1023",
+     "django/contrib/admin/widgets.py:315",
+     "django/contrib/postgres/forms/array.py:124"
+    ]
+   },
+   {
+    "name": "as_oracle",
+    "definitions": 39,
+    "distinct_files": 13,
+    "def_sites": [
+     "django/db/models/expressions.py:1980",
+     "django/db/models/lookups.py:149",
+     "django/db/models/aggregates.py:271",
+     "django/db/models/aggregates.py:383",
+     "django/db/models/functions/mixins.py:35",
+     "django/db/models/functions/comparison.py:60",
+     "django/db/models/functions/comparison.py:88",
+     "django/db/models/functions/comparison.py:169"
+    ]
+   },
+   {
+    "name": "_alter_field",
+    "definitions": 6,
+    "distinct_files": 6,
+    "def_sites": [
+     "django/db/backends/postgresql/schema.py:263",
+     "django/db/backends/sqlite3/schema.py:360",
+     "django/db/backends/base/schema.py:984",
+     "django/contrib/gis/db/backends/oracle/schema.py:101",
+     "django/contrib/gis/db/backends/postgis/schema.py:62",
+     "django/contrib/gis/db/backends/mysql/schema.py:51"
+    ]
+   },
+   {
+    "name": "adapt_datetimefield_value",
+    "definitions": 5,
+    "distinct_files": 5,
+    "def_sites": [
+     "django/db/backends/postgresql/operations.py:330",
+     "django/db/backends/oracle/operations.py:581",
+     "django/db/backends/sqlite3/operations.py:246",
+     "django/db/backends/mysql/operations.py:229",
+     "django/db/backends/base/operations.py:584"
+    ]
+   },
+   {
+    "name": "output_field",
+    "definitions": 14,
+    "distinct_files": 11,
+    "def_sites": [
+     "django/db/models/expressions.py:326",
+     "django/db/models/lookups.py:168",
+     "django/db/models/sql/query.py:334",
+     "django/db/models/sql/where.py:293",
+     "django/contrib/postgres/expressions.py:13",
+     "django/contrib/gis/db/models/functions.py:118",
+     "django/contrib/gis/db/models/functions.py:163",
+     "django/contrib/gis/db/models/functions.py:305"
+    ]
+   },
+   {
+    "name": "get_distance",
+    "definitions": 5,
+    "distinct_files": 5,
+    "def_sites": [
+     "django/contrib/gis/db/backends/oracle/operations.py:180",
+     "django/contrib/gis/db/backends/postgis/operations.py:270",
+     "django/contrib/gis/db/backends/mysql/operations.py:120",
+     "django/contrib/gis/db/backends/spatialite/operations.py:129",
+     "django/contrib/gis/db/backends/base/operations.py:109"
+    ]
+   },
+   {
+    "name": "setdefault",
+    "definitions": 6,
+    "distinct_files": 5,
+    "def_sites": [
+     "django/template/context.py:106",
+     "django/utils/datastructures.py:159",
+     "django/http/request.py:708",
+     "django/http/response.py:101",
+     "django/http/response.py:287",
+     "django/contrib/sessions/backends/base.py:92"
+    ]
+   },
+   {
+    "name": "as_mysql",
+    "definitions": 18,
+    "distinct_files": 10,
+    "def_sites": [
+     "django/db/models/expressions.py:1262",
+     "django/db/models/aggregates.py:360",
+     "django/db/models/aggregates.py:400",
+     "django/db/models/functions/mixins.py:29",
+     "django/db/models/functions/comparison.py:38",
+     "django/db/models/functions/text.py:9",
+     "django/db/models/functions/text.py:47",
+     "django/db/models/functions/text.py:102"
+    ]
+   },
+   {
+    "name": "errors",
+    "definitions": 6,
+    "distinct_files": 4,
+    "def_sites": [
+     "django/forms/boundfield.py:70",
+     "django/forms/formsets.py:363",
+     "django/forms/forms.py:198",
+     "django/contrib/admin/helpers.py:77",
+     "django/contrib/admin/helpers.py:160",
+     "django/contrib/admin/helpers.py:199"
+    ]
+   }
+  ]
+ },
+ "sqlalchemy": {
+  "size": 12830,
+  "blast": [
+   {
+    "name": "_all_registries",
+    "definitions": 1,
+    "def_site": "lib/sqlalchemy/orm/mapper.py:144",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   },
+   {
+    "name": "_state_session",
+    "definitions": 1,
+    "def_site": "lib/sqlalchemy/orm/session.py:197",
+    "in_scope_calls": 4,
+    "total_calls": 4
+   },
+   {
+    "name": "detect_is_backref",
+    "definitions": 1,
+    "def_site": "lib/sqlalchemy/orm/util.py:272",
+    "in_scope_calls": 7,
+    "total_calls": 7
+   },
+   {
+    "name": "_document_text_coercion",
+    "definitions": 1,
+    "def_site": "lib/sqlalchemy/sql/coercions.py:130",
+    "in_scope_calls": 6,
+    "total_calls": 6
+   },
+   {
+    "name": "_before_attach",
+    "definitions": 1,
+    "def_site": "lib/sqlalchemy/orm/session.py:4426",
+    "in_scope_calls": 4,
+    "total_calls": 5
+   },
+   {
+    "name": "_effective_key",
+    "definitions": 1,
+    "def_site": "lib/sqlalchemy/ext/baked.py:160",
+    "in_scope_calls": 4,
+    "total_calls": 4
+   },
+   {
+    "name": "_deep_is_literal",
+    "definitions": 1,
+    "def_site": "lib/sqlalchemy/sql/coercions.py:92",
+    "in_scope_calls": 5,
+    "total_calls": 5
+   },
+   {
+    "name": "_compare_dml_values_or_ce",
+    "definitions": 1,
+    "def_site": "lib/sqlalchemy/sql/traversals.py:902",
+    "in_scope_calls": 4,
+    "total_calls": 4
+   },
+   {
+    "name": "inspect_formatargspec",
+    "definitions": 1,
+    "def_site": "lib/sqlalchemy/util/compat.py:187",
+    "in_scope_calls": 7,
+    "total_calls": 7
+   },
+   {
+    "name": "_post_configure_properties",
+    "definitions": 1,
+    "def_site": "lib/sqlalchemy/orm/mapper.py:2340",
+    "in_scope_calls": 3,
+    "total_calls": 3
+   }
+  ],
+  "disamb": [
+   {
+    "name": "compile",
+    "definitions": 6,
+    "distinct_files": 4,
+    "def_sites": [
+     "lib/sqlalchemy/ext/compiler.py:241",
+     "lib/sqlalchemy/ext/compiler.py:246",
+     "lib/sqlalchemy/sql/ddl.py:954",
+     "lib/sqlalchemy/sql/elements.py:257",
+     "lib/sqlalchemy/sql/elements.py:817",
+     "lib/sqlalchemy/sql/type_api.py:1134"
+    ]
+   },
+   {
+    "name": "discard",
+    "definitions": 7,
+    "distinct_files": 5,
+    "def_sites": [
+     "lib/sqlalchemy/util/_collections_cy.py:137",
+     "lib/sqlalchemy/util/_collections_cy.py:302",
+     "lib/sqlalchemy/ext/mutable.py:1049",
+     "lib/sqlalchemy/ext/associationproxy.py:1888",
+     "lib/sqlalchemy/orm/collections.py:1351",
+     "lib/sqlalchemy/orm/collections.py:1352",
+     "lib/sqlalchemy/orm/identity.py:276"
+    ]
+   },
+   {
+    "name": "python_type",
+    "definitions": 16,
+    "distinct_files": 4,
+    "def_sites": [
+     "lib/sqlalchemy/sql/sqltypes.py:320",
+     "lib/sqlalchemy/sql/sqltypes.py:413",
+     "lib/sqlalchemy/sql/sqltypes.py:539",
+     "lib/sqlalchemy/sql/sqltypes.py:907",
+     "lib/sqlalchemy/sql/sqltypes.py:932",
+     "lib/sqlalchemy/sql/sqltypes.py:977",
+     "lib/sqlalchemy/sql/sqltypes.py:1029",
+     "lib/sqlalchemy/sql/sqltypes.py:2016"
+    ]
+   },
+   {
+    "name": "create_for_statement",
+    "definitions": 6,
+    "distinct_files": 3,
+    "def_sites": [
+     "lib/sqlalchemy/orm/context.py:276",
+     "lib/sqlalchemy/orm/context.py:455",
+     "lib/sqlalchemy/orm/bulk_persistence.py:1369",
+     "lib/sqlalchemy/orm/bulk_persistence.py:1462",
+     "lib/sqlalchemy/orm/bulk_persistence.py:1947",
+     "lib/sqlalchemy/sql/base.py:761"
+    ]
+   },
+   {
+    "name": "fetchmany",
+    "definitions": 19,
+    "distinct_files": 7,
+    "def_sites": [
+     "lib/sqlalchemy/connectors/asyncio.py:103",
+     "lib/sqlalchemy/connectors/asyncio.py:321",
+     "lib/sqlalchemy/connectors/asyncio.py:345",
+     "lib/sqlalchemy/engine/interfaces.py:216",
+     "lib/sqlalchemy/engine/result.py:947",
+     "lib/sqlalchemy/engine/result.py:1362",
+     "lib/sqlalchemy/engine/result.py:1466",
+     "lib/sqlalchemy/engine/result.py:1665"
+    ]
+   },
+   {
+    "name": "visit_sequence",
+    "definitions": 8,
+    "distinct_files": 6,
+    "def_sites": [
+     "lib/sqlalchemy/sql/ddl.py:1548",
+     "lib/sqlalchemy/sql/ddl.py:1738",
+     "lib/sqlalchemy/sql/compiler.py:3170",
+     "lib/sqlalchemy/sql/compiler.py:6942",
+     "lib/sqlalchemy/dialects/postgresql/base.py:2390",
+     "lib/sqlalchemy/dialects/oracle/base.py:1465",
+     "lib/sqlalchemy/dialects/mysql/_mariadb_shim.py:125",
+     "lib/sqlalchemy/dialects/mssql/base.py:2556"
+    ]
+   },
+   {
+    "name": "get_table_names",
+    "definitions": 7,
+    "distinct_files": 7,
+    "def_sites": [
+     "lib/sqlalchemy/engine/interfaces.py:1624",
+     "lib/sqlalchemy/engine/reflection.py:385",
+     "lib/sqlalchemy/dialects/postgresql/base.py:4082",
+     "lib/sqlalchemy/dialects/oracle/base.py:2580",
+     "lib/sqlalchemy/dialects/sqlite/base.py:2355",
+     "lib/sqlalchemy/dialects/mysql/base.py:3220",
+     "lib/sqlalchemy/dialects/mssql/base.py:3441"
+    ]
+   },
+   {
+    "name": "get_multi_foreign_keys",
+    "definitions": 6,
+    "distinct_files": 6,
+    "def_sites": [
+     "lib/sqlalchemy/engine/interfaces.py:1596",
+     "lib/sqlalchemy/engine/reflection.py:1096",
+     "lib/sqlalchemy/engine/default.py:1398",
+     "lib/sqlalchemy/dialects/postgresql/base.py:5079",
+     "lib/sqlalchemy/dialects/oracle/base.py:3520",
+     "lib/sqlalchemy/dialects/mssql/base.py:4315"
+    ]
+   },
+   {
+    "name": "_soft_close",
+    "definitions": 6,
+    "distinct_files": 3,
+    "def_sites": [
+     "lib/sqlalchemy/engine/result.py:1240",
+     "lib/sqlalchemy/engine/result.py:1857",
+     "lib/sqlalchemy/engine/result.py:1960",
+     "lib/sqlalchemy/engine/result.py:2008",
+     "lib/sqlalchemy/engine/_result_cy.py:129",
+     "lib/sqlalchemy/engine/cursor.py:1755"
+    ]
+   },
+   {
+    "name": "visit_primary_key_constraint",
+    "definitions": 5,
+    "distinct_files": 5,
+    "def_sites": [
+     "lib/sqlalchemy/sql/compiler.py:7476",
+     "lib/sqlalchemy/dialects/postgresql/base.py:2731",
+     "lib/sqlalchemy/dialects/sqlite/base.py:1820",
+     "lib/sqlalchemy/dialects/mysql/base.py:2285",
+     "lib/sqlalchemy/dialects/mssql/base.py:2777"
+    ]
+   }
+  ]
+ }
+}

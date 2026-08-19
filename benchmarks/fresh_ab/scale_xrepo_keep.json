@@ -1,0 +1,128 @@
+{
+ "tickets": [
+  {
+   "id": "XL1",
+   "repo": "django+celery+sqlalchemy",
+   "title": "Map out where each layer defers building/loading an object until it's actually touched",
+   "text": "We keep hitting surprising latency spikes that turn out to be some object finally getting built or fetched the moment we touch an attribute on it, long after it looked like it was already created. Before we write a shared 'don't be surprised by this' doc for the team, I want a precise inventory across our stack (Django models/ORM, Celery, SQLAlchemy ORM): for each one, what's the actual mechanism that defers the real work until first access, where does it live in the code, what specifically triggers it to finally run, and does the result get cached afterward (and at what granularity - per instance, per proxy, per session)? I've seen at least one case where the deferred value gets cached forever after the first touch and another where it seems to re-run on every access, and I want to know exactly which is which before we rely on either behavior.",
+   "gold": "Each project has its own deferred-evaluation primitive with different trigger/caching semantics:\n\nDjango: `DeferredAttribute` in django/db/models/query_utils.py (class starts ~line 250). It's a descriptor installed for fields excluded by QuerySet.defer()/.only(); `__get__` checks if the field is already in `instance.__dict__`, and if not, triggers a fetch via `instance._state.fetch_mode.fetch(self, instance)` on first attribute access. The fetched value is then cached per-instance in `instance.__dict__` (subsequent accesses hit the dict directly, bypassing the descriptor's fetch path).\n\nCelery: `PromiseProxy` in celery/celery/local.py (class ~line 282, subclass of `Proxy`). It's used by `Celery.task()` in celery/celery/app/base.py (~line 566, inside `inner_create_task_cls`) to return a proxy immediately when a task is declared before the app is finalized: `ret = PromiseProxy(self._task_from_fun, (fun,), opts, __doc__=fun.__doc__)`. The real Task subclass is only constructed on first attribute access via `_get_current_object`/`__evaluate__`, which then stores the result on `object.__setattr__(self, '__thing', thing)' - once evaluated, the proxy caches the object forever (`__evaluated__()` just checks whether `__thing` was set), unlike the base `Proxy` class which re-resolves on every access.\n\nSQLAlchemy: two separate loader strategies in sqlalchemy/lib/sqlalchemy/orm/strategies.py. `_LazyLoader` (~line 710) implements relationship loading with `lazy='select'` (the default) - it fires a SELECT the first time the relationship attribute is accessed on an instance, per the docstring 'loads when first accessed'. `_DeferredColumnLoader` (~line 407) is the separate strategy used for columns excluded via `defer()`, and only loads those specific columns when touched. Both are per-mapper/per-attribute strategies, not a single class shared across relationships and columns.\n\nThe key divergence: Celery's PromiseProxy caches its evaluated object once, globally, on the proxy itself, and evaluation is effectively binary (unrealized vs realized forever). Django's DeferredAttribute is a per-instance, per-field cache that lives in the instance's own `__dict__`. SQLAlchemy splits the concern into two different strategy classes (columns vs relationships) and its caching is governed by the owning Session/instance state rather than the loader itself, and is configurable per attribute (lazy='select' vs 'joined' vs 'subquery' etc.) rather than a fixed on/off.",
+   "gold_markers": [
+    "DeferredAttribute",
+    "PromiseProxy",
+    "_LazyLoader",
+    "_DeferredColumnLoader"
+   ],
+   "primary_paths": [
+    "django/django/db/models/query_utils.py",
+    "celery/celery/local.py",
+    "celery/celery/app/base.py",
+    "sqlalchemy/lib/sqlalchemy/orm/strategies.py"
+   ],
+   "verified_how": "Read django/db/models/query_utils.py:250-280 (DeferredAttribute.__get__ triggers fetch_mode.fetch on first access, caches in instance.__dict__); read celery/local.py:282-353 (PromiseProxy._get_current_object/__evaluate__/__evaluated__ show once-only evaluation and permanent caching via object.__setattr__(self,'__thing',thing)), confirmed usage site celery/app/base.py:520-580 ('return a proxy object that evaluates on first use'); read sqlalchemy/orm/strategies.py:407-440 (_DeferredColumnLoader) and 710-740 (_LazyLoader docstring 'loads when first accessed'). Grepped counts: DeferredAttribute=13 hits in django/django, PromiseProxy=7 hits in celery/celery, _LazyLoader=5 and _DeferredColumnLoader=2 hits in sqlalchemy/lib/sqlalchemy - all under the 50-hit precision bar.",
+   "why_this_is_hard": "The three deferred-evaluation mechanisms are in different subsystems of each codebase (ORM field loading, task-decorator app-binding, and ORM relationship/column loading strategies) and share no common vocabulary ('deferred' vs 'promise/proxy' vs 'lazy') despite doing structurally the same thing - solving it requires locating three separate, differently-named implementations and reasoning about each one's caching granularity from the actual descriptor/proxy code, not from any doc that uses a common term for all three.",
+   "corpus_size": 27400,
+   "target_definitions": 4,
+   "repos_required": [
+    "django",
+    "celery",
+    "sqlalchemy"
+   ]
+  },
+  {
+   "id": "XL2",
+   "repo": "django+celery+sqlalchemy",
+   "title": "Nail down what 'pool' actually means in each service before we standardize pooling config",
+   "text": "In our infra sync everyone says 'pool' and means something different, and I want to stop guessing before we write the shared config guide. For our Django services, our Celery workers, and anything going through SQLAlchemy: what concretely gets pooled in each (if anything), where is the pool implemented in code, what causes a new pool member to get created versus an existing one reused, and how/when does a member get torn down? I specifically want to know whether the default behavior in each case is even pooling at all, or something else that just gets called that colloquially.",
+   "gold": "The three 'pools' are genuinely different mechanisms pooling different kinds of resources:\n\nDjango: `DatabaseWrapper.pool` property in django/db/backends/postgresql/base.py (~lines 191-236). This is opt-in only (`settings_dict['OPTIONS'].get('pool')` must be set) and lazily constructs a `psycopg_pool.ConnectionPool`, keyed by connection alias in a class-level dict `_connection_pools`, on first access; `close_pool()` (~line 238) closes it and removes the alias's entry. Without that option, Django does NOT pool connections at all by default - instead django/db/backends/base/base.py manages a single persistent connection per thread, reused across requests up to `CONN_MAX_AGE` seconds (tracked via `self.close_at`, set at connect time ~line 248-249, and checked in `close_if_unusable_or_obsolete()` ~line 591/614) - i.e. one connection kept alive and recycled, not a pool of several.\n\nCelery: `BasePool` in celery/celery/concurrency/base.py (class ~line 46) is the abstraction for the worker's execution pool - a set of OS-level worker processes/threads that execute tasks concurrently, not a pool of network connections at all. `TaskPool` in celery/celery/concurrency/prefork.py (class ~line 95, subclassing BasePool) is the default prefork implementation, with `on_start`/`on_stop` lifecycle hooks (~lines 104, 142) that spin the worker processes up/down. Which pool implementation runs is chosen via the `--pool` flag (prefork/eventlet/gevent/solo/threads).\n\nSQLAlchemy: `Pool` in sqlalchemy/lib/sqlalchemy/pool/base.py (class ~line 156) is the base DBAPI-connection-pool abstraction; `QueuePool` in sqlalchemy/lib/sqlalchemy/pool/impl.py is the default Engine-level implementation, holding a bounded queue of DBAPI connections that get checked out and checked back in per unit of work, growing up to `pool_size + max_overflow` before blocking/erroring, distinct from Django's single-persistent-connection default.\n\nDivergence for the standup: Django's pooling is opt-in and, even then, delegates to a third-party pool implementation rather than owning pooling logic itself; its unqualified default behavior is connection *reuse*, not pooling. SQLAlchemy owns and always runs an actual bounded multi-connection pool by default (QueuePool) unless explicitly swapped for NullPool/StaticPool/etc. Celery's 'pool' isn't about connections at all - it's the concurrency mechanism for running tasks, configurable independently of any broker connection pooling that may happen underneath it.",
+   "gold_markers": [
+    "_connection_pools",
+    "psycopg_pool",
+    "class BasePool",
+    "class TaskPool",
+    "class QueuePool",
+    "class Pool(log.Identified"
+   ],
+   "primary_paths": [
+    "django/django/db/backends/postgresql/base.py",
+    "django/django/db/backends/base/base.py",
+    "celery/celery/concurrency/base.py",
+    "celery/celery/concurrency/prefork.py",
+    "sqlalchemy/lib/sqlalchemy/pool/base.py",
+    "sqlalchemy/lib/sqlalchemy/pool/impl.py"
+   ],
+   "verified_how": "Read django/db/backends/postgresql/base.py:191-241 (pool property, _connection_pools dict, close_pool) and django/db/backends/base/base.py:87,247-249,578-614 (close_at/CONN_MAX_AGE persistent-connection default, distinct from the pool property); read celery/concurrency/base.py:1-60 (class BasePool docstring 'Task pool') and celery/concurrency/prefork.py:95-142 (class TaskPool(BasePool), on_start/on_stop); read sqlalchemy/pool/base.py:156 (class Pool(log.Identified, event.EventTarget)) and grepped 'class QueuePool' in sqlalchemy/pool/impl.py. Grep counts: _connection_pools=10 in django/django, BasePool=15 in celery/celery, QueuePool class def=1 (unique) in sqlalchemy/lib/sqlalchemy - all under the 50-hit bar.",
+   "why_this_is_hard": "All three literally use the word 'pool' in source, which invites the wrong assumption that they're comparable line items in a single config table; only by reading the actual classes does it become clear Django's default path isn't pooling at all, Celery's pool is a process/thread concurrency pool unrelated to connections, and only SQLAlchemy's QueuePool is a true bounded multi-connection pool - a shallow keyword search across repos would find three 'pool' hits and wrongly treat them as the same knob.",
+   "corpus_size": 27400,
+   "target_definitions": 6,
+   "repos_required": [
+    "django",
+    "celery",
+    "sqlalchemy"
+   ]
+  },
+  {
+   "id": "XL3",
+   "repo": "django+celery+sqlalchemy",
+   "title": "How does each piece of our stack know a long-lived resource has gone stale before something bad happens?",
+   "text": "We had an incident where a worker looked alive in our dashboard well after it had actually died, and separately we've seen queries fail against a DB connection that quietly went bad while idle. I want to understand, precisely, how each layer of our stack currently detects that a long-lived resource (a DB connection, a pooled connection, a worker process) is no longer good before something downstream relies on it - is it an active check done right before reuse, or does the resource itself have to proactively announce that it's still alive, and if so how is a missed announcement noticed? Need the actual mechanism in Django, Celery, and SQLAlchemy, not just 'there's a timeout somewhere.'",
+   "gold": "The three systems use genuinely different liveness models:\n\nDjango: pull-based, checked right before reuse. `BaseDatabaseWrapper.close_if_health_check_failed()` in django/db/backends/base/base.py (~line 578) runs when `CONN_HEALTH_CHECKS` is enabled and no check has been done yet on the current connection; it calls the backend's `is_usable()` (abstract at ~line 565, implemented per-backend e.g. postgresql/base.py ~line 498) and closes the connection if the check fails, forcing a fresh reconnect on next use. This is invoked opportunistically (e.g. in `ensure_connection()`), not on a timer.\n\nSQLAlchemy: pull-based, checked at checkout. `_ConnectionFairy._checkout()` in sqlalchemy/lib/sqlalchemy/pool/base.py (~line 1262) checks `pool._pre_ping` when a connection is checked out of the pool; if enabled and the connection isn't freshly created, it calls `pool._dialect._do_ping_w_event(fairy.dbapi_connection)` to actually round-trip a ping before handing the connection to the caller, invalidating and retrying (up to a couple of attempts) if the ping fails.\n\nCelery: push-based, with a separate expiry check on the receiving side. Workers proactively broadcast their own liveness: `Heart` in celery/celery/worker/heartbeat.py (class ~line 14) is a timer that periodically calls `self.eventer.send(event, freq=self.interval, ...)` to emit heartbeat events (default every 2s) - nothing 'checks' the worker directly. On the consuming side, celery/celery/events/state.py tracks each worker's last-seen heartbeats and exposes `Worker.alive()` (~line 234), which returns `nowfun() < self.heartbeat_expires` (heartbeat_expires computed from the last heartbeat timestamp plus `freq * expire_window` - see the module-level `heartbeat_expires()` function ~line 114) - i.e. a worker is considered dead only once its expected next heartbeat window has passed, not via any direct probe. Celery separately offers an on-demand pull-style check via `Control.ping()` in celery/celery/app/control.py (~line 560), but that's an explicit admin action, not something the framework runs automatically before using a worker.\n\nDivergence: Django and SQLAlchemy both actively verify the specific resource immediately before it's handed back for reuse (pull, synchronous, inline with the calling code path). Celery instead relies on workers proactively self-reporting on an interval, with staleness detected only indirectly by another component noticing a heartbeat is overdue - there's no automatic 'check this worker is alive before dispatching a task to it' step analogous to Django's or SQLAlchemy's pre-use check.",
+   "gold_markers": [
+    "close_if_health_check_failed",
+    "is_usable",
+    "_pre_ping",
+    "_do_ping_w_event",
+    "class Heart",
+    "heartbeat_expires"
+   ],
+   "primary_paths": [
+    "django/django/db/backends/base/base.py",
+    "django/django/db/backends/postgresql/base.py",
+    "sqlalchemy/lib/sqlalchemy/pool/base.py",
+    "celery/celery/worker/heartbeat.py",
+    "celery/celery/events/state.py",
+    "celery/celery/app/control.py"
+   ],
+   "verified_how": "Read django/db/backends/base/base.py:565-618 (is_usable abstract, close_if_health_check_failed, close_if_unusable_or_obsolete) and postgresql/base.py:498 (is_usable impl); read sqlalchemy/pool/base.py:1262-1310 (_ConnectionFairy._checkout, pool._pre_ping branch calling _do_ping_w_event); read celery/worker/heartbeat.py:1-50 (class Heart, self.eventer.send) and celery/events/state.py:114-235 (heartbeat_expires function, Worker.alive using nowfun() < self.heartbeat_expires) and celery/app/control.py:560-575 (Control.ping as separate on-demand broadcast). Grep counts: close_if_health_check_failed=7, is_usable=10 in django/django; _pre_ping=31 (still <50), _do_ping_w_event=4 in sqlalchemy/lib/sqlalchemy; class Heart=2, heartbeat_expires=5 in celery/celery.",
+   "why_this_is_hard": "The push-vs-pull distinction is invisible from names alone (health_check, pre_ping, heartbeat all sound like synonyms for 'liveness check'), and the celery mechanism is split across two files with two different responsibilities (the sender in worker/heartbeat.py, the staleness judgment in events/state.py) plus a decoy on-demand ping in app/control.py that looks like the obvious answer but is not what runs automatically - getting this right requires reading enough of each implementation to see which side initiates the check and when it actually executes.",
+   "corpus_size": 27400,
+   "target_definitions": 5,
+   "repos_required": [
+    "django",
+    "celery",
+    "sqlalchemy"
+   ]
+  },
+  {
+   "id": "XL4",
+   "repo": "django+celery+sqlalchemy",
+   "title": "Where does each layer stash its 'current' active resource so unrelated code can find it without being handed a reference?",
+   "text": "In all three layers of our stack, code deep in a call chain manages to get hold of 'the current X' (the active DB connection, the active Celery app, the active session) without anyone explicitly threading a reference through every function call. I want to understand the actual storage mechanism behind that in Django, Celery, and SQLAlchemy - is it a plain global, something thread-local, something that's aware of async contexts - and where in the code does that live? We're chasing a bug where two different pieces of code seem to disagree about what 'the current one' is, so I need the real storage structure per layer, not just 'it's a singleton.'",
+   "gold": "Each of the three uses a different context-local storage primitive for tracking 'the current X':\n\nDjango: `BaseConnectionHandler` in django/django/utils/connection.py (class ~line 34) backs `django.db.connections` (via `ConnectionHandler` in django/db/utils.py ~line 141, subclassing it). It stores per-alias connections in `self._connections = Local(self.thread_critical)` (~line 41), where `Local` is imported from the third-party `asgiref.local` package - this is explicitly async-context-aware (not just thread-local), so a connection tracked under one async task/thread doesn't leak into another.\n\nCelery: `_TLS` in celery/celery/_state.py (class, `_tls = _TLS()` ~line 71) is a plain `threading.local` subclass holding `current_app = None` as a class attribute. `_get_current_app()` (~line 92) reads `_tls.current_app or default_app`, and the public `current_app` object (~line 139) is actually a `Proxy(get_current_app)` (from celery/celery/local.py) wrapping that lookup, so every access re-resolves through the thread-local rather than holding a fixed reference. This is genuinely thread-local only, not async-context-aware.\n\nSQLAlchemy: `ScopedRegistry` / `ThreadLocalRegistry` in sqlalchemy/lib/sqlalchemy/util/_collections.py (classes ~lines 566 and 630) back `scoped_session` in sqlalchemy/lib/sqlalchemy/orm/scoping.py. `scoped_session.__init__` (~line 198) builds `self.registry = ScopedRegistry(session_factory, scopefunc)` when the caller supplies a custom `scopefunc` (e.g. to make it greenlet- or async-task-aware), or falls back to a plain `ThreadLocalRegistry(session_factory)` (~line 200) otherwise; session lookup (`self.registry()` ~line 204) and explicit removal (`self.registry.set(sess)` ~line 225, plus `.has()`) go through that registry object.\n\nDivergence: Django's storage is async-context-safe by construction, out of the box, via a purpose-built third-party `Local`. SQLAlchemy's is thread-local by default but can be swapped to be context-aware only if the caller explicitly passes a `scopefunc` when constructing the `scoped_session` - it isn't automatic. Celery's is plain `threading.local` with no async-context awareness at all, wrapped in an extra layer of indirection (a `Proxy`) that re-resolves the lookup on every attribute access rather than caching a reference - so 'two pieces of code disagreeing about the current one' is far more plausible under Celery/SQLAlchemy-without-scopefunc in an async or greenlet context than under Django.",
+   "gold_markers": [
+    "BaseConnectionHandler",
+    "asgiref.local",
+    "class _TLS",
+    "ScopedRegistry",
+    "ThreadLocalRegistry",
+    "current_app = Proxy"
+   ],
+   "primary_paths": [
+    "django/django/utils/connection.py",
+    "django/django/db/utils.py",
+    "celery/celery/_state.py",
+    "celery/celery/local.py",
+    "sqlalchemy/lib/sqlalchemy/util/_collections.py",
+    "sqlalchemy/lib/sqlalchemy/orm/scoping.py"
+   ],
+   "verified_how": "Read django/utils/connection.py:1-41 (BaseConnectionHandler using asgiref.local.Local) and django/db/utils.py:141 (ConnectionHandler subclass); read celery/_state.py:68-173 (class _TLS, _tls instance, _get_current_app, current_app = Proxy(get_current_app)); read sqlalchemy/orm/scoping.py:31,153-225 (import of ScopedRegistry, scoped_session.__init__ choosing ScopedRegistry vs ThreadLocalRegistry based on scopefunc) and grepped class defs in sqlalchemy/util/_collections.py:566,630. Grep counts: BaseConnectionHandler=7 in django/django, _TLS=2 in celery/celery, ScopedRegistry=11 in sqlalchemy/lib/sqlalchemy - all under the 50-hit bar.",
+   "why_this_is_hard": "None of the three call this mechanism by the same name (BaseConnectionHandler/Local vs _TLS/Proxy vs ScopedRegistry), the actual storage primitive differs in a way that matters (async-aware Local vs plain threading.local vs a registry that's async-aware only if explicitly configured), and in two of the three repos the real answer sits behind a layer of indirection (Django's ConnectionHandler subclassing a differently-named base class in a different module; Celery's public current_app being a Proxy wrapping the actual thread-local lookup) that a name-only search would likely miss.",
+   "corpus_size": 27400,
+   "target_definitions": 6,
+   "repos_required": [
+    "django",
+    "celery",
+    "sqlalchemy"
+   ]
+  }
+ ]
+}

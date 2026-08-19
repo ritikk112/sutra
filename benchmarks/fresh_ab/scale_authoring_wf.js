@@ -497,7 +497,7 @@ flask ${BASE}flask.
 
 Tickets as JSON:
 
-${'${JSON.stringify(tickets, null, 1)}'}
+${JSON.stringify(tickets, null, 1)}
 
 For EVERY ticket, verify by running commands:
 1. Each gold_marker appears in the stated repo. Markers that are FILE BASENAMES must be

@@ -1,0 +1,214 @@
+{
+ "flask": {
+  "size": 497,
+  "blast_prefix": "FL",
+  "disamb_prefix": "FD",
+  "blast": [
+   {
+    "name": "record_once",
+    "definitions": 1,
+    "def_site": "src/flask/sansio/blueprints.py:233",
+    "in_scope_calls": 10,
+    "total_calls": 10
+   },
+   {
+    "name": "_method_route",
+    "definitions": 1,
+    "def_site": "src/flask/sansio/scaffold.py:284",
+    "in_scope_calls": 6,
+    "total_calls": 7
+   }
+  ],
+  "disamb": [
+   {
+    "name": "decorator",
+    "definitions": 13,
+    "distinct_files": 5,
+    "def_sites": [
+     "src/flask/cli.py:395",
+     "src/flask/cli.py:422",
+     "src/flask/helpers.py:120",
+     "src/flask/sansio/blueprints.py:469",
+     "src/flask/sansio/blueprints.py:525",
+     "src/flask/sansio/blueprints.py:583",
+     "src/flask/sansio/blueprints.py:663",
+     "src/flask/sansio/app.py:692"
+    ]
+   }
+  ]
+ },
+ "celery": {
+  "size": 3601,
+  "blast_prefix": "CE",
+  "disamb_prefix": "CD",
+  "blast": [
+   {
+    "name": "_ensure_retryable",
+    "definitions": 1,
+    "def_site": "celery/backends/base.py:636",
+    "in_scope_calls": 9,
+    "total_calls": 9
+   },
+   {
+    "name": "_set_task_join_will_block",
+    "definitions": 1,
+    "def_site": "celery/_state.py:55",
+    "in_scope_calls": 8,
+    "total_calls": 10
+   }
+  ],
+  "disamb": [
+   {
+    "name": "delete",
+    "definitions": 16,
+    "distinct_files": 15,
+    "def_sites": [
+     "celery/result.py:969",
+     "celery/backends/elasticsearch.py:260",
+     "celery/backends/arangodb.py:165",
+     "celery/backends/dynamodb.py:538",
+     "celery/backends/gcs.py:101",
+     "celery/backends/filesystem.py:95",
+     "celery/backends/cache.py:72",
+     "celery/backends/cache.py:128"
+    ]
+   },
+   {
+    "name": "update",
+    "definitions": 10,
+    "distinct_files": 9,
+    "def_sites": [
+     "celery/platforms.py:688",
+     "celery/result.py:636",
+     "celery/beat.py:149",
+     "celery/app/task.py:131",
+     "celery/app/base.py:229",
+     "celery/utils/graph.py:95",
+     "celery/utils/collections.py:299",
+     "celery/utils/collections.py:544"
+    ]
+   }
+  ]
+ },
+ "django": {
+  "size": 11010,
+  "blast_prefix": "DJ",
+  "disamb_prefix": "DD",
+  "blast": [
+   {
+    "name": "units_name",
+    "definitions": 1,
+    "def_site": "django/contrib/gis/db/models/fields.py:132",
+    "in_scope_calls": 6,
+    "total_calls": 6
+   },
+   {
+    "name": "_sqlite_datetime_parse",
+    "definitions": 1,
+    "def_site": "django/db/backends/sqlite3/_functions.py:119",
+    "in_scope_calls": 6,
+    "total_calls": 6
+   }
+  ],
+  "disamb": [
+   {
+    "name": "as_oracle",
+    "definitions": 39,
+    "distinct_files": 13,
+    "def_sites": [
+     "django/db/models/expressions.py:1980",
+     "django/db/models/lookups.py:149",
+     "django/db/models/aggregates.py:271",
+     "django/db/models/aggregates.py:383",
+     "django/db/models/functions/mixins.py:35",
+     "django/db/models/functions/comparison.py:60",
+     "django/db/models/functions/comparison.py:88",
+     "django/db/models/functions/comparison.py:169"
+    ]
+   },
+   {
+    "name": "as_mysql",
+    "definitions": 18,
+    "distinct_files": 10,
+    "def_sites": [
+     "django/db/models/expressions.py:1262",
+     "django/db/models/aggregates.py:360",
+     "django/db/models/aggregates.py:400",
+     "django/db/models/functions/mixins.py:29",
+     "django/db/models/functions/comparison.py:38",
+     "django/db/models/functions/text.py:9",
+     "django/db/models/functions/text.py:47",
+     "django/db/models/functions/text.py:102"
+    ]
+   },
+   {
+    "name": "output_field",
+    "definitions": 14,
+    "distinct_files": 11,
+    "def_sites": [
+     "django/db/models/expressions.py:326",
+     "django/db/models/lookups.py:168",
+     "django/db/models/sql/query.py:334",
+     "django/db/models/sql/where.py:293",
+     "django/contrib/postgres/expressions.py:13",
+     "django/contrib/gis/db/models/functions.py:118",
+     "django/contrib/gis/db/models/functions.py:163",
+     "django/contrib/gis/db/models/functions.py:305"
+    ]
+   }
+  ]
+ },
+ "sqlalchemy": {
+  "size": 12830,
+  "blast_prefix": "SA",
+  "disamb_prefix": "SD",
+  "blast": [
+   {
+    "name": "detect_is_backref",
+    "definitions": 1,
+    "def_site": "lib/sqlalchemy/orm/util.py:272",
+    "in_scope_calls": 7,
+    "total_calls": 7
+   },
+   {
+    "name": "inspect_formatargspec",
+    "definitions": 1,
+    "def_site": "lib/sqlalchemy/util/compat.py:187",
+    "in_scope_calls": 7,
+    "total_calls": 7
+   }
+  ],
+  "disamb": [
+   {
+    "name": "fetchmany",
+    "definitions": 19,
+    "distinct_files": 7,
+    "def_sites": [
+     "lib/sqlalchemy/connectors/asyncio.py:103",
+     "lib/sqlalchemy/connectors/asyncio.py:321",
+     "lib/sqlalchemy/connectors/asyncio.py:345",
+     "lib/sqlalchemy/engine/interfaces.py:216",
+     "lib/sqlalchemy/engine/result.py:947",
+     "lib/sqlalchemy/engine/result.py:1362",
+     "lib/sqlalchemy/engine/result.py:1466",
+     "lib/sqlalchemy/engine/result.py:1665"
+    ]
+   },
+   {
+    "name": "python_type",
+    "definitions": 16,
+    "distinct_files": 4,
+    "def_sites": [
+     "lib/sqlalchemy/sql/sqltypes.py:320",
+     "lib/sqlalchemy/sql/sqltypes.py:413",
+     "lib/sqlalchemy/sql/sqltypes.py:539",
+     "lib/sqlalchemy/sql/sqltypes.py:907",
+     "lib/sqlalchemy/sql/sqltypes.py:932",
+     "lib/sqlalchemy/sql/sqltypes.py:977",
+     "lib/sqlalchemy/sql/sqltypes.py:1029",
+     "lib/sqlalchemy/sql/sqltypes.py:2016"
+    ]
+   }
+  ]
+ }
+}
