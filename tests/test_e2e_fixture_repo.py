@@ -63,11 +63,11 @@ EXPECTED_REL_COUNTS = {
     "calls": 3,
     "imports": 2,
 }
-EXPECTED_EMBEDDABLE_COUNT = 4   # Base, UserService, __init__, create_user, _generate_id, bootstrap
 # Embeddable: ClassSymbol (Base, UserService) + MethodSymbol (__init__, create_user)
 #           + FunctionSymbol (_generate_id, bootstrap)
-# = 2 + 2 + 2 = 6
-EXPECTED_EMBEDDABLE_COUNT = 6
+#           + VariableSymbol (MAX_RETRIES) + ModuleSymbol (user.py)
+# = 2 + 2 + 2 + 1 + 1 = 8
+EXPECTED_EMBEDDABLE_COUNT = 8
 
 
 # ---------------------------------------------------------------------------
@@ -336,16 +336,19 @@ class TestEmbeddingsContract:
                 f"graph says {syms_by_id.get(row_idx)!r}"
             )
 
-    def test_non_embeddable_symbols_have_null_embedding_id(self, indexed) -> None:
+    def test_local_symbols_have_null_embedding_id(self, indexed) -> None:
         for sym in indexed["graph"]["symbols"]:
-            if sym["kind"] in ("variable", "module"):
+            if sym.get("is_local"):
                 assert sym["embedding_id"] is None, (
                     f"{sym['id']} should not have embedding_id"
                 )
 
     def test_embeddable_symbols_have_integer_embedding_id(self, indexed) -> None:
+        # Variables and modules embed too (assignment source / member roster).
         for sym in indexed["graph"]["symbols"]:
-            if sym["kind"] in ("function", "method", "class"):
+            if sym.get("is_local"):
+                continue
+            if sym["kind"] in ("function", "method", "class", "variable", "module"):
                 assert isinstance(sym["embedding_id"], int), (
                     f"{sym['id']} missing embedding_id"
                 )

@@ -21,7 +21,7 @@ from sutra.core.extractor.adapters.python import PythonAdapter
 from sutra.core.indexer import Indexer
 from sutra.core.output.json_graph_exporter import JsonGraphExporter
 from sutra.core.resolver import HeuristicResolver
-from sutra.mcp.server import SutraServer, _docstring_summary
+from sutra.mcp.server import SutraServer, _docstring_summary, _signature_summary
 
 _FIXTURES = Path(__file__).parent / "fixtures"
 _FIXTURE_REPO = _FIXTURES / "sample_python_repo"
@@ -339,3 +339,30 @@ class TestDocstringSummary:
         out = _docstring_summary("x" * 300)
         assert len(out) == 200
         assert out.endswith("…")
+
+
+# ---------------------------------------------------------------------------
+# _signature_summary — search payloads carried multi-KB signatures
+# (fastapi's Annotated[..., Doc("...")] style: measured 115K of a 126K
+# two-query payload was signature text). Full signature stays available
+# via sutra_get_symbol.
+# ---------------------------------------------------------------------------
+
+class TestSignatureSummary:
+    def test_short_signature_untouched(self) -> None:
+        sig = "def create_user(name: str) -> User"
+        assert _signature_summary(sig) == sig
+
+    def test_multiline_signature_collapses_whitespace(self) -> None:
+        sig = "def f(\n    a: int,\n    b: str,\n) -> None"
+        assert _signature_summary(sig) == "def f( a: int, b: str, ) -> None"
+
+    def test_long_signature_capped_with_ellipsis(self) -> None:
+        sig = "def request(" + ", ".join(f"p{i}: Annotated[int, Doc('word')]" for i in range(100)) + ")"
+        out = _signature_summary(sig)
+        assert len(out) == 200
+        assert out.endswith("…")
+
+    def test_none_and_empty_pass_through(self) -> None:
+        assert _signature_summary(None) is None
+        assert _signature_summary("") == ""

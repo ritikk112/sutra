@@ -21,11 +21,28 @@ class LocalEmbedder(Embedder):
     GPU/CPU memory management internally.
     """
 
+    # bge en-family models are asymmetric: queries embed with an instruction
+    # prefix, documents without.  LocalEmbedder previously embedded queries
+    # bare — a known confound flagged in KIND_FILTER_AB.md.  bge-m3 and the
+    # rerankers deliberately take no prefix.
+    _BGE_QUERY_INSTRUCTION = (
+        "Represent this sentence for searching relevant passages: "
+    )
+
+    @staticmethod
+    def default_query_instruction(model_name: str) -> str | None:
+        """Query-side instruction the model was trained with, or None."""
+        import re  # noqa: PLC0415
+        if re.fullmatch(r"BAAI/bge-(small|base|large)-en(-v[\d.]+)?", model_name):
+            return LocalEmbedder._BGE_QUERY_INSTRUCTION
+        return None
+
     def __init__(
         self,
         model_name: str = "all-MiniLM-L6-v2",
         dimensions: int = 384,
         batch_size: int = 32,
+        query_instruction: str | None = "auto",
     ) -> None:
         try:
             from sentence_transformers import SentenceTransformer  # noqa: PLC0415
@@ -49,6 +66,11 @@ class LocalEmbedder(Embedder):
             )
         self._dimensions = dimensions
         self._model_name = model_name
+        self._query_instruction = (
+            self.default_query_instruction(model_name)
+            if query_instruction == "auto"
+            else query_instruction
+        )
 
     @property
     def dimensions(self) -> int:
@@ -57,6 +79,13 @@ class LocalEmbedder(Embedder):
     @property
     def model_id(self) -> str:
         return f"sentence-transformers/{self._model_name}"
+
+    def embed_queries(self, chunks: list[str]) -> np.ndarray:
+        """Query-side embedding: apply the model's instruction prefix, if any.
+        Document embedding (embed) is untouched — artifacts stay valid."""
+        if self._query_instruction:
+            chunks = [self._query_instruction + c for c in chunks]
+        return self.embed(chunks)
 
     @staticmethod
     def native_dimensions(model_name: str) -> int:

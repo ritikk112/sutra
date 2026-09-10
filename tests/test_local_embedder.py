@@ -21,3 +21,46 @@ class TestWantsProgress:
 
     def test_progress_hidden_for_empty(self) -> None:
         assert LocalEmbedder._wants_progress(0, 32) is False
+
+
+class TestQueryInstruction:
+    """bge-family models want a query-side instruction prefix (documents
+    embed bare).  Pure resolution logic — no model load required."""
+
+    def test_bge_models_get_the_bge_prefix(self) -> None:
+        prefix = LocalEmbedder.default_query_instruction("BAAI/bge-base-en-v1.5")
+        assert prefix == "Represent this sentence for searching relevant passages: "
+        assert LocalEmbedder.default_query_instruction("BAAI/bge-small-en-v1.5") == prefix
+        assert LocalEmbedder.default_query_instruction("BAAI/bge-large-en") == prefix
+
+    def test_non_bge_models_get_none(self) -> None:
+        assert LocalEmbedder.default_query_instruction("all-MiniLM-L6-v2") is None
+        assert LocalEmbedder.default_query_instruction("BAAI/bge-m3") is None  # m3 wants no prefix
+        assert LocalEmbedder.default_query_instruction("BAAI/bge-reranker-base") is None
+
+    def test_embed_queries_prepends_instruction(self) -> None:
+        # Build an instance without running __init__ (no model download).
+        emb = LocalEmbedder.__new__(LocalEmbedder)
+        emb._query_instruction = "PREFIX: "
+        captured = {}
+
+        def fake_embed(chunks):
+            captured["chunks"] = chunks
+            return "vecs"
+
+        emb.embed = fake_embed
+        assert emb.embed_queries(["find the thing"]) == "vecs"
+        assert captured["chunks"] == ["PREFIX: find the thing"]
+
+    def test_embed_queries_without_instruction_is_plain_embed(self) -> None:
+        emb = LocalEmbedder.__new__(LocalEmbedder)
+        emb._query_instruction = None
+        captured = {}
+
+        def fake_embed(chunks):
+            captured["chunks"] = chunks
+            return "vecs"
+
+        emb.embed = fake_embed
+        assert emb.embed_queries(["find the thing"]) == "vecs"
+        assert captured["chunks"] == ["find the thing"]

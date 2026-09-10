@@ -101,16 +101,20 @@ class QueryAnalyzer:
         lowered = [w.lower() for w in words]
 
         kind_hint = self._kind_hint(lowered)
+        hint_source = "noun" if kind_hint is not None else None
         verbs = self._extract_verbs(lowered)
 
         # Verb-derived fallback: behavioral verbs imply a callable, but only
         # when no explicit kind noun contradicts/none present (conservative).
         if kind_hint is None and verbs and not self._has_any_kind_noun(lowered):
             kind_hint = frozenset({"function", "method"})
+            hint_source = "verb"
 
         embedding = None
         if embed and self._embedder is not None:
-            embedding = self._embedder.embed([text])[0]
+            # embed_queries, not embed: query-side instruction prefixes
+            # (bge) apply here and must never touch document embedding.
+            embedding = self._embedder.embed_queries([text])[0]
 
         return ParsedQuery(
             text=text,
@@ -118,6 +122,7 @@ class QueryAnalyzer:
             kind_hint=kind_hint,
             verbs=verbs,
             entities=self._extract_entities(text),
+            kind_hint_source=hint_source,
         )
 
     # ------------------------------------------------------------------

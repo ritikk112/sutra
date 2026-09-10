@@ -387,7 +387,8 @@ class TestChunkBuilderClassChunks:
 # ---------------------------------------------------------------------------
 
 class TestChunkBuilderFiltering:
-    def test_variable_symbols_not_included(self, tmp_path: Path) -> None:
+    def test_variable_symbols_included(self, tmp_path: Path) -> None:
+        _make_source_file(tmp_path, "pkg/a.py", "X = 1\n")
         var = VariableSymbol(
             id="sutra python repo pkg/a.py X.",
             name="X",
@@ -400,10 +401,10 @@ class TestChunkBuilderFiltering:
             is_exported=True,
         )
         chunks, monikers = build_chunks([var], tmp_path)
-        assert chunks == []
-        assert monikers == []
+        assert monikers == ["sutra python repo pkg/a.py X."]
+        assert chunks[0].startswith("Variable: pkg.X")
 
-    def test_module_symbols_not_included(self, tmp_path: Path) -> None:
+    def test_module_symbols_included(self, tmp_path: Path) -> None:
         mod = ModuleSymbol(
             id="sutra python repo pkg/a.py pkg/a/",
             name="a",
@@ -416,8 +417,8 @@ class TestChunkBuilderFiltering:
             is_exported=True,
         )
         chunks, monikers = build_chunks([mod], tmp_path)
-        assert chunks == []
-        assert monikers == []
+        assert monikers == ["sutra python repo pkg/a.py pkg/a/"]
+        assert chunks[0].startswith("Module: pkg.a")
 
     def test_output_sorted_by_moniker(self, tmp_path: Path) -> None:
         src = "def z() -> None: pass\ndef a() -> None: pass\n"
