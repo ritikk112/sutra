@@ -3,10 +3,21 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sutra"
+name = "sutra-engine"
 version = "0.1.0"
+authors = [
+  { name="Ritik Shukla", email="shukla.ritik2001@gmail.com" },
+]
 description = "Code-aware retrieval engine with a guided CLI for indexing, serving, and querying repositories."
 requires-python = ">=3.11"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICENCE"]
+
 dependencies = [
     # --- Core runtime (kept in sync with requirements.txt) ---
     "fastapi==0.136.3",
@@ -38,6 +49,10 @@ local = ["sentence-transformers==5.5.1"]
 
 [project.scripts]
 sutra = "sutra.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/ritikk112/sutra"
+Issues = "https://github.com/ritikk112/sutra/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]

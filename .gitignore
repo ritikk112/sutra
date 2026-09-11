@@ -16,3 +16,8 @@ sutra-benchmark/
 
 # Python packaging build artifacts
 *.egg-info/
+
+dist/*
+
+benchmarkings/
+markdowns/
