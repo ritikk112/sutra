@@ -45,8 +45,22 @@ class TestCommandBuilders:
 
     def test_claude_mcp_add_command(self) -> None:
         cmd = provision.claude_mcp_add_command(Path("/home/x/.sutra/artifacts"))
-        assert cmd[:5] == ["claude", "mcp", "add", "sutra", "--"]
+        assert cmd[:7] == ["claude", "mcp", "add", "sutra", "-s", "user", "--"]
         assert cmd[-2:] == ["--artifacts-dir", "/home/x/.sutra/artifacts"]
+
+    def test_claude_mcp_get_command(self) -> None:
+        assert provision.claude_mcp_get_command() == ["claude", "mcp", "get", "sutra"]
+        assert provision.claude_mcp_get_command("other") == ["claude", "mcp", "get", "other"]
+
+    def test_add_and_probe_agree_on_the_server_name(self) -> None:
+        # Guards the trap where the probe checks one name and the add
+        # registers another, so the skip could never fire.
+        name = "sutra-probe"
+        add = provision.claude_mcp_add_command(Path("/art"), name)
+        assert add[3] == name
+        assert provision.claude_mcp_get_command(name)[-1] == add[3]
+        # The launched console script stays `sutra` regardless of the name.
+        assert add[add.index("--") + 1] == "sutra"
 
     def test_mcp_json_snippet_is_valid_json(self) -> None:
         import json
@@ -85,3 +99,51 @@ class TestRunCommand:
     def test_output_captured_on_result(self) -> None:
         res = provision.run_command([sys.executable, "-c", "print('captured-line')"])
         assert "captured-line" in res.output
+
+
+class TestUserScopeProbe:
+    """`claude mcp get` exits 0 for a LOCAL-scope server as well as a user-scope
+    one, so an exit-code-only probe would read the broken per-directory
+    registration as "already done" and skip the fix.  The payloads below are
+    verbatim `claude mcp get` output.
+    """
+
+    USER_SCOPE_OUTPUT = (
+        "sutra:\n"
+        "  Scope: User config (available in all your projects)\n"
+        "  Status: ✔ Connected\n"
+        "  Type: stdio\n"
+        "  Command: sutra\n"
+        "  Args: serve --artifacts-dir /home/x/.sutra/artifacts\n"
+    )
+    LOCAL_SCOPE_OUTPUT = (
+        "sutra:\n"
+        "  Scope: Local config (private to you in this project)\n"
+        "  Status: ✔ Connected\n"
+        "  Type: stdio\n"
+        "  Command: sutra\n"
+    )
+    ABSENT_OUTPUT = 'No MCP server named "sutra". Configured servers: other\n'
+
+    @staticmethod
+    def _probe(returncode: int, output: str) -> provision.ProvisionResult:
+        return provision.ProvisionResult(
+            ok=returncode == 0,
+            returncode=returncode,
+            command=provision.claude_mcp_get_command(),
+            output=output,
+        )
+
+    def test_user_scope_counts_as_registered(self) -> None:
+        assert provision.probe_says_user_scope(self._probe(0, self.USER_SCOPE_OUTPUT)) is True
+
+    def test_local_scope_does_not_count_as_registered(self) -> None:
+        # The regression this whole change exists to prevent.
+        assert provision.probe_says_user_scope(self._probe(0, self.LOCAL_SCOPE_OUTPUT)) is False
+
+    def test_absent_server_does_not_count_as_registered(self) -> None:
+        assert provision.probe_says_user_scope(self._probe(1, self.ABSENT_OUTPUT)) is False
+
+    def test_nonzero_exit_never_counts_even_if_text_matches(self) -> None:
+        # A failed probe must not be trusted just because the word appears.
+        assert provision.probe_says_user_scope(self._probe(1, self.USER_SCOPE_OUTPUT)) is False
