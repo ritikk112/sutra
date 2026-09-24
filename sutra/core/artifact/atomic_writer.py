@@ -76,12 +76,16 @@ class AtomicArtifactWriter:
                     os.fsync(fh.fileno())
                 os.replace(src, artifact_dir / name)
 
-            # fsync the directory so the renames are durable.
-            dir_fd = os.open(artifact_dir, os.O_RDONLY)
-            try:
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
+            # fsync the directory so the renames are durable.  Windows has no
+            # directory fsync (os.open on a directory raises PermissionError)
+            # and os.replace is already a durable MoveFileEx there, so skip it
+            # rather than abort a commit whose files are already promoted.
+            if os.name != "nt":
+                dir_fd = os.open(artifact_dir, os.O_RDONLY)
+                try:
+                    os.fsync(dir_fd)
+                finally:
+                    os.close(dir_fd)
 
             ready.write_text(generation or "ready", encoding="utf-8")
         finally:
