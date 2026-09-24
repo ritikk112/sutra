@@ -69,19 +69,33 @@ Gold functions absent from the index (parser gap, decorator-generated code, …)
 
 ## 4. Layer 2 — paired agent A/B (Claude Code headless)
 
-**Common invocation** (both arms; cwd = the issue's checkout):
+**Common invocation** (both arms; cwd = the issue's checkout; verified live on 2026-09-24 with Claude Code 2.1.281, see §4.1):
 
 ```
-claude -p --bare --model claude-sonnet-5 --output-format stream-json \
+MCP_TIMEOUT=120000 \
+claude -p "<prompt>" \
+       --setting-sources "" --disable-slash-commands \
+       --model claude-sonnet-5 --output-format stream-json --verbose \
        --permission-mode dontAsk --max-turns 30 --max-budget-usd 0.75 \
        --json-schema <answer.schema.json> \
+       --strict-mcp-config --mcp-config '{"mcpServers":{}}' \
        --allowedTools "Read,Grep,Glob" \
-       --disallowedTools "Edit,Write,Bash,WebFetch,WebSearch,Agent,NotebookEdit"
+       --disallowedTools "Edit,Write,Bash,WebFetch,WebSearch,Agent,NotebookEdit" \
+       < /dev/null
 ```
+
+### 4.1 Runtime facts the runner must respect (all verified live)
+
+- **No `--bare`.** It reads only `ANTHROPIC_API_KEY`, never OAuth → "Not logged in". **No `--safe-mode`** either: it also drops dynamic `--mcp-config` servers (`mcp_servers: []`). Isolation comes from `--setting-sources ""` (no user/project/local settings → no hooks, no user MCP) + `--strict-mcp-config` + `--disable-slash-commands`. There is no global or project `CLAUDE.md` on the bench machine; `prepare.py` asserts none exists in a checkout before running.
+- **Prompt goes first.** `--allowedTools` / `--disallowedTools` are variadic and swallow a trailing positional prompt (the run then fails with "Input must be provided…"). Always `claude -p "<prompt>" …` with `< /dev/null`.
+- **`MCP_TIMEOUT=120000`.** `sutra serve` takes ≈ 42 s to initialize on this CPU (it loads the sentence-transformers model at startup); Claude Code's default 30 s MCP timeout marks it `failed`. The grep arm passes `--mcp-config '{"mcpServers":{}}'` so both arms share the identical flag set.
+- **Connection check** = `system/init` message has `mcp_servers == [{"name":"sutra","status":"connected",…}]` and the tool list contains all six `mcp__sutra__*` names. Anything else → invalid run (§4).
+- **Cost fields** come from the `result` message: `total_cost_usd`, `num_turns`, `duration_ms`, `duration_api_ms`, `usage.{input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens}`. On an OAuth subscription `total_cost_usd` is computed, not billed — still the right per-run cost metric.
+- **Windows artifact publish bug**: `atomic_writer.py` fsyncs the artifact *directory*, which raises `PermissionError` on Windows, so `.ready` is never written and `sutra serve` ignores the bundle. Must be fixed (stage 0) before `prepare.py` can index anything on this machine.
 
 **Arms**:
 - `grep`: exactly the above.
-- `grep_sutra`: additionally `--mcp-config <issue mcp.json> --strict-mcp-config` and `mcp__sutra__*` appended to `--allowedTools`. `mcp.json` launches `sutra serve --artifacts-dir benchmarkings/locbench/artifacts/<instance_id>` over stdio, so the server holds only that one index. The run is **invalid** (recorded, retried once, then excluded and counted) if the `system/init` message does not show the `sutra` server as connected.
+- `grep_sutra`: `--mcp-config <issue mcp.json>` replaces the empty one, and `mcp__sutra__*` is appended to `--allowedTools`. `mcp.json` launches `<venv>/Scripts/sutra.exe serve --artifacts-dir benchmarkings/locbench/artifacts/<instance_id>` over stdio (absolute paths), so the server holds only that one index. The ≈ 42 s model load is paid per run (≈ 1 h over 90 runs) — accepted, because it is what a real user pays too. The run is **invalid** (recorded, retried once, then excluded and counted) if the `system/init` message does not show the `sutra` server as connected.
 
 **Prompt**: byte-identical across arms, stored at `layer2/prompt.md`. Contents: the `problem_statement`, the instruction to identify the functions that must be edited to fix it, return up to 5 ranked functions and their files. **The prompt does not mention Sutra or MCP** — the as-shipped condition. Tool descriptions are the only advertising the index gets.
 
@@ -117,7 +131,8 @@ Branch `bench/locbench`. Code in `benchmarkings/locbench/`:
 Tests in `tests/benchmark/` — real data, no mocks: normalizer on real gold strings and real monikers from a tiny indexed fixture repo; Acc@k on hand-checked examples; stream-json parser on a real recorded Claude Code transcript; bootstrap on a known distribution.
 
 Stages (each ends with a report back to the designer for review before the next starts):
-1. `prepare.py` + **timing pilot** on 3 issues (small / medium / django-sized) → shrink decision (§2.1).
+0. **Windows publish fix** in `sutra/core/artifact/atomic_writer.py`: skip the directory `fsync` when `os.name == "nt"` (per-file fsync + `os.replace` remain), with a real test that publishes a bundle and asserts `.ready` exists on the current OS. Product bug, ships independently of the benchmark.
+1. `prepare.py` + **timing pilot** on 3 issues (small / medium / django-sized) → shrink decision (§2.1). Reference point: the `sutra` repo (≈ 700 symbols) indexes in ≈ 104 s with the local embedder on this machine.
 2. `score.py` + `layer1.py` + tests → full Layer 1 run → `layer1/summary.json`.
 3. `layer2.py` + **manual MCP-runtime check** (Sutra MCP connected to a headless Claude Code run on one index, verified from `system/init`) + 5-issue adoption pilot → decision rule.
 4. Full 180-run Layer 2 → `stats.py`, `report.py`, `PREREG.md` hash check → `REPORT.md`.
