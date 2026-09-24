@@ -116,7 +116,7 @@ claude -p "<prompt>" \
 
 ## 6. Implementation plan (handoff)
 
-Branch `bench/locbench`. Code in `benchmarkings/locbench/`:
+Branch `bench/locbench`. Code in `benchmarks/locbench/` (a new tracked directory — `benchmarkings/` is gitignored in this repo; `benchmarks/locbench/.gitignore` excludes `data/locbench_v1.json`, `artifacts/`, `repos/`, `layer2/runs/`):
 
 | File | Responsibility |
 |------|----------------|
