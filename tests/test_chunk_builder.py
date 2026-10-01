@@ -117,3 +117,39 @@ def test_module_member_list_is_capped(tmp_path):
     assert "fn000" in mod_chunk
     assert "fn079" not in mod_chunk
     assert "more" in mod_chunk
+
+
+def test_class_chunk_lists_methods_in_source_order_regardless_of_symbol_order(tmp_path):
+    """Class chunks must not depend on the order symbols arrive in. The method
+    roster used to follow input order, which varied between `sutra index` runs
+    of the same checkout, so class embeddings (and rankings) drifted run to run
+    (found by the LocBench benchmark: 18/446 class vectors differed by up to
+    0.07 on two indexes of one docling commit)."""
+    import random
+
+    from sutra.core.extractor.adapters.python import PythonAdapter
+
+    src = (
+        "class Backend:\n"
+        "    def __init__(self):\n        pass\n"
+        "    @classmethod\n    def supports_pagination(cls) -> bool:\n        return True\n"
+        "    def convert(self):\n        pass\n"
+        "    @staticmethod\n    def supported_formats():\n        return []\n"
+        "    def unload(self):\n        pass\n"
+    )
+    (tmp_path / "b.py").write_text(src)
+    fx = PythonAdapter().extract("b.py", src.encode(), "t/r")
+
+    def class_chunk(symbols):
+        chunks, monikers = build_chunks(symbols, tmp_path, fx.relationships)
+        return chunks[[i for i, m in enumerate(monikers) if m.endswith("Backend#")][0]]
+
+    rng = random.Random(0)
+    seen = set()
+    for _ in range(8):
+        shuffled = list(fx.symbols)
+        rng.shuffle(shuffled)
+        seen.add(class_chunk(shuffled))
+    assert len(seen) == 1
+    order = [line.strip().split("(")[0] for line in seen.pop().split("Methods:\n")[1].splitlines()]
+    assert order == ["__init__", "supports_pagination", "convert", "supported_formats", "unload"]

@@ -60,6 +60,11 @@ def build_chunks(
     for sym in symbols:
         if isinstance(sym, MethodSymbol) and sym.enclosing_class_id in class_method_syms:
             class_method_syms[sym.enclosing_class_id].append(sym)
+    # Source order, not arrival order: the incoming symbol order is not stable across
+    # runs, and the roster is part of the embedded text (and capped), so any drift
+    # here changes class vectors — and rankings — between two indexes of one commit.
+    for methods in class_method_syms.values():
+        methods.sort(key=lambda m: (m.location.byte_start, m.id))
 
     # Build source_id → sorted unique call targets from CALLS relationships.
     calls_by_source: dict[str, list[str]] = {}
