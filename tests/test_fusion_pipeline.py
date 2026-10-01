@@ -102,6 +102,39 @@ class TestRrfFusion:
     def test_empty_channels(self) -> None:
         assert rrf_fuse({"vector": [], "bm25": []}) == []
 
+    def test_channel_weights_scale_contributions(self) -> None:
+        # vector weighted 2.0: its rank-1-only doc (2/(60+1)) must now beat a
+        # doc two unweighted channels agree on at rank 2 (1/62 + 1/62).
+        channels = {
+            "vector": [_r("vec_top", 0.9)],
+            "bm25": [_r("lex_top", 9.0), _r("agreed", 4.0)],
+            "moniker": [_r("lex_top", 1.0), _r("agreed", 0.8)],
+        }
+        plain = rrf_fuse(channels)
+        assert plain[0].moniker != "vec_top"   # unweighted: agreement wins
+        weighted = rrf_fuse(channels, channel_weights={"vector": 3.0})
+        assert weighted[0].moniker == "vec_top"
+
+    def test_pipeline_defaults_to_weighted_vector(self, snapshot) -> None:
+        # Measured default: vector 1.5 at rrf_k=20 (benchmarks/battle_test/).
+        pipe = RetrievalPipeline(snapshot, FixtureEmbedder())
+        assert pipe._channel_weights == {"vector": 1.5}
+        assert pipe._rrf_k == 20
+        # {} opts back into classic unweighted RRF.
+        plain = RetrievalPipeline(snapshot, FixtureEmbedder(), channel_weights={})
+        assert plain._channel_weights == {}
+
+    def test_unit_weights_change_nothing(self) -> None:
+        channels = {
+            "vector": [_r("a", 0.9), _r("b", 0.5)],
+            "bm25": [_r("b", 9.0), _r("c", 4.0)],
+        }
+        plain = rrf_fuse(channels)
+        weighted = rrf_fuse(channels, channel_weights={"vector": 1.0, "bm25": 1.0})
+        assert [(r.moniker, r.score) for r in plain] == [
+            (r.moniker, r.score) for r in weighted
+        ]
+
 
 # ---------------------------------------------------------------------------
 # Moniker channel
@@ -202,11 +235,63 @@ class TestPipelineHermetic:
         assert "create_user" in results[0].moniker
         assert "rrf" in results[0].provenance
 
-    def test_kind_hint_restricts_channels(self, snapshot) -> None:
-        pipe = RetrievalPipeline(snapshot, FixtureEmbedder(), expand=False)
+    def test_kind_hint_restricts_channels_in_hard_mode(self, snapshot) -> None:
+        # Hard mode is the legacy behavior, kept for A/B (KIND_FILTER_AB.md).
+        pipe = RetrievalPipeline(
+            snapshot, FixtureEmbedder(), expand=False, kind_mode="hard"
+        )
         results = pipe.search("the user service class", top_k=10)
         kinds = {snapshot.symbols[r.moniker]["kind"] for r in results}
         assert kinds <= {"class"}
+
+    def test_soft_mode_boosts_but_never_erases(self, snapshot) -> None:
+        # Default soft mode: hint-matching kinds are boosted, but symbols of
+        # other kinds stay in the pool — a wrong hint must not zero recall.
+        pipe = RetrievalPipeline(snapshot, FixtureEmbedder(), expand=False)
+        results = pipe.search("the user service class", top_k=50)
+        kinds = {snapshot.symbols[r.moniker]["kind"] for r in results}
+        assert not (kinds <= {"class"})  # non-class symbols survive
+        boosted = [r for r in results if "kind_boost" in r.provenance]
+        assert boosted, "hint-matching symbols should carry the boost marker"
+        assert all(
+            snapshot.symbols[r.moniker]["kind"] == "class" for r in boosted
+        )
+
+    def test_kind_mode_off_ignores_hints(self, snapshot) -> None:
+        pipe = RetrievalPipeline(
+            snapshot, FixtureEmbedder(), expand=False, kind_mode="off"
+        )
+        results = pipe.search("the user service class", top_k=50)
+        assert all("kind_boost" not in r.provenance for r in results)
+
+    def test_verb_derived_hint_uses_verb_boost(self, snapshot) -> None:
+        # "saves" fires the verb fallback → callable hint with source "verb".
+        # kind_boost_verb=1.0 must neutralize it entirely (behaves like off),
+        # while the noun-derived boost stays at kind_boost.
+        neutral = RetrievalPipeline(
+            snapshot, FixtureEmbedder(), expand=False, kind_boost_verb=1.0
+        )
+        results = neutral.search("what saves the user record", top_k=50)
+        assert all("kind_boost" not in r.provenance for r in results)
+
+        scaled = RetrievalPipeline(
+            snapshot, FixtureEmbedder(), expand=False,
+            kind_boost=1.3, kind_boost_verb=1.15,
+        )
+        results = scaled.search("what saves the user record", top_k=50)
+        boosted = [r for r in results if "kind_boost" in r.provenance]
+        assert boosted
+        assert all(r.provenance["kind_boost"] == 1.15 for r in boosted)
+
+        # Noun-derived hints are untouched by kind_boost_verb.
+        results = scaled.search("the user service class", top_k=50)
+        boosted = [r for r in results if "kind_boost" in r.provenance]
+        assert boosted
+        assert all(r.provenance["kind_boost"] == 1.3 for r in boosted)
+
+    def test_invalid_kind_mode_rejected(self, snapshot) -> None:
+        with pytest.raises(ValueError, match="kind_mode"):
+            RetrievalPipeline(snapshot, FixtureEmbedder(), kind_mode="fuzzy")
 
     def test_expansion_can_be_disabled(self, snapshot) -> None:
         on = RetrievalPipeline(snapshot, FixtureEmbedder(), expand=True)

@@ -57,6 +57,20 @@ class PipelineDeps:
             self.pgvector_store.close()
 
 
+def load_exclude_globs(config_path: Optional[Path]) -> tuple[str, ...]:
+    """
+    Read indexing.exclude_globs from sutra.yaml — repo-relative fnmatch
+    patterns pruned from the file walk ("docs_src/*", "examples/*").
+    Missing file/section → ().
+    """
+    if config_path is None or not Path(config_path).exists():
+        return ()
+    import yaml  # noqa: PLC0415
+    data = yaml.safe_load(Path(config_path).read_text(encoding="utf-8")) or {}
+    globs = (data.get("indexing") or {}).get("exclude_globs") or []
+    return tuple(str(g) for g in globs)
+
+
 def build_dependencies(
     config_path: Optional[Path] = None,
     pg_url: Optional[str] = None,

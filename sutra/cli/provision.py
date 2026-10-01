@@ -143,11 +143,36 @@ def pg_url_for(user: str, password: str, port: int, db: str) -> str:
     return f"postgresql://{user}:{password}@127.0.0.1:{port}/{db}"
 
 
-def claude_mcp_add_command(artifacts_dir: Path) -> list[str]:
+def claude_mcp_add_command(artifacts_dir: Path, name: str = "sutra") -> list[str]:
+    # `-s user` is load-bearing: without a scope, `claude mcp add` defaults to
+    # `local`, which registers the server for the single directory the wizard
+    # happened to run in and nowhere else.
+    #
+    # `name` is the registered server name; the command it launches is always
+    # the `sutra` console script.  They must stay in step with the probe in
+    # claude_mcp_add(), or it would check one name and register another.
     return [
-        "claude", "mcp", "add", "sutra", "--",
+        "claude", "mcp", "add", name, "-s", "user", "--",
         "sutra", "serve", "--artifacts-dir", str(artifacts_dir),
     ]
+
+
+# `claude mcp get` names the scope it found the server in, one of:
+#   "  Scope: User config (available in all your projects)"
+#   "  Scope: Local config (private to you in this project)"
+# Only the first means the server is registered everywhere.
+_USER_SCOPE_MARKER = "Scope: User config"
+
+
+def claude_mcp_get_command(name: str = "sutra") -> list[str]:
+    """Probe a single MCP server by name.
+
+    `get` rather than `list`: list health-checks EVERY configured server —
+    measured at ~4.8s against ~2.8s here, with real network calls to unrelated
+    servers whose output would land in the wizard transcript.  `get` touches
+    only this one and answers through its exit code: 0 configured, 1 absent.
+    """
+    return ["claude", "mcp", "get", name]
 
 
 def mcp_json_snippet(artifacts_dir: Path) -> str:
@@ -210,7 +235,48 @@ def build_and_run_pgvector(
     )
 
 
+def probe_says_user_scope(probe: ProvisionResult) -> bool:
+    """Read a `claude mcp get` result as "registered for every project".
+
+    Deliberately stricter than "did it exit 0": `claude mcp get` exits 0 for a
+    **local**-scope entry too, and a local entry is precisely the broken
+    per-directory registration that `-s user` exists to replace.  Treating one
+    as "already done" would skip the add and leave the user with the bug.
+
+    Split out from the subprocess call so it can be asserted against real CLI
+    output without registering anything.
+    """
+    return probe.ok and _USER_SCOPE_MARKER in probe.output
+
+
+def claude_mcp_registered_at_user_scope(name: str = "sutra") -> bool:
+    """True when `name` is already registered for *all* projects.
+
+    Runs silently — the probe health-checks the server, and that output in the
+    wizard transcript reads like a failure.
+    """
+    return probe_says_user_scope(run_command(claude_mcp_get_command(name), echo=False))
+
+
 def claude_mcp_add(
-    artifacts_dir: Path, *, on_output: Callable[[str], None] | None = None
+    artifacts_dir: Path,
+    *,
+    name: str = "sutra",
+    on_output: Callable[[str], None] | None = None,
 ) -> ProvisionResult:
-    return run_command(claude_mcp_add_command(artifacts_dir), on_output=on_output)
+    """Register the MCP server, or report that it already is.
+
+    `claude mcp add` exits 1 on a duplicate name, so without the probe every
+    re-run of this (idempotent) wizard reported `failed (exited with code 1)`
+    while the server was in fact registered correctly.
+    """
+    if claude_mcp_registered_at_user_scope(name):
+        if on_output is not None:
+            on_output(f"MCP server '{name}' already registered for all projects — skipping.")
+        return ProvisionResult(
+            ok=True,
+            returncode=0,
+            command=claude_mcp_get_command(name),
+            message="already registered",
+        )
+    return run_command(claude_mcp_add_command(artifacts_dir, name), on_output=on_output)

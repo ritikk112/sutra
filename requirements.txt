@@ -14,7 +14,7 @@ jiter==0.13.0
 mcp==1.27.2
 numpy==2.4.4
 openai==2.30.0
-psycopg2==2.9.11
+psycopg2-binary
 rank-bm25==0.2.2
 pycparser==3.0
 pydantic==2.12.5

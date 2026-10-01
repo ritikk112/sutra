@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import fnmatch
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Iterator, Optional, Sequence
 
 from sutra.core.artifact.atomic_writer import AtomicArtifactWriter
 from sutra.core.artifact.sink import ArtifactSink
@@ -45,6 +46,9 @@ _EXCLUDED_DIRS = frozenset({
     "dist",
     "build",
     "testdata",   # Go conventional test-fixture directory; ignored by go toolchain
+    "tests",      # test suites are noise in a code-RAG index — they crowd out
+    "test",       # the implementations they exercise (same rationale as _test.go)
+    "__tests__",  # jest/vitest convention
 })
 
 # File extension → language string.
@@ -58,7 +62,15 @@ _EXTENSION_MAP: dict[str, str] = {
 # Filename suffixes that are never indexed (before extension check).
 # _test.go files are excluded at the Indexer level, not the GoAdapter level,
 # to keep the adapter pure (adapters never see test files).
-_EXCLUDED_SUFFIXES = frozenset({"_test.go"})
+_EXCLUDED_SUFFIXES = frozenset({
+    "_test.go",
+    "_test.py", "_spec.py",                    # pytest / unittest trailing form
+    ".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx",   # jest/vitest
+})
+
+# Filename PREFIXES that are never indexed.  pytest's leading form
+# (test_foo.py) can't be expressed as a suffix.
+_EXCLUDED_PREFIXES = frozenset({"test_"})
 
 
 def _dedup_keep_first(symbols: list[Symbol]) -> tuple[list[Symbol], int]:
@@ -132,6 +144,10 @@ class Indexer:
         gitignore_filter: Optional[GitignoreFilter] = None,
         resolver: Optional["Resolver"] = None,
         artifact_sink: Optional[ArtifactSink] = None,
+        # Repo-relative fnmatch patterns to skip (config: indexing.exclude_globs).
+        # For example/doc trees that are valid code but retrieval noise
+        # ("docs_src/*", "examples/*") — fnmatch '*' crosses '/'.
+        exclude_globs: Sequence[str] = (),
     ) -> None:
         self.adapters = adapters
         self.exporter = exporter
@@ -141,6 +157,7 @@ class Indexer:
         self.gitignore_filter = gitignore_filter
         self.resolver = resolver
         self.artifact_sink = artifact_sink or AtomicArtifactWriter()
+        self.exclude_globs = tuple(exclude_globs)
 
     # ------------------------------------------------------------------
     # Public API
@@ -366,7 +383,7 @@ class Indexer:
     def _walk_files(self, root: Path) -> Iterator[Path]:
         """
         Yield all files under `root`, skipping excluded directories,
-        excluded suffixes (_test.go), and gitignored files.
+        test files (by dir, prefix or suffix), and gitignored files.
 
         Uses os.walk with in-place pruning of excluded dir names so we never
         descend into .git/, __pycache__/, node_modules/, testdata/, etc.
@@ -383,9 +400,17 @@ class Indexer:
             for filename in sorted(filenames):
                 if any(filename.endswith(suf) for suf in _EXCLUDED_SUFFIXES):
                     continue
+                if any(filename.startswith(pre) for pre in _EXCLUDED_PREFIXES):
+                    continue
                 abs_path = Path(dirpath) / filename
-                if self.gitignore_filter is not None:
+                if self.gitignore_filter is not None or self.exclude_globs:
                     rel = str(abs_path.relative_to(root)).replace("\\", "/")
-                    if self.gitignore_filter.should_ignore(rel):
+                    if self.gitignore_filter is not None and (
+                        self.gitignore_filter.should_ignore(rel)
+                    ):
+                        continue
+                    if any(
+                        fnmatch.fnmatch(rel, pat) for pat in self.exclude_globs
+                    ):
                         continue
                 yield abs_path

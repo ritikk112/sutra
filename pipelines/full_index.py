@@ -30,7 +30,7 @@ import os
 import sys
 from pathlib import Path
 
-from pipelines._common import build_dependencies
+from pipelines._common import build_dependencies, load_exclude_globs
 from sutra.core.gitignore_filter import GitignoreFilter
 from sutra.core.indexer import EmptyIndexError, Indexer
 
@@ -107,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
             pgvector_store=deps.pgvector_store,
             gitignore_filter=gitignore_filter,
             resolver=resolver,
+            exclude_globs=load_exclude_globs(args.config),
         )
 
         result = indexer.index(

@@ -138,7 +138,13 @@ def _run(
     if claude.ok:
         if ask_confirm(io, "Register the Sutra MCP server with Claude Code now?", default=False):
             res = provision.claude_mcp_add(artifacts_path, on_output=emit)
-            summary.append(("MCP", "registered with Claude Code" if res.ok else f"failed ({res.message})"))
+            # run_command leaves `message` empty on success, so a fresh add
+            # falls through to the default and a skipped one says why.
+            summary.append(
+                ("MCP", res.message or "registered with Claude Code")
+                if res.ok
+                else ("MCP", f"failed ({res.message})")
+            )
         else:
             summary.append(("MCP", "skipped"))
     else:

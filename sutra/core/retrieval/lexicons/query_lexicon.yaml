@@ -33,10 +33,12 @@ kind_nouns:
   class:
     kinds: [class]
     nouns:
+      # NOTE: "model"/"models" are deliberately ABSENT — in ML-adjacent code
+      # ("cross encoder model", "pydantic model instance", "response model")
+      # the word names data, not a class definition; as a kind noun it erased
+      # function golds (same failure class as the "file"/"files" note below).
       - class
       - classes
-      - model
-      - models
       - interface
       - interfaces
       - struct
@@ -58,8 +60,9 @@ kind_nouns:
       # NOTE: "file"/"files" are deliberately ABSENT — in real queries they
       # almost always name a data object ("form file", "file to disk"), not
       # a code module, and as kind nouns they hijacked verb-derived hints.
-      - module
-      - modules
+      # NOTE: "module"/"modules" are likewise ABSENT — "within the same
+      # module" describes WHERE something happens, not a request for a module
+      # symbol; as a kind noun it erased function golds.
       - package
       - packages
   variable:

@@ -6,18 +6,24 @@ from sutra.core.extractor.base import (
     ClassSymbol,
     FunctionSymbol,
     MethodSymbol,
+    ModuleSymbol,
     RelationKind,
     Relationship,
     Symbol,
+    VariableSymbol,
 )
 
-# Symbol types that receive embeddings.
-# VariableSymbol and ModuleSymbol are excluded — no meaningful body chunk.
-_EMBEDDABLE = (FunctionSymbol, ClassSymbol, MethodSymbol)
+# Symbol types that receive embeddings.  Variables embed their assignment
+# source, modules a docstring + member roster — without these the vector
+# channel is structurally blind to data symbols (measured: 4/4 variable/
+# module golds zero-recalled in every mode, BATTLE_TEST.md).
+_EMBEDDABLE = (FunctionSymbol, ClassSymbol, MethodSymbol, VariableSymbol, ModuleSymbol)
 
 # Truncation limits
 _MAX_FUNC_LINES = 150        # max lines of function/method body included in chunk
 _MAX_CLASS_METHODS = 30      # max method names listed in class chunk
+_MAX_VAR_LINES = 20          # max lines of a variable's assignment source
+_MAX_MODULE_MEMBERS = 50     # max member names listed in a module chunk
 _MAX_CHARS = 30_000          # hard character cap on any chunk (pathological single-line files)
 
 
@@ -69,8 +75,29 @@ def build_chunks(
         for source_id in calls_by_source:
             calls_by_source[source_id] = sorted(set(calls_by_source[source_id]))
 
+    # file_path → module-scope member names, for the module chunk roster.
+    members_by_file: dict[str, list[str]] = {}
+    for sym in symbols:
+        if isinstance(sym, ModuleSymbol) or sym.is_local:
+            continue
+        if sym.enclosing_moniker is None:
+            members_by_file.setdefault(sym.file_path, []).append(sym.name)
+    for fp in members_by_file:
+        members_by_file[fp] = sorted(set(members_by_file[fp]))
+
     # Local file cache — scoped to this call, GC'd on return.
     file_cache: dict[str, bytes] = {}
+
+    def _src_bytes(sym: Symbol) -> bytes:
+        if sym.file_path not in file_cache:
+            src_path = root / sym.file_path
+            if not src_path.exists():
+                raise FileNotFoundError(
+                    f"Source file not found while building embedding chunk "
+                    f"for symbol {sym.id!r}: {src_path}"
+                )
+            file_cache[sym.file_path] = src_path.read_bytes()
+        return file_cache[sym.file_path]
 
     chunks: list[str] = []
     monikers: list[str] = []
@@ -78,19 +105,15 @@ def build_chunks(
     for sym in embeddable:
         if isinstance(sym, ClassSymbol):
             chunk = _build_class_chunk(sym, class_method_syms.get(sym.id, []))
+        elif isinstance(sym, ModuleSymbol):
+            chunk = _build_module_chunk(sym, members_by_file.get(sym.file_path, []))
+        elif isinstance(sym, VariableSymbol):
+            chunk = _build_variable_chunk(sym, _src_bytes(sym))
         else:
             # FunctionSymbol or MethodSymbol — needs source bytes
-            if sym.file_path not in file_cache:
-                src_path = root / sym.file_path
-                if not src_path.exists():
-                    raise FileNotFoundError(
-                        f"Source file not found while building embedding chunk "
-                        f"for symbol {sym.id!r}: {src_path}"
-                    )
-                file_cache[sym.file_path] = src_path.read_bytes()
             chunk = _build_function_chunk(
                 sym,
-                file_cache[sym.file_path],
+                _src_bytes(sym),
                 calls=calls_by_source.get(sym.id),
             )
 
@@ -245,6 +268,53 @@ def _build_function_chunk(
     if len(chunk) > _MAX_CHARS:
         chunk = chunk[:_MAX_CHARS]
 
+    return chunk
+
+
+def _build_variable_chunk(sym: VariableSymbol, src_bytes: bytes) -> str:
+    parts = [
+        f"Variable: {sym.qualified_name}",
+        f"File: {sym.file_path}",
+    ]
+    if sym.is_constant:
+        parts.append("Tags: constant")
+    if sym.type_annotation:
+        parts.append(f"Type: {sym.type_annotation}")
+
+    raw = src_bytes[sym.location.byte_start:sym.location.byte_end]
+    value_lines = raw.decode("utf-8", errors="replace").splitlines()
+    if value_lines:
+        if len(value_lines) > _MAX_VAR_LINES:
+            remaining = len(value_lines) - _MAX_VAR_LINES
+            value_text = "\n".join(value_lines[:_MAX_VAR_LINES]) + f"\n... ({remaining} more lines)"
+        else:
+            value_text = "\n".join(value_lines)
+        parts.append(f"Value:\n{value_text}")
+
+    chunk = "\n".join(parts)
+    if len(chunk) > _MAX_CHARS:
+        chunk = chunk[:_MAX_CHARS]
+    return chunk
+
+
+def _build_module_chunk(sym: ModuleSymbol, member_names: list[str]) -> str:
+    parts = [
+        f"Module: {sym.qualified_name}",
+        f"File: {sym.file_path}",
+    ]
+    if sym.docstring:
+        parts.append(f"Docstring: {sym.docstring}")
+    if member_names:
+        if len(member_names) > _MAX_MODULE_MEMBERS:
+            shown = member_names[:_MAX_MODULE_MEMBERS]
+            remaining = len(member_names) - _MAX_MODULE_MEMBERS
+            parts.append(f"Contains: {', '.join(shown)}, ... ({remaining} more)")
+        else:
+            parts.append(f"Contains: {', '.join(member_names)}")
+
+    chunk = "\n".join(parts)
+    if len(chunk) > _MAX_CHARS:
+        chunk = chunk[:_MAX_CHARS]
     return chunk
 
 

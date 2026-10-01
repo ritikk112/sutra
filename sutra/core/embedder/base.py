@@ -46,6 +46,18 @@ class Embedder(ABC):
         setup cost (for async providers) is paid once per embed() call, not per batch.
         """
 
+    def embed_queries(self, chunks: list[str]) -> np.ndarray:
+        """
+        Embed QUERY text (as opposed to document chunks).
+
+        Default: identical to embed().  Providers whose model wants an
+        asymmetric query instruction (bge: "Represent this sentence for
+        searching relevant passages: ") override this to apply it on the
+        query side only — document embedding stays untouched so existing
+        artifacts remain valid.
+        """
+        return self.embed(chunks)
+
     def usage_stats(self) -> dict[str, Any] | None:
         """
         Optional provider-specific usage metadata for the most recent embed run.

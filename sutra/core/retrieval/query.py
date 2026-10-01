@@ -33,6 +33,12 @@ class ParsedQuery:
     entities : tuple[str, ...]
         Code-identifier-looking tokens in query order ("PostgresDALWrapper",
         "find_one") — exact/moniker lookup fodder.
+    kind_hint_source : str | None
+        Where the hint came from: "noun" (explicit kind noun) or "verb"
+        (behavioral-verb fallback).  None when kind_hint is None.  Verb
+        hints are weaker evidence and downstream boosting scales them
+        separately (measured: a verb-derived callable hint pushed a gold
+        class out of top-10 on pydantic, BATTLE_TEST.md PD-A3).
     """
 
     text: str
@@ -40,3 +46,4 @@ class ParsedQuery:
     kind_hint: Optional[frozenset[str]] = None
     verbs: frozenset[str] = frozenset()
     entities: tuple[str, ...] = ()
+    kind_hint_source: Optional[str] = None

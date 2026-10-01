@@ -1,5 +1,39 @@
+# Sutra configuration file.
+# Copy this file and adjust for your environment.
+
+# indexing:
+#   # Repo-relative fnmatch patterns pruned from indexing, for example/doc
+#   # trees that are valid code but retrieval noise. '*' crosses '/'.
+#   # (Test files are always excluded; this is for project-specific dirs.)
+#   exclude_globs:
+#     - docs_src/*
+#     - examples/*
+
 embedder:
+  # provider: openai | local | fixture
+  #   openai  — calls the OpenAI Embeddings API, OR any OpenAI-compatible
+  #             endpoint (Ollama, LM Studio, vLLM, Together, Azure, …) via base_url
+  #   local   — sentence-transformers, runs fully offline (requires: pip install sentence-transformers)
+  #   fixture — deterministic fake vectors, used in tests and CI (no API key needed)
   provider: local
+
+  # OpenAI settings (used when provider: openai)
   model: BAAI/bge-base-en-v1.5
-  dimensions: 768
-  batch_size: 2
+  dimensions: 768           # native width of bge-base-en-v1.5; must match exactly
+  batch_size: 32            # chunks per encode() call on MPS
+  # api_key_env: OPENAI_API_KEY   # env var name that holds your key — never put the key itself here
+
+  # OpenAI-compatible endpoint (optional; used when provider: openai)
+  #   base_url — point the OpenAI client at a compatible server instead of api.openai.com.
+  #              When set, `dimensions` MUST be specified (these servers do not share
+  #              OpenAI's 1536 default; `sutra init` discovers it via a probe embed).
+  #              Leave api_key_env blank for endpoints that need no key (e.g. Ollama).
+  # base_url: http://localhost:11434/v1   # example: Ollama
+  # model: nomic-embed-text
+  # dimensions: 768
+  # api_key_env:                          # blank → no API key required
+
+  # Local settings (used when provider: local)
+  # model: all-MiniLM-L6-v2
+  # dimensions: 384         # must match model's native output or LocalEmbedder raises at construction
+  # batch_size: 32

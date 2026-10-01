@@ -44,6 +44,7 @@ callees.
 """
 
 _DOCSTRING_SUMMARY_MAX = 200
+_SIGNATURE_SUMMARY_MAX = 200
 
 
 def _docstring_summary(doc: Optional[str]) -> Optional[str]:
@@ -64,6 +65,24 @@ def _docstring_summary(doc: Optional[str]) -> Optional[str]:
                 return line[: _DOCSTRING_SUMMARY_MAX - 1] + "…"
             return line
     return ""
+
+
+def _signature_summary(sig: Optional[str]) -> Optional[str]:
+    """Whitespace-collapsed, length-capped signature for search payloads.
+
+    Raw signatures can be enormous — fastapi's Annotated[..., Doc("...")]
+    parameter style put 115K of a 126K two-query search payload in this one
+    field, and the vs-control benchmark measured sutra-arm agents growing
+    context ~30% faster than grep-only agents largely on tool-result bulk
+    (SUTRA_VS_CONTROL.md).  The full signature stays available via
+    sutra_get_symbol — same pushed-vs-pulled split as _docstring_summary.
+    """
+    if not sig:
+        return sig
+    collapsed = " ".join(sig.split())
+    if len(collapsed) > _SIGNATURE_SUMMARY_MAX:
+        return collapsed[: _SIGNATURE_SUMMARY_MAX - 1] + "…"
+    return collapsed
 
 
 class SutraServer:
@@ -189,7 +208,7 @@ class SutraServer:
             "file_path": sym.get("file_path"),
             "line_start": loc.get("line_start"),
             "line_end": loc.get("line_end"),
-            "signature": sym.get("signature"),
+            "signature": _signature_summary(sym.get("signature")),
             "docstring": _docstring_summary(sym.get("docstring")),
         }
         if include_provenance:
