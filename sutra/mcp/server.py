@@ -19,13 +19,21 @@ from sutra.mcp.registry import (
 from sutra.mcp.watcher import ArtifactWatcher
 
 INSTRUCTIONS = """\
-Sutra serves a team's indexed repositories for code-aware retrieval.
+Sutra is a semantic + keyword index of your team's repositories — usually
+including the one you are working in — over functions, classes and methods
+with their signatures, docstrings and resolved call graph.
 
-Start with sutra_list_repos to see what is indexed and to get the exact repo
-names the other tools expect.
+Reach for sutra_search when you know WHAT the code does but not what it is
+CALLED: finding the code behind a bug report, feature request or error
+description ("where are uploaded images resized", "which function retries
+failed HTTP requests").  It ranks symbols by meaning as well as by matching
+words, so it finds implementations whose names share no words with the
+description — the case where grep needs several guesses.  Each result
+carries file, line range, signature and docstring, so you can open the right
+file directly.  Grep stays the better tool for an exact identifier or string
+you already know.
 
-Two things an index does that a per-repo file search cannot — reach for Sutra
-when:
+Also reach for Sutra when:
   - The answer may span MULTIPLE repositories.  Call sutra_search with no
     `repo` argument to search every indexed repo in one call; results are
     merged and ordered by score as a pragmatic cut (per-repo scores are not
@@ -36,11 +44,10 @@ when:
     references out to `depth` hops — a call chain / partial blast radius (only
     resolved edges are in the graph, so treat it as a lower bound).
 
-sutra_search answers natural-language questions ("which function saves the
-meeting in db") with symbols ranked by relevance, each carrying file/line,
-signature and docstring.  sutra_get_symbol returns full metadata for one
-moniker (the id sutra_search returns), including its resolved callers and
-callees.
+sutra_search's `repo` argument is optional; sutra_list_repos lists what is
+indexed and the exact repo names it accepts.  sutra_get_symbol returns full
+metadata for one moniker (the id sutra_search returns), including its
+resolved callers and callees.
 """
 
 _DOCSTRING_SUMMARY_MAX = 200
