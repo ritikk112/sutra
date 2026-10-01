@@ -16,7 +16,7 @@
 - Code lives in `benchmarks/locbench/` (tracked). `benchmarkings/` is gitignored — never put code there.
 - Never `git add -A`; add the exact files each step names.
 - Tests: real instances, real data, real code paths — **no mocks, no monkeypatching**. Tests that need a live Claude Code call are gated on `SUTRA_BENCH_LIVE=1` with `pytest.mark.skipif`; tests that need network (HF fetch) are gated on `SUTRA_BENCH_NET=1`.
-- Embedder for real indexes: the shipped default `config/sutra.yaml` (`provider: local`, `BAAI/bge-base-en-v1.5`, 768d). Tests index with `provider: fixture` (a config file the plan creates) so they need no ML weights.
+- Embedder for real indexes: the `provider: local` default `all-MiniLM-L6-v2` (384d) via `config/sutra.local.yaml` (requires `torch` CPU build + `sentence-transformers`, see `requirements-ml.txt`). Tests index with `provider: fixture` (a config file the plan creates) so they need no ML weights.
 - `--resolver heuristic` everywhere. `rerank=False`. No graph expansion (pipeline default).
 - Agent model: `claude-sonnet-5`. Runtime recipe (spec §4.1): prompt FIRST, `--setting-sources "" --disable-slash-commands --strict-mcp-config`, never `--bare`, never `--safe-mode`, env `MCP_TIMEOUT=120000`, stdin from devnull.
 - Windows host (PowerShell / Git Bash). Paths in JSON are forward-slash. Use `shutil.which("claude")` — never hardcode `claude.cmd`.
@@ -775,7 +775,7 @@ def test_select_writes_subset_with_checksum(tmp_path):
 def test_paths_are_under_benchmarks_locbench():
     p = prepare.paths()
     assert p["ROOT"].name == "locbench" and p["ROOT"].parent.name == "benchmarks"
-    assert p["CONFIG"].name == "sutra.yaml"
+    assert p["CONFIG"].name == "sutra.local.yaml"
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -811,7 +811,7 @@ def paths() -> dict[str, Path]:
         "MANIFEST": root / "manifest.jsonl",
         "ARTIFACTS": root / "artifacts",
         "REPOS": root / "repos",
-        "CONFIG": REPO_ROOT / "config" / "sutra.yaml",
+        "CONFIG": REPO_ROOT / "config" / "sutra.local.yaml",
     }
 
 
@@ -907,9 +907,9 @@ Pick from `subset.json`: the first `layer1` id whose repo is `tobymao/sqlglot` (
 ```bash
 python -m benchmarks.locbench.prepare index --ids <small> <medium> <large>
 ```
-Record for each: `index_seconds`, `symbol_count`, and the clone size. The first run also downloads `BAAI/bge-base-en-v1.5` (~440 MB) once.
+Record for each: `index_seconds`, `symbol_count`, and the clone size. The first run also downloads `all-MiniLM-L6-v2` (~90 MB) once.
 
-**Report back to the designer before continuing** with: the three timings, projected hours for all of `layer1` (`sum(sec) / 3 × len(layer1) / 3600`), and any `status: failed`. **Shrink rule (spec §2.1)**: if projected > 24 h, re-run `select` with `--min-issues` raised until `repos` = 10, commit the new `subset.json`, and note it in the report. Also confirm `embedder_model` in the manifest reads `sentence-transformers/BAAI/bge-base-en-v1.5` (or whatever the LocalEmbedder records) — Task 5 needs the artifact to load through `EmbedderCache`.
+**Report back to the designer before continuing** with: the three timings, projected hours for all of `layer1` (`sum(sec) / 3 × len(layer1) / 3600`), and any `status: failed`. **Shrink rule (spec §2.1)**: if projected > 24 h, re-run `select` with `--min-issues` raised until `repos` = 10, commit the new `subset.json`, and note it in the report. Also confirm `embedder_model` in the manifest reads `sentence-transformers/all-MiniLM-L6-v2` — Task 5 needs the artifact to load through `EmbedderCache`.
 
 - [ ] **Step 7: Commit the manifest rows**
 
@@ -1987,7 +1987,7 @@ def test_render_report_has_every_section_and_flags_directional_delta():
                     "total_cost_usd": {"mean": 0.05, "ci_lo": 0.01, "ci_hi": 0.09, "n_pairs": 30}},
           "pass^k": {"grep": 0.3, "grep_sutra": 0.35},
           "adoption": {"rate": 0.6, "mean_sutra_calls": 1.4, "by_tool": {"mcp__sutra__sutra_search": 40}}}
-    md = render_report(l1, cis, l2, {"sutra_git_sha": "abc", "date": "2026-09-24", "embedder": "BAAI/bge-base-en-v1.5", "model": "claude-sonnet-5"})
+    md = render_report(l1, cis, l2, {"sutra_git_sha": "abc", "date": "2026-09-24", "embedder": "all-MiniLM-L6-v2", "model": "claude-sonnet-5"})
     for h in ("# Sutra on LocBench", "## Headline", "## Guard metric: adoption", "## Layer 1", "## Layer 2", "## Method", "## Caveats", "## README snippet"):
         assert h in md
     assert "directional" in md and "[−5%, +15%]" in md  # U+2212 minus, percent-formatted Δ
@@ -2121,7 +2121,7 @@ def main() -> None:
         l2 = json.loads(full.read_text(encoding="utf-8"))
     sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=root).stdout.strip()
     md = render_report(l1, cis, l2, {"date": date.today().isoformat(), "sutra_git_sha": sha,
-                                     "embedder": "BAAI/bge-base-en-v1.5", "model": "claude-sonnet-5"})
+                                     "embedder": "all-MiniLM-L6-v2", "model": "claude-sonnet-5"})
     (root / "REPORT.md").write_text(md, encoding="utf-8")
     print(md)
 

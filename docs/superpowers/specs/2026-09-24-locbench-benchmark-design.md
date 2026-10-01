@@ -13,7 +13,7 @@ Purpose: produce **launch numbers** for Sutra that are comparable, reproducible 
 
 Out of scope (follow-ups, not this spec): SWE-bench task resolution, TS/Go claims, reranker / graph-expansion variants, LSP resolver, prompt variants that mention Sutra.
 
-Fixed assumptions: agent model `claude-sonnet-5`; index embedder = the shipped default in `config/sutra.yaml` (`provider: local`, `BAAI/bge-base-en-v1.5`, 768d — decided 2026-09-24; the runtime check in §4.1 used MiniLM, so its 104 s index / 42 s cold-start figures are lower bounds); `--resolver heuristic`; `rerank=False`.
+Fixed assumptions: agent model `claude-sonnet-5`; index embedder = the `provider: local` default, `all-MiniLM-L6-v2` (384d) via `config/sutra.local.yaml` — decided 2026-10-01 (it is what the runtime check in §4.1 measured: ≈104 s to index the `sutra` repo, ≈42 s server cold start); `--resolver heuristic`; `rerank=False`.
 
 ## 2. Data
 
