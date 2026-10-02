@@ -64,7 +64,9 @@ _EXTENSION_MAP: dict[str, str] = {
 # to keep the adapter pure (adapters never see test files).
 _EXCLUDED_SUFFIXES = frozenset({
     "_test.go",
-    "_test.py", "_spec.py",                    # pytest / unittest trailing form
+    "_test.py",                                # pytest trailing form
+    # NOT "_spec.py": in Python that is ordinary source naming (jax partition_spec.py,
+    # keras input_spec.py, dask _task_spec.py), not a test convention.
     ".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx",   # jest/vitest
 })
 
